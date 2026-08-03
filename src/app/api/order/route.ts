@@ -33,15 +33,21 @@ export async function POST(req: NextRequest) {
     return fail("paymentMethod must be qris, bank_transfer or cash", 400);
   }
 
-  const items = itemsRaw.map((it) => {
-    const row = it as Record<string, unknown>;
-    const menuItemId = typeof row.menuItemId === "string" ? row.menuItemId : "";
-    const quantity = Math.floor(Number(row.quantity));
-    if (!menuItemId || !Number.isFinite(quantity) || quantity < 1 || quantity > 99) {
-      throw new HttpError(400, "Each item needs menuItemId (string) and quantity (1-99)");
-    }
-    return { menuItemId, quantity };
-  });
+  let items: { menuItemId: string; quantity: number }[];
+  try {
+    items = itemsRaw.map((it) => {
+      const row = it as Record<string, unknown>;
+      const menuItemId = typeof row.menuItemId === "string" ? row.menuItemId : "";
+      const quantity = Math.floor(Number(row.quantity));
+      if (!menuItemId || !Number.isFinite(quantity) || quantity < 1 || quantity > 99) {
+        throw new HttpError(400, "Each item needs menuItemId (string) and quantity (1-99)");
+      }
+      return { menuItemId, quantity };
+    });
+  } catch (e) {
+    if (e instanceof HttpError) return fail(e.message, e.status);
+    throw e;
+  }
 
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Tenant not found", 404);
@@ -62,8 +68,8 @@ export async function POST(req: NextRequest) {
       throw new HttpError(429, "Order queue is full — please try again in a few minutes");
     }
 
-    // Menu items validated INSIDE the tenant context: only this tenant's
-    // available items match — a foreign menuItemId fails the length check.
+    // Menu item validation can also fail (unavailable / foreign item) — it
+    // runs inside the try so its HttpError becomes a clean 4xx response.
     const ids = Array.from(new Set(items.map((i) => i.menuItemId)));
     const menuItems = await db.menuItem.findMany({
       where: { id: { in: ids }, isAvailable: true },

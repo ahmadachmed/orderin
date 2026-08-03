@@ -28,7 +28,19 @@ async function main() {
     },
   });
 
-  // Reset menu items for idempotency
+  // Reset menu items for idempotency. Orders referencing them must go first
+  // (no FK cascade in the schema — OrderItem/OrderStatusLog have no onDelete).
+  const orders = await prisma.order.findMany({
+    where: { tenantId: tenant.id },
+    select: { id: true },
+  });
+  for (const o of orders) {
+    await prisma.orderStatusLog.deleteMany({ where: { orderId: o.id } });
+    await prisma.orderItem.deleteMany({ where: { orderId: o.id } });
+  }
+  if (orders.length > 0) {
+    await prisma.order.deleteMany({ where: { tenantId: tenant.id } });
+  }
   await prisma.menuItem.deleteMany({ where: { tenantId: tenant.id } });
 
   const menu = [
