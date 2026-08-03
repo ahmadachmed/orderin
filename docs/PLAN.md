@@ -94,19 +94,34 @@ pending ──► confirmed ──► brewing ──► ready_for_pickup ──�
 - **picked_up:** Customer picks up, order complete
 - **cancelled:** Only possible from `pending` (no barista work yet)
 
+### 3.1.1 Payment Tracking (Separate from Fulfillment Status)
+
+Payment status is tracked independently from the order fulfillment state machine:
+
+```
+UNPAID → PAID
+```
+
+- **UNPAID:** Default on order creation. Customer sees QRIS + total on status page.
+- **PAID:** Barista manually confirms after verifying payment notification on their device.
+- Payment method stored as `paymentMethod` (e.g., `'qris'`, `'cash'`).
+- `paidAt` timestamp records when the barista marked it paid.
+- Payment confirmation is manual — no gateway integration in MVP.
+
 ### 3.2 Customer View (Public)
 
 - Per-shop menu page (`/[tenantSlug]`)
 - Display: shop name, menu items (name, price, estimated prep time), current queue status ("~15 minutes")
 - Order form: pick items + qty, enter name + phone no.
-- Status page: order ID, live status, estimated ready time
+- Status page: order ID, live status, estimated ready time, tenant QRIS + total amount for payment
 - **No login/register** — identification via phone no. + name (MVP)
 
 ### 3.3 Shop Dashboard (Admin)
 
 - Login via magic link / OTP to phone no. (MVP: simple username + password)
-- Dashboard: list of active orders (pending → ready), drag-and-drop to update status
+- Dashboard: list of active orders (pending → ready), drag-and-drop to update status, mark payment as paid
 - Menu management: MenuItem CRUD
+- QRIS management: upload image / input QRIS code
 - Operating hours: set open/close (orders outside hours automatically rejected)
 - Toggle: accept orders / pause (if too busy)
 
@@ -163,7 +178,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 | **Realtime** | Vercel Edge Config + SWR polling (MVP) | Simple, no WebSocket. Post-MVP: Server-Sent Events |
 | **Notifications** | WhatsApp Business API (post-MVP) | Main channel in Indonesia. MVP: status display on screen |
 | **Auth** | next-auth (post-MVP) | MVP: simple session-based auth for shop admins |
-| **Payment** | None in MVP | Cash on pickup |
+| **Payment** | QRIS (tenant-owned, manual confirm) | Static QRIS per tenant; customer scans & pays via e-wallet/bank app; barista confirms manually in dashboard |
 
 ### 5.1 Why Not...
 
@@ -190,6 +205,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 | ✅ Queue & ETA | Simple FIFO calculation |
 | ✅ Tenant admin login | Username + password (simple) |
 | ✅ Pause/resume orders | Toggle in dashboard |
+| ✅ QRIS payment (static) | Tenant inputs QRIS image/code; customer sees QRIS + amount on status page; barista marks paid |
 
 ### 6.2 Post-MVP (v1.1+)
 
@@ -200,7 +216,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 | 🔜 QR code pickup | Medium — pickup verification |
 | 🔜 Menu image upload | Medium |
 | 🔜 Multi-barista workflow | Low |
-| 🔜 Payment integration (QRIS, GoPay) | Low — cash on pickup is enough |
+| 🔜 Dynamic QRIS / payment gateway | Low — static QRIS (tenant-owned, manual confirm) is already in MVP; gateway-based QRIS (Midtrans, Xendit) for auto-verification |
 | 🔜 Customer login + favorite orders | Low |
 
 ### 6.3 Explicitly Out of Scope
@@ -209,7 +225,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 - ❌ Loyalty program / points
 - ❌ Multi-branch management (1 tenant = 1 physical shop)
 - ❌ Native mobile app (mobile-first web is enough)
-- ❌ POS/QRIS integration
+- ❌ Gateway-based QRIS / dynamic payment (tenant-owned static QRIS IS in scope for MVP — see 6.1)
 
 ---
 
@@ -242,6 +258,8 @@ model Tenant {
   timezone      String    @default("Asia/Makassar")
   maxQueueSize  Int       @default(20)
   prepTimeBuffer Int      @default(0)        // additional buffer minutes
+  qrisImageUrl  String?                       // QRIS image (uploaded by tenant)
+  qrisCode      String?                       // QRIS code string (for display/copy)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -287,6 +305,9 @@ model Order {
   status        OrderStatus   @default(PENDING)
   etaSeconds    Int?          // estimated ready time in seconds (from now)
   etaCalculatedAt DateTime?   // when ETA was last calculated
+  paymentStatus PaymentStatus @default(UNPAID) // payment tracking
+  paidAt        DateTime?                       // when barista marked paid
+  paymentMethod String?                         // e.g. 'qris', 'cash'
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -322,6 +343,11 @@ enum OrderStatus {
   READY_FOR_PICKUP
   PICKED_UP
   CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
 }
 ```
 
@@ -458,7 +484,7 @@ kopi-order/
 | Shops are willing to actively monitor the dashboard | Need simple UI + sound notifications. Risk: barista doesn't see the dashboard → orders not processed |
 | All orders are pickup (no delivery) | Major simplification. If delivery is needed later → architecture changes significantly |
 | 1 tenant = 1 physical shop | Safe. Multi-branch can be separate tenants |
-| Cash on pickup payment | Safe for MVP. Risk: fake orders (customer doesn't show up to pick up) |
+| QRIS payment with manual barista confirmation | Safe — common practice in Makassar coffee shops (static QRIS). Risk: fake payment confirmation (unpaid orders marked as paid) — see 10.2 |
 | Menu item prep time can be estimated manually | ETA inaccurate if estimates are wrong. Need admin dashboard to adjust |
 | Shared schema is enough for < 1000 tenants | Safe. Above 1000 tenants → need to re-evaluate noisy neighbor |
 
@@ -466,7 +492,8 @@ kopi-order/
 
 | Risk | Severity | Mitigation |
 |--------|----------|----------|
-| **Fake / unpicked-up orders** | Medium | MVP: no charge. Post-MVP: upfront payment. Monitor per-tenant unpicked-up order rate. |
+| **Fake / unpicked-up orders** | Medium | QRIS prepayment reduces no-shows. Monitor per-tenant unpicked-up order rate. Post-MVP: upfront payment gateway. |
+| **Unpaid orders / fake payment confirmation** | Medium | Barista must verify payment notification on their device before marking 'paid'. Payment status visible on order; audit log of who marked paid. |
 | **Shop doesn't update status on time** | High | Simple dashboard UI (drag-and-drop between status columns). Auto-reminder if an order stays in one status > N minutes. |
 | **Inaccurate ETA** | Medium | Transparency: show "estimate" not "promise". Admin can adjust prep time per item. Post-MVP: historical avg. |
 | **Shared schema → data leak if a query is wrong** | High | Mandatory Prisma client extension. Integration tests to verify tenant isolation. Code review for all raw queries. |
@@ -495,8 +522,9 @@ kopi-order/
 | Public frontend (menu + order + status) | 2 days | Customer flow pages |
 | Admin dashboard | 2 days | Order + menu management |
 | Queue & ETA calculation | 1 day | Queue + estimation logic |
+| Tenant QRIS input + payment status UI | 0.5–1 day | QRIS image/code upload in dashboard, payment status display, manual confirm |
 | Testing + bugfix | 1 day | Critical path test coverage |
-| **Total** | **~9 days** | MVP ready for 1–2 shop pilot |
+| **Total** | **~10 days** | MVP ready for 1–2 shop pilot |
 
 ---
 
