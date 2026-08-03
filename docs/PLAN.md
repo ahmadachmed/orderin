@@ -72,6 +72,10 @@ Takeaway coffee shops in Makassar face physical queue buildup during peak hours 
     │                                       ├─ Send notif to shop dashboard ─────► ├─ See new order
     │                                       │                                      ├─ Confirm (→confirmed)
     │◄─── Show order status page ───────── ├─ Display ETA + live status           │
+    │                                       │                                      │
+    ├─ Pay via QRIS / bank transfer ─────►  │                                      │
+    │                                       │                                      │
+    │                                       │                                      ├─ Verify payment → mark PAID
     │                                       │                                      ├─ Start brewing (→brewing)
     │                                       │                                      ├─ Finish (→ready_for_pickup)
     │◄─── "coffee ready" notification ──── ├─ Notify via WhatsApp (optional)       │
@@ -88,8 +92,8 @@ pending ──► confirmed ──► brewing ──► ready_for_pickup ──�
 ```
 
 - **pending:** Customer submitted, not yet confirmed by barista
-- **confirmed:** Barista accepts the order, counted in the queue
-- **brewing:** Barista starts the process
+- **confirmed:** Barista accepts the order, counted in the queue. Cannot advance to `brewing` until payment is confirmed (PAID).
+- **brewing:** Barista starts the process (only after payment confirmed — payment gate)
 - **ready_for_pickup:** Coffee is ready, customer is notified
 - **picked_up:** Customer picks up, order complete
 - **cancelled:** Only possible from `pending` (no barista work yet)
@@ -102,18 +106,19 @@ Payment status is tracked independently from the order fulfillment state machine
 UNPAID → PAID
 ```
 
-- **UNPAID:** Default on order creation. Customer sees QRIS + total on status page.
-- **PAID:** Barista manually confirms after verifying payment notification on their device.
-- Payment method stored as `paymentMethod` (e.g., `'qris'`, `'cash'`).
+- **UNPAID:** Default on order creation. Customer selects payment method (QRIS or bank transfer) and sees payment details + total on status page.
+- **PAID:** Barista manually confirms after verifying payment notification (QRIS) or transfer receipt (bank transfer) on their device.
+- Payment method stored as `paymentMethod` (enum: `'qris'`, `'bank_transfer'`, `'cash'`).
 - `paidAt` timestamp records when the barista marked it paid.
-- Payment confirmation is manual — no gateway integration in MVP.
+- **Bank transfer flow:** Customer transfers to tenant's bank account → customer marks "I have paid" + optional `customerTransferNote` → barista verifies receipt in dashboard → marks PAID.
+- **Payment gate:** Payment must be confirmed (PAID) before barista can advance order to `brewing`. Payment confirmation is the gate between `confirmed` and `brewing` — the dashboard blocks transition until payment is marked PAID.
 
 ### 3.2 Customer View (Public)
 
 - Per-shop menu page (`/[tenantSlug]`)
 - Display: shop name, menu items (name, price, estimated prep time), current queue status ("~15 minutes")
 - Order form: pick items + qty, enter name + phone no.
-- Status page: order ID, live status, estimated ready time, tenant QRIS + total amount for payment
+- Status page: order ID, live status, estimated ready time, payment method selection (QRIS or bank transfer), tenant payment details (QRIS code/image or bank account number) + total amount for payment, "I have paid" confirmation button (for bank transfer) + optional note
 - **No login/register** — identification via phone no. + name (MVP)
 
 ### 3.3 Shop Dashboard (Admin)
@@ -121,7 +126,7 @@ UNPAID → PAID
 - Login via magic link / OTP to phone no. (MVP: simple username + password)
 - Dashboard: list of active orders (pending → ready), drag-and-drop to update status, mark payment as paid
 - Menu management: MenuItem CRUD
-- QRIS management: upload image / input QRIS code
+- Payment config: upload QRIS image / input QRIS code, input bank account number + bank name
 - Operating hours: set open/close (orders outside hours automatically rejected)
 - Toggle: accept orders / pause (if too busy)
 
@@ -178,7 +183,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 | **Realtime** | Vercel Edge Config + SWR polling (MVP) | Simple, no WebSocket. Post-MVP: Server-Sent Events |
 | **Notifications** | WhatsApp Business API (post-MVP) | Main channel in Indonesia. MVP: status display on screen |
 | **Auth** | next-auth (post-MVP) | MVP: simple session-based auth for shop admins |
-| **Payment** | QRIS (tenant-owned, manual confirm) | Static QRIS per tenant; customer scans & pays via e-wallet/bank app; barista confirms manually in dashboard |
+| **Payment** | QRIS (tenant-owned, manual confirm) + manual bank transfer | Static QRIS + bank transfer (tenant account number); customer pays via e-wallet/bank app or bank transfer; barista confirms manually in dashboard |
 
 ### 5.1 Why Not...
 
@@ -205,7 +210,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 | ✅ Queue & ETA | Simple FIFO calculation |
 | ✅ Tenant admin login | Username + password (simple) |
 | ✅ Pause/resume orders | Toggle in dashboard |
-| ✅ QRIS payment (static) | Tenant inputs QRIS image/code; customer sees QRIS + amount on status page; barista marks paid |
+| ✅ QRIS payment (static) + bank transfer | Tenant inputs QRIS image/code + bank account number; customer sees payment options (QRIS/bank transfer) + amount on status page; customer marks "I have paid" for transfers (advisory); barista verifies + marks paid |
 
 ### 6.2 Post-MVP (v1.1+)
 
@@ -225,7 +230,7 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 - ❌ Loyalty program / points
 - ❌ Multi-branch management (1 tenant = 1 physical shop)
 - ❌ Native mobile app (mobile-first web is enough)
-- ❌ Gateway-based QRIS / dynamic payment (tenant-owned static QRIS IS in scope for MVP — see 6.1)
+- ❌ Gateway-based QRIS / dynamic payment / auto-verification (tenant-owned static QRIS + manual bank transfer IS in scope for MVP — see 6.1)
 
 ---
 
@@ -258,9 +263,11 @@ model Tenant {
   timezone      String    @default("Asia/Makassar")
   maxQueueSize  Int       @default(20)
   prepTimeBuffer Int      @default(0)        // additional buffer minutes
-  qrisImageUrl  String?                       // QRIS image (uploaded by tenant)
-  qrisCode      String?                       // QRIS code string (for display/copy)
-  createdAt     DateTime  @default(now())
+  qrisImageUrl        String?                 // QRIS image (uploaded by tenant)
+  qrisCode            String?                 // QRIS code string (for display/copy)
+  bankAccountNumber   String?                 // Bank account number for manual transfer
+  bankName            String?                 // Bank name (e.g. BCA, BRI, Mandiri)
+  createdAt           DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   menuItems     MenuItem[]
@@ -307,7 +314,8 @@ model Order {
   etaCalculatedAt DateTime?   // when ETA was last calculated
   paymentStatus PaymentStatus @default(UNPAID) // payment tracking
   paidAt        DateTime?                       // when barista marked paid
-  paymentMethod String?                         // e.g. 'qris', 'cash'
+  paymentMethod        String?                 // 'qris' | 'bank_transfer' | 'cash'
+  customerTransferNote String?                  // customer marks "I have paid" + optional note (bank transfer)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -484,7 +492,7 @@ kopi-order/
 | Shops are willing to actively monitor the dashboard | Need simple UI + sound notifications. Risk: barista doesn't see the dashboard → orders not processed |
 | All orders are pickup (no delivery) | Major simplification. If delivery is needed later → architecture changes significantly |
 | 1 tenant = 1 physical shop | Safe. Multi-branch can be separate tenants |
-| QRIS payment with manual barista confirmation | Safe — common practice in Makassar coffee shops (static QRIS). Risk: fake payment confirmation (unpaid orders marked as paid) — see 10.2 |
+| QRIS + bank transfer payment with manual barista confirmation | Safe — common practice in Makassar coffee shops (static QRIS, manual transfer). Risk: fake payment confirmation (unpaid orders marked as paid) — see 10.2 |
 | Menu item prep time can be estimated manually | ETA inaccurate if estimates are wrong. Need admin dashboard to adjust |
 | Shared schema is enough for < 1000 tenants | Safe. Above 1000 tenants → need to re-evaluate noisy neighbor |
 
@@ -493,7 +501,7 @@ kopi-order/
 | Risk | Severity | Mitigation |
 |--------|----------|----------|
 | **Fake / unpicked-up orders** | Medium | QRIS prepayment reduces no-shows. Monitor per-tenant unpicked-up order rate. Post-MVP: upfront payment gateway. |
-| **Unpaid orders / fake payment confirmation** | Medium | Barista must verify payment notification on their device before marking 'paid'. Payment status visible on order; audit log of who marked paid. |
+| **Unpaid orders / fake payment confirmation** | Medium | Barista must verify payment notification (QRIS) or transfer receipt (bank) on their device before marking 'paid'. Payment status visible on order; audit log of who marked paid. Customer "I have paid" marking for transfers is advisory only — barista verification is authoritative. |
 | **Shop doesn't update status on time** | High | Simple dashboard UI (drag-and-drop between status columns). Auto-reminder if an order stays in one status > N minutes. |
 | **Inaccurate ETA** | Medium | Transparency: show "estimate" not "promise". Admin can adjust prep time per item. Post-MVP: historical avg. |
 | **Shared schema → data leak if a query is wrong** | High | Mandatory Prisma client extension. Integration tests to verify tenant isolation. Code review for all raw queries. |
