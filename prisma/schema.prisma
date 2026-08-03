@@ -1,0 +1,132 @@
+// Prisma schema for orderin — multitenant coffee takeaway ordering SaaS.
+// See docs/PLAN.md section 7 (Data Model) — shared schema + row-level isolation.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id              String   @id @default(uuid()) @db.Uuid
+  slug            String   @unique
+  name            String
+  address         String?
+  phone           String?
+  logoUrl         String?
+  isOpen          Boolean  @default(true)
+  openTime        String   @default("07:00") // HH:mm UTC
+  closeTime       String   @default("21:00") // HH:mm UTC
+  timezone        String   @default("Asia/Makassar")
+  maxQueueSize    Int      @default(20)
+  prepTimeBuffer  Int      @default(0) // additional buffer minutes
+  qrisImageUrl    String? // QRIS image (uploaded by tenant)
+  qrisCode        String? // QRIS code string (for display/copy)
+  bankAccountNumber String? // Bank account number for manual transfer
+  bankName        String? // Bank name (e.g. BCA, BRI, Mandiri)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  menuItems MenuItem[]
+  orders    Order[]
+  admins    TenantAdmin[]
+}
+
+model TenantAdmin {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  username     String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@unique([tenantId, username])
+}
+
+model MenuItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  name            String
+  description     String?
+  price           Decimal  @db.Decimal(10, 2)
+  imageUrl        String?
+  prepTimeSeconds Int      @default(120) // estimated prep time per item
+  isAvailable     Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@index([tenantId])
+}
+
+model Order {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @db.Uuid
+  tenant             Tenant        @relation(fields: [tenantId], references: [id])
+  customerName       String
+  customerPhone      String
+  status             OrderStatus   @default(PENDING)
+  etaSeconds         Int? // estimated ready time in seconds (from now)
+  etaCalculatedAt    DateTime? // when ETA was last calculated
+  paymentStatus      PaymentStatus @default(UNPAID) // payment tracking
+  paidAt             DateTime? // when barista marked paid
+  paymentMethod      PaymentMethod? // 'qris' | 'bank_transfer' | 'cash'
+  customerTransferNote String? // customer marks "I have paid" + optional note (bank transfer)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  items      OrderItem[]
+  statusLogs OrderStatusLog[]
+
+  @@index([tenantId, status, createdAt])
+  @@index([customerPhone])
+}
+
+model OrderItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @db.Uuid
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItemId String   @db.Uuid
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity   Int      @default(1)
+  unitPrice  Decimal  @db.Decimal(10, 2)
+
+  @@unique([orderId, menuItemId])
+}
+
+model OrderStatusLog {
+  id        String      @id @default(uuid()) @db.Uuid
+  orderId   String      @db.Uuid
+  order     Order       @relation(fields: [orderId], references: [id])
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  BREWING
+  READY_FOR_PICKUP
+  PICKED_UP
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
+enum PaymentMethod {
+  qris
+  bank_transfer
+  cash
+}
