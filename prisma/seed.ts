@@ -6,6 +6,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { hashPassword } from "../src/lib/password";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -42,7 +43,19 @@ async function main() {
     await prisma.menuItem.create({ data: { ...item, tenantId: tenant.id } });
   }
 
+  // Demo admin for the dashboard (MVP: username + password, PLAN §3.3/§9.2).
+  await prisma.tenantAdmin.upsert({
+    where: { tenantId_username: { tenantId: tenant.id, username: "admin" } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      username: "admin",
+      passwordHash: hashPassword("admin123"),
+    },
+  });
+
   console.log(`Seeded tenant "${tenant.slug}" with ${menu.length} menu items.`);
+  console.log(`Seeded admin  "admin" / password "admin123" for tenant "${tenant.slug}".`);
 }
 
 main()
