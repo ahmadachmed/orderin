@@ -68,5 +68,21 @@ export async function PATCH(
     },
   });
 
+  // Audit trail (issue #7): log the customer's "I have paid" claim (advisory —
+  // barista verification is authoritative and logged separately via the admin
+  // dashboard when marking PAID).
+  if (note) {
+    await prisma.orderStatusLog.create({
+      data: {
+        orderId: order.id,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        actorType: "CUSTOMER",
+        actorName: order.customerName,
+        note: `Customer marked "I have paid"${note ? ` — ${note}` : ""}`,
+      },
+    });
+  }
+
   return NextResponse.json(updated);
 }

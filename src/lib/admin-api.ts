@@ -6,6 +6,7 @@
 //   POST   /api/admin/menu                 create item
 //   PATCH  /api/admin/menu/[itemId]        update item
 //   DELETE /api/admin/menu/[itemId]        delete item
+//   GET    /api/admin/settings             read tenant settings (issue #7)
 //   PATCH  /api/admin/settings             update tenant settings
 //
 // Fetch wrappers are normalized so the UI tolerates both
@@ -104,6 +105,10 @@ export async function updateMenuItem(
 
 export async function deleteMenuItem(itemId: string): Promise<void> {
   await req(`/api/admin/menu/${itemId}`, { method: "DELETE" });
+}
+
+export async function fetchSettings(): Promise<TenantSettings> {
+  return req<TenantSettings>("/api/admin/settings");
 }
 
 export async function updateSettings(

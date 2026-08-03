@@ -169,6 +169,12 @@ export default function AdminDashboardPage() {
               Menu
             </a>
             <a
+              href={`/admin/${tenantSlug}/settings`}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Payment
+            </a>
+            <a
               href={`/${tenantSlug}`}
               target="_blank"
               rel="noreferrer"

@@ -61,17 +61,24 @@ export async function PATCH(
     const order = await db.order.findFirst({ where: { id: params.orderId } });
     if (!order) throw new HttpError(404, "Order not found");
 
+    // Barista identity for the audit log (issue #7: who marked paid).
+    const admin = await db.tenantAdmin.findFirst({ where: { id: session.adminId } });
+    const actorName = admin?.username ?? "barista";
+
     const data: Record<string, unknown> = {};
     let nextStatus: OrderStatus | undefined;
+    let paymentChanged: "PAID" | "UNPAID" | undefined;
 
     if (rawPayment === "PAID") {
       data.paymentStatus = PaymentStatus.PAID;
       data.paidAt = new Date();
       if (rawMethod !== undefined) data.paymentMethod = rawMethod as PaymentMethod;
+      paymentChanged = "PAID";
     } else if (rawPayment === "UNPAID") {
       data.paymentStatus = PaymentStatus.UNPAID;
       data.paidAt = null;
       data.paymentMethod = null;
+      paymentChanged = "UNPAID";
     }
 
     if (rawStatus !== undefined) {
@@ -101,7 +108,30 @@ export async function PATCH(
 
     if (nextStatus) {
       await prisma.orderStatusLog.create({
-        data: { orderId: order.id, status: nextStatus, note: note ?? null },
+        data: {
+          orderId: order.id,
+          status: nextStatus,
+          actorType: "BARISTA",
+          actorName,
+          note: note ?? null,
+        },
+      });
+    }
+
+    // Audit log for payment events (issue #7): who marked the order paid.
+    if (paymentChanged) {
+      await prisma.orderStatusLog.create({
+        data: {
+          orderId: order.id,
+          status: nextStatus ?? order.status,
+          paymentStatus: paymentChanged,
+          actorType: "BARISTA",
+          actorName,
+          note:
+            paymentChanged === "PAID"
+              ? note ?? `Marked PAID via ${rawMethod ?? "dashboard"}`
+              : note ?? "Marked UNPAID",
+        },
       });
     }
 
@@ -136,6 +166,9 @@ export async function PATCH(
       statusLogs: updated.statusLogs.map((l) => ({
         id: l.id,
         status: l.status,
+        paymentStatus: l.paymentStatus,
+        actorType: l.actorType,
+        actorName: l.actorName,
         note: l.note,
         createdAt: l.createdAt,
       })),

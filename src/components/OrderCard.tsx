@@ -122,6 +122,19 @@ export default function OrderCard({
         </p>
       )}
 
+      {/* Customer transfer info (issue #7: surfaced on the admin card) */}
+      {order.customerTransferNote && (
+        <p className="mt-2 rounded bg-sky-50 px-2 py-1 text-xs text-sky-800">
+          💬 {order.customerTransferNote}
+        </p>
+      )}
+      {order.paidAt && (
+        <p className="mt-1 text-xs text-emerald-700">
+          ✓ Paid {new Date(order.paidAt).toLocaleString("id-ID")}
+          {order.paymentMethod ? ` via ${order.paymentMethod.replaceAll("_", " ")}` : ""}
+        </p>
+      )}
+
       {/* Actions */}
       {!isTerminal && (
         <div className="mt-2 flex flex-wrap gap-1.5">
