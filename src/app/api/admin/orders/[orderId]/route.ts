@@ -7,11 +7,15 @@
  *   ready_for_pickup → picked_up
  * Payment tracked independently (UNPAID → PAID, §3.1.1); marking PAID stores
  * paidAt + paymentMethod. Status changes append OrderStatusLog entries.
+ * ETA (issue #6): an order that LEAVES the queue gets etaSeconds 0
+ * (ready_for_pickup) or null (cancelled/picked_up), and the remaining queue
+ * ETAs are recalculated (PLAN §4.1 — recalc when an order finishes).
  */
 import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { recalculateQueueEtas, QUEUE_STATUSES } from "@/lib/queue";
 import { OrderStatus, PaymentStatus, PaymentMethod } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
@@ -94,6 +98,13 @@ export async function PATCH(
         throw new HttpError(409, "Payment must be PAID before order can brew");
       }
       data.status = nextStatus;
+      // ETA semantics for orders leaving the queue (issue #6): ready → 0,
+      // cancelled/picked_up → null.
+      if (nextStatus === OrderStatus.READY_FOR_PICKUP) {
+        data.etaSeconds = 0;
+      } else if (nextStatus === OrderStatus.CANCELLED || nextStatus === OrderStatus.PICKED_UP) {
+        data.etaSeconds = null;
+      }
     }
 
     if (Object.keys(data).length === 0) {
@@ -133,6 +144,19 @@ export async function PATCH(
               : note ?? "Marked UNPAID",
         },
       });
+    }
+
+    // Order left the queue → recalc remaining ETAs (PLAN §4.1 / issue #6).
+    const leftQueue =
+      nextStatus !== undefined &&
+      (QUEUE_STATUSES as readonly string[]).includes(order.status) &&
+      !(QUEUE_STATUSES as readonly string[]).includes(nextStatus);
+    if (leftQueue) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: session.tenantId },
+        select: { prepTimeBuffer: true },
+      });
+      await recalculateQueueEtas(db, session.tenantId, tenant?.prepTimeBuffer ?? 0);
     }
 
     const updated = await db.order.findFirst({

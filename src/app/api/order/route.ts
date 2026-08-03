@@ -1,13 +1,14 @@
 /**
  * POST /api/order — create an order (status PENDING, payment UNPAID).
- * PLAN §9.1 / §3.2. Guards: shop open flag, operating hours (PLAN §4.3).
- * Full queue/ETA math (order cap, FIFO ETA) is T5 (issue #6, lib/queue.ts);
- * here we store a basic self-prep ETA so the status endpoint has data.
+ * PLAN §9.1 / §3.2. Guards: shop open flag, operating hours (PLAN §4.3),
+ * order cap (PLAN §4.3 / issue #6). ETA = FIFO queue ahead + own prep
+ * (PLAN §4.2, lib/queue.ts).
  */
 import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { isWithinHours } from "@/lib/time";
+import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
 import { PaymentMethod } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const db = scoped(tenant.id);
+
+    // Order cap (PLAN §4.3 / issue #6): refuse once the FIFO queue is full.
+    // Note: check-then-create is not atomic — two concurrent requests can
+    // both pass the cap. Acceptable at MVP queue sizes (≤20); a serialized
+    // transaction is the post-MVP hardening.
+    const queue = await fetchQueue(db, tenant.id);
+    if (queue.length >= tenant.maxQueueSize) {
+      throw new HttpError(429, "Order queue is full — please try again in a few minutes");
+    }
+
     // Menu items validated INSIDE the tenant context: only this tenant's
     // available items match — a foreign menuItemId fails the length check.
     const ids = Array.from(new Set(items.map((i) => i.menuItemId)));
@@ -71,12 +82,12 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const totalPrepSeconds = orderItems.reduce(
+    const ownPrepSeconds = orderItems.reduce(
       (acc, oi) => acc + (byId.get(oi.menuItemId)?.prepTimeSeconds ?? 0) * oi.quantity,
       0
     );
-    // Basic ETA (own prep + tenant buffer). Full FIFO queue ETA: T5.
-    const etaSeconds = totalPrepSeconds + tenant.prepTimeBuffer * 60;
+    // FIFO queue ETA (PLAN §4.2): everything ahead + own prep + tenant buffer.
+    const etaSeconds = withBuffer(etaForNewOrder(queue, ownPrepSeconds), tenant.prepTimeBuffer);
 
     const order = await db.order.create({
       data: {

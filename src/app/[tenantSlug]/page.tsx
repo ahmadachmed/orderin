@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
@@ -19,8 +20,9 @@ function isWithinHours(open: string, close: string, now: Date = new Date()): boo
  * Server-rendered: tenant + available items + queue estimate. OrderForm
  * (client) handles the cart and submits via POST /api/order (T2).
  *
- * Queue estimate: provisional FIFO sum (prep_time × qty of active orders +
- * tenant buffer). T5 (issue #6) will formalize this in lib/queue.ts.
+ * Queue estimate: FIFO queue sum via lib/queue.ts (issue #6 / PLAN §4) —
+ * Σ (prep_time × qty) of active orders + tenant buffer. This is the wait a
+ * NEW order would face (own prep is added server-side at POST time).
  */
 export default async function ShopMenuPage({
   params,
@@ -45,28 +47,10 @@ export default async function ShopMenuPage({
     sortOrder: it.sortOrder,
   }));
 
-  // Provisional queue estimate: active orders (PENDING/CONFIRMED/BREWING).
-  const activeOrders = await prisma.order.findMany({
-    where: {
-      tenantId: tenant.id,
-      status: { in: ["PENDING", "CONFIRMED", "BREWING"] },
-    },
-    include: {
-      items: {
-        include: { menuItem: { select: { prepTimeSeconds: true } } },
-      },
-    },
-  });
-  const activePrepSeconds = activeOrders.reduce(
-    (acc, o) =>
-      acc +
-      o.items.reduce(
-        (s, oi) => s + oi.quantity * oi.menuItem.prepTimeSeconds,
-        0
-      ),
-    0
-  );
-  const queueSeconds = activePrepSeconds + tenant.prepTimeBuffer * 60;
+  // Queue estimate for a new order: everything currently in the FIFO queue
+  // (PENDING/CONFIRMED/BREWING) + tenant buffer (PLAN §4, issue #6).
+  const queue = await fetchQueue(prisma, tenant.id);
+  const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
   const open = tenant.isOpen && isWithinHours(tenant.openTime, tenant.closeTime);
   const closedMessage = tenant.isOpen
