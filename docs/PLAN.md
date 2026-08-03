@@ -1,36 +1,36 @@
-# SaaS Multitenant Order Kopi Takeaway — PRD & Technical Plan
+# Multitenant Coffee Takeaway Ordering SaaS — PRD & Technical Plan
 
-> **Status:** Draft — menunggu review PM  
-> **Target:** Platform SaaS multitenant order kopi takeaway  
-> **Klien:** Kedai kopi di Makassar (takeaway-only, no delivery)  
-> **Repo:** Belum dibuat — struktur folder direncanakan di bawah
+> **Status:** Draft — awaiting PM review  
+> **Target:** Multitenant SaaS platform for coffee takeaway ordering  
+> **Clients:** Coffee shops in Makassar (takeaway-only, no delivery)  
+> **Repo:** Not created yet — folder structure planned below
 
 ---
 
 ## 1. Problem Statement
 
-Kedai kopi takeaway di Makassar menghadapi penumpukan antrian fisik di jam sibuk (pagi 07:00–09:00, siang 12:00–14:00). Customer datang bersamaan, barista kewalahan, customer menunggu lama → pengalaman buruk → kehilangan penjualan.
+Takeaway coffee shops in Makassar face physical queue buildup during peak hours (morning 07:00–09:00, afternoon 12:00–14:00). Customers arrive at the same time, baristas get overwhelmed, customers wait a long time → poor experience → lost sales.
 
-**Akar masalah:** Customer dan kedai tidak punya mekanisme komunikasi pra-kedatangan. Customer tidak tahu kapan kopi siap, kedai tidak bisa mengatur beban kerja.
+**Root cause:** Customers and shops have no pre-arrival communication mechanism. Customers don't know when their coffee is ready, and shops cannot manage their workload.
 
-**Solusi:** Platform web order-ahead — customer pesan dari HP, sistem estimasi waktu siap, customer datang hanya saat kopi sudah ready. Tanpa delivery (menghindari kompleksitas logistik + biaya). Fokus: mengurangi antrian fisik, meningkatkan throughput kedai.
+**Solution:** Order-ahead web platform — customers order from their phone, the system estimates the ready time, and customers arrive only when their coffee is already ready. No delivery (avoids logistics complexity + cost). Focus: reduce physical queues, increase shop throughput.
 
 ---
 
 ## 2. Multitenancy Model
 
-### 2.1 Analisis Tradeoff
+### 2.1 Tradeoff Analysis
 
-| Model | Pro | Kontra | Verdict |
+| Model | Pro | Con | Verdict |
 |-------|-----|--------|---------|
-| **Shared schema + tenant_id** | 1 DB, murah, onboarding instan, query simpel | Isolasi data via aplikasi (risk leak kalau ada bug query), noisy neighbor di DB level | ✅ **Pilih ini** |
-| **Schema-per-tenant** | Isolasi kuat, backup/restore per tenant mudah | N tenant = N schema, migrasi DB nightmare, pooling connection rumit, mahal di Aiven | ❌ Overkill untuk skala kedai kopi |
-| **Hybrid (shared + schema kustom)** | Fleksibel | Kompleksitas ganda, tidak ada use case jelas di MVP | ❌ YAGNI |
+| **Shared schema + tenant_id** | 1 DB, cheap, instant onboarding, simple queries | Data isolation via application layer (leak risk if there's a query bug), noisy neighbor at the DB level | ✅ **Choose this** |
+| **Schema-per-tenant** | Strong isolation, easy per-tenant backup/restore | N tenants = N schemas, DB migration nightmare, complicated connection pooling, expensive on Aiven | ❌ Overkill for coffee shop scale |
+| **Hybrid (shared + custom schema)** | Flexible | Double complexity, no clear use case in the MVP | ❌ YAGNI |
 
-### 2.2 Keputusan: Shared Schema + Row-Level Isolation
+### 2.2 Decision: Shared Schema + Row-Level Isolation
 
-- Setiap tabel punya kolom `tenant_id` (UUID, FK ke `tenants`)
-- **Semua query di-filter `WHERE tenant_id = $currentTenantId`** — tidak bisa pakai RLS native PostgreSQL karena Prisma tidak support `SET LOCAL` / `app.current_tenant_id` di connection level tanpa raw query. Alternatif: Prisma middleware / client extension untuk inject `tenant_id` otomatis.
+- Every table has a `tenant_id` column (UUID, FK to `tenants`)
+- **All queries are filtered `WHERE tenant_id = $currentTenantId`** — native PostgreSQL RLS cannot be used because Prisma does not support `SET LOCAL` / `app.current_tenant_id` at the connection level without raw queries. Alternative: Prisma middleware / client extension to inject `tenant_id` automatically.
 - **Middleware pattern:**
   ```ts
   // lib/prisma.ts
@@ -39,7 +39,7 @@ Kedai kopi takeaway di Makassar menghadapi penumpukan antrian fisik di jam sibuk
       $allModels: {
         $allOperations({ model, operation, args, query }) {
           if (args.where && model !== 'Tenant') {
-            args.where.tenantId = currentTenantId(); // dari subdomain/slug
+            args.where.tenantId = currentTenantId(); // from subdomain/slug
           }
           return query(args);
         },
@@ -47,132 +47,132 @@ Kedai kopi takeaway di Makassar menghadapi penumpukan antrian fisik di jam sibuk
     },
   });
   ```
-- Tenant routing via **subdomain** (`kedaiA.kopi.app`) atau **path slug** (`kopi.app/s/kedaiA`). MVP pakai slug — tidak perlu wildcard DNS.
+- Tenant routing via **subdomain** (`kedaiA.kopi.app`) or **path slug** (`kopi.app/s/kedaiA`). MVP uses slug — no wildcard DNS needed.
 
-### 2.3 Onboarding Tenant
+### 2.3 Tenant Onboarding
 
-1. Kedai daftar via landing page → dapat slug + subdomain
-2. Admin kedai isi: nama kedai, alamat, jam operasional, logo (opsional)
-3. Admin kedai input menu via dashboard
-4. Kedai langsung live — customer bisa akses via `kopi.app/s/<slug>`
+1. Shop registers via the landing page → gets a slug + subdomain
+2. Shop admin fills in: shop name, address, operating hours, logo (optional)
+3. Shop admin inputs the menu via the dashboard
+4. Shop goes live immediately — customers can access via `kopi.app/s/<slug>`
 
 ---
 
 ## 3. Core Flow
 
 ```
-[CUSTOMER]                              [SYSTEM]                            [KEDAI/BARISTA]
+[CUSTOMER]                              [SYSTEM]                            [SHOP/BARISTA]
     │                                       │                                      │
-    ├─ Buka kopi.app/s/<kedai>              │                                      │
-    ├─ Lihat menu + estimasi antrian        │                                      │
-    ├─ Pilih item, input nama + no.HP       │                                      │
+    ├─ Open kopi.app/s/<shop>               │                                      │
+    ├─ View menu + queue estimate           │                                      │
+    ├─ Pick items, enter name + phone no.   │                                      │
     ├─ Submit order ──────────────────────► │                                      │
-    │                                       ├─ Buat Order (status: pending)        │
-    │                                       ├─ Kalkulasi ETA dari queue            │
-    │                                       ├─ Kirim notif ke dashboard kedai ───► ├─ Lihat order baru
+    │                                       ├─ Create Order (status: pending)      │
+    │                                       ├─ Calculate ETA from queue            │
+    │                                       ├─ Send notif to shop dashboard ─────► ├─ See new order
     │                                       │                                      ├─ Confirm (→confirmed)
-    │◄─── Tampil halaman status order ──── ├─ Tampilkan ETA + status live         │
-    │                                       │                                      ├─ Mulai brewing (→brewing)
-    │                                       │                                      ├─ Selesai (→ready_for_pickup)
-    │◄─── Notifikasi "kopi siap" ───────── ├─ Notifikasi via WhatsApp (opsional)  │
+    │◄─── Show order status page ───────── ├─ Display ETA + live status           │
+    │                                       │                                      ├─ Start brewing (→brewing)
+    │                                       │                                      ├─ Finish (→ready_for_pickup)
+    │◄─── "coffee ready" notification ──── ├─ Notify via WhatsApp (optional)       │
     │                                       │                                      │
-    ├─ Datang ke kedai, ambil kopi          │                                      ├─ Serahkan (→picked_up)
+    ├─ Arrive at shop, pick up coffee       │                                      ├─ Hand over (→picked_up)
 ```
 
-### 3.1 Status Order (State Machine)
+### 3.1 Order Status (State Machine)
 
 ```
 pending ──► confirmed ──► brewing ──► ready_for_pickup ──► picked_up
    │                                                              │
-   └────────────────── cancelled (hanya di pending) ◄─────────────┘
+   └────────────────── cancelled (only from pending) ◄─────────────┘
 ```
 
-- **pending:** Customer submit, belum di-confirm barista
-- **confirmed:** Barista accept order, antrian terhitung
-- **brewing:** Barista mulai proses
-- **ready_for_pickup:** Kopi siap, customer dinotifikasi
-- **picked_up:** Customer ambil, order selesai
-- **cancelled:** Hanya bisa dari `pending` (belum ada kerja barista)
+- **pending:** Customer submitted, not yet confirmed by barista
+- **confirmed:** Barista accepts the order, counted in the queue
+- **brewing:** Barista starts the process
+- **ready_for_pickup:** Coffee is ready, customer is notified
+- **picked_up:** Customer picks up, order complete
+- **cancelled:** Only possible from `pending` (no barista work yet)
 
 ### 3.2 Customer View (Public)
 
-- Halaman menu per kedai (`/[tenantSlug]`)
-- Tampilan: nama kedai, menu items (nama, harga, estimasi waktu buat), status antrian saat ini ("~15 menit")
-- Form order: pilih item + qty, input nama + no.HP
-- Halaman status: order ID, status live, estimasi siap
-- **Tanpa login/register** — identifikasi via no.HP + nama (MVP)
+- Per-shop menu page (`/[tenantSlug]`)
+- Display: shop name, menu items (name, price, estimated prep time), current queue status ("~15 minutes")
+- Order form: pick items + qty, enter name + phone no.
+- Status page: order ID, live status, estimated ready time
+- **No login/register** — identification via phone no. + name (MVP)
 
-### 3.3 Kedai Dashboard (Admin)
+### 3.3 Shop Dashboard (Admin)
 
-- Login via magic link / OTP ke no.HP (MVP: username + password sederhana)
-- Dashboard: list order aktif (pending → ready), drag-and-drop untuk update status
-- Manajemen menu: CRUD MenuItem
-- Jam operasional: set buka/tutup (otomatis tolak order di luar jam)
-- Toggle: terima order / pause (kalau terlalu rame)
+- Login via magic link / OTP to phone no. (MVP: simple username + password)
+- Dashboard: list of active orders (pending → ready), drag-and-drop to update status
+- Menu management: MenuItem CRUD
+- Operating hours: set open/close (orders outside hours automatically rejected)
+- Toggle: accept orders / pause (if too busy)
 
 ---
 
-## 4. Queue Management & Estimasi Waktu
+## 4. Queue Management & Time Estimation
 
-### 4.1 Model Sederhana (MVP)
+### 4.1 Simple Model (MVP)
 
 ```
-ETA = Σ (waktu_persiapan_per_item × qty) untuk semua order di antrian sebelum order ini
-    + (waktu_persiapan_per_item × qty untuk order ini sendiri)
+ETA = Σ (prep_time_per_item × qty) for all orders in the queue before this order
+    + (prep_time_per_item × qty for this order itself)
 ```
 
-- Setiap `MenuItem` punya `prep_time_seconds` (default 120s untuk kopi standar, bisa di-set per item oleh admin kedai)
-- Antrian FIFO per tenant — order di antrian diproses sesuai urutan `confirmed`
-- ETA dihitung ulang setiap kali order selesai (`ready_for_pickup` / `picked_up`) atau order baru masuk
+- Each `MenuItem` has `prep_time_seconds` (default 120s for standard coffee, can be set per item by the shop admin)
+- FIFO queue per tenant — orders in the queue are processed in `confirmed` order
+- ETA is recalculated every time an order finishes (`ready_for_pickup` / `picked_up`) or a new order comes in
 
-### 4.2 Formula ETA
+### 4.2 ETA Formula
 
 ```
 remaining_time_seconds = SUM(order_items × menu_item.prep_time_seconds)
-                         untuk semua order dengan status IN (pending, confirmed, brewing)
-                         yang dibuat SEBELUM order ini
+                         for all orders with status IN (pending, confirmed, brewing)
+                         created BEFORE this order
                          
 current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time_seconds)
 ```
 
-### 4.3 Anti-Penumpukan
+### 4.3 Anti-Overload
 
-- **Pause orders:** Admin kedai bisa pause penerimaan order baru (toggle di dashboard)
-- **Order cap:** Maksimal N order di status `pending` + `confirmed` + `brewing` (default 20, bisa di-set per tenant)
-- **Jam operasional:** Di luar jam buka → tolak order, tampil "Tutup — buka lagi jam X"
-- **ETA transparan:** Customer lihat estimasi sebelum submit → ekspektasi terkelola
+- **Pause orders:** Shop admin can pause acceptance of new orders (toggle in dashboard)
+- **Order cap:** Maximum N orders in status `pending` + `confirmed` + `brewing` (default 20, configurable per tenant)
+- **Operating hours:** Outside opening hours → reject orders, show "Closed — opens again at X"
+- **Transparent ETA:** Customer sees the estimate before submitting → managed expectations
 
 ### 4.4 Future Enhancement (Post-MVP)
 
-- Weighted prep time (minuman panas vs dingin, single vs double shot)
-- Barista capacity (N barista = throughput × N)
-- Historical average adjustment (ML ringan: actual vs estimated prep time)
+- Weighted prep time (hot vs cold drinks, single vs double shot)
+- Barista capacity (N baristas = throughput × N)
+- Historical average adjustment (light ML: actual vs estimated prep time)
 
 ---
 
 ## 5. Stack Recommendation
 
-| Layer | Teknologi | Alasan |
+| Layer | Technology | Reason |
 |-------|-----------|--------|
-| **Frontend** | Next.js 14+ (App Router) | SSR/SSG untuk halaman menu (SEO kedai), RSC untuk dashboard realtime |
-| **Bahasa** | TypeScript (strict) | Type safety, same stack as project-one |
-| **ORM** | Prisma | Type-safe, migrasi deklaratif, client extension untuk multitenancy |
-| **Database** | PostgreSQL (Aiven) | Managed, murah mulai $19/bln, cocok untuk multitenant shared schema |
+| **Frontend** | Next.js 14+ (App Router) | SSR/SSG for menu pages (shop SEO), RSC for realtime dashboard |
+| **Language** | TypeScript (strict) | Type safety, same stack as project-one |
+| **ORM** | Prisma | Type-safe, declarative migrations, client extension for multitenancy |
+| **Database** | PostgreSQL (Aiven) | Managed, cheap from $19/mo, suitable for multitenant shared schema |
 | **Deploy** | Vercel (Hobby/Pro) | Edge functions, auto-deploy, integrated with Next.js |
-| **Styling** | Tailwind CSS | Utility-first, cepat prototyping |
-| **Realtime** | Vercel Edge Config + SWR polling (MVP) | Simpel, tanpa WebSocket. Post-MVP: Server-Sent Events |
-| **Notifikasi** | WhatsApp Business API (post-MVP) | Channel utama di Indonesia. MVP: tampilan status di layar |
-| **Auth** | next-auth (post-MVP) | MVP: session-based sederhana untuk admin kedai |
-| **Payment** | Tidak ada di MVP | Cash on pickup |
+| **Styling** | Tailwind CSS | Utility-first, fast prototyping |
+| **Realtime** | Vercel Edge Config + SWR polling (MVP) | Simple, no WebSocket. Post-MVP: Server-Sent Events |
+| **Notifications** | WhatsApp Business API (post-MVP) | Main channel in Indonesia. MVP: status display on screen |
+| **Auth** | next-auth (post-MVP) | MVP: simple session-based auth for shop admins |
+| **Payment** | None in MVP | Cash on pickup |
 
-### 5.1 Kenapa Bukan...
+### 5.1 Why Not...
 
-| Alternatif | Kenapa Ditolak |
+| Alternative | Why Rejected |
 |------------|----------------|
-| **Supabase** | Bagus, tapi lebih mahal di skala dan vendor lock-in. Aiven Postgres standar, mudah migrasi |
-| **Django/Rails** | Full-stack JS lebih efisien untuk tim kecil; Next.js handle frontend + API di 1 repo |
-| **Microservices** | Overkill. Monolith Next.js cukup untuk skala puluhan kedai |
-| **Firebase/Firestore** | NoSQL susah untuk relasi order-item-menu, migrasi data kompleks |
+| **Supabase** | Good, but more expensive at scale and vendor lock-in. Standard Aiven Postgres, easy to migrate |
+| **Django/Rails** | Full-stack JS is more efficient for a small team; Next.js handles frontend + API in 1 repo |
+| **Microservices** | Overkill. Next.js monolith is enough for dozens-of-shops scale |
+| **Firebase/Firestore** | NoSQL makes order-item-menu relations hard, complex data migration |
 
 ---
 
@@ -180,36 +180,36 @@ current_order_eta = remaining_time_seconds + (order_items × menu_item.prep_time
 
 ### 6.1 MVP (v1.0)
 
-| Fitur | Detail |
+| Feature | Detail |
 |-------|--------|
-| ✅ Landing page | Daftar kedai, registrasi tenant |
-| ✅ Halaman menu per tenant | View-only, slug-based routing |
-| ✅ Order tanpa login | Input nama + no.HP, submit order |
-| ✅ Status order live | Polling 5 detik, tampil ETA |
-| ✅ Dashboard kedai | List order + update status, CRUD menu, jam operasional |
-| ✅ Queue & ETA | Kalkulasi sederhana FIFO |
-| ✅ Tenant admin login | Username + password (sederhana) |
-| ✅ Pause/resume orders | Toggle di dashboard |
+| ✅ Landing page | List of shops, tenant registration |
+| ✅ Per-tenant menu page | View-only, slug-based routing |
+| ✅ Order without login | Enter name + phone no., submit order |
+| ✅ Live order status | 5-second polling, displays ETA |
+| ✅ Shop dashboard | Order list + status update, menu CRUD, operating hours |
+| ✅ Queue & ETA | Simple FIFO calculation |
+| ✅ Tenant admin login | Username + password (simple) |
+| ✅ Pause/resume orders | Toggle in dashboard |
 
 ### 6.2 Post-MVP (v1.1+)
 
-| Fitur | Prioritas |
+| Feature | Priority |
 |-------|-----------|
-| 🔜 WhatsApp notifikasi | High — channel komunikasi utama di Indonesia |
-| 🔜 Riwayat order customer | Medium — retensi |
-| 🔜 QR code pickup | Medium — verifikasi pengambilan |
+| 🔜 WhatsApp notifications | High — main communication channel in Indonesia |
+| 🔜 Customer order history | Medium — retention |
+| 🔜 QR code pickup | Medium — pickup verification |
 | 🔜 Menu image upload | Medium |
 | 🔜 Multi-barista workflow | Low |
-| 🔜 Payment integration (QRIS, GoPay) | Low — cash on pickup cukup |
+| 🔜 Payment integration (QRIS, GoPay) | Low — cash on pickup is enough |
 | 🔜 Customer login + favorite orders | Low |
 
 ### 6.3 Explicitly Out of Scope
 
-- ❌ Delivery/logistik (Gojek, Grab)
-- ❌ Loyalty program / poin
-- ❌ Multi-cabang management (1 tenant = 1 kedai fisik)
-- ❌ Native mobile app (web mobile-first cukup)
-- ❌ Integrasi POS/QRIS
+- ❌ Delivery/logistics (Gojek, Grab)
+- ❌ Loyalty program / points
+- ❌ Multi-branch management (1 tenant = 1 physical shop)
+- ❌ Native mobile app (mobile-first web is enough)
+- ❌ POS/QRIS integration
 
 ---
 
@@ -226,7 +226,7 @@ MenuItem ──1:N──► OrderItem
 Order  ──1:N──► OrderStatusLog
 ```
 
-### 7.2 Schema Prisma
+### 7.2 Prisma Schema
 
 ```prisma
 model Tenant {
@@ -241,7 +241,7 @@ model Tenant {
   closeTime     String    @default("21:00")  // HH:mm UTC
   timezone      String    @default("Asia/Makassar")
   maxQueueSize  Int       @default(20)
-  prepTimeBuffer Int      @default(0)        // buffer menit tambahan
+  prepTimeBuffer Int      @default(0)        // additional buffer minutes
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -269,7 +269,7 @@ model MenuItem {
   description   String?
   price         Decimal  @db.Decimal(10, 2)
   imageUrl      String?
-  prepTimeSeconds Int    @default(120)       // estimasi persiapan per item
+  prepTimeSeconds Int    @default(120)       // estimated prep time per item
   isAvailable   Boolean  @default(true)
   sortOrder     Int      @default(0)
   createdAt     DateTime @default(now())
@@ -285,8 +285,8 @@ model Order {
   customerName  String
   customerPhone String
   status        OrderStatus   @default(PENDING)
-  etaSeconds    Int?          // estimasi waktu siap dalam detik (dari sekarang)
-  etaCalculatedAt DateTime?   // kapan ETA terakhir dikalkulasi
+  etaSeconds    Int?          // estimated ready time in seconds (from now)
+  etaCalculatedAt DateTime?   // when ETA was last calculated
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -327,25 +327,25 @@ enum OrderStatus {
 
 ### 7.3 Timezone Strategy
 
-Mengikuti pola **all-UTC** dari project-one:
-- Semua `DateTime` disimpan UTC
-- `openTime`/`closeTime` disimpan sebagai `HH:mm` UTC (tenant bertanggung jawab konversi dari timezone lokal saat set)
-- ETA dikalkulasi dalam detik (durasi), bukan timestamp absolut → tidak terpengaruh timezone
-- Konversi zona waktu hanya di layer presentasi
+Following the **all-UTC** pattern from project-one:
+- All `DateTime` stored in UTC
+- `openTime`/`closeTime` stored as `HH:mm` UTC (tenant is responsible for converting from local timezone when setting)
+- ETA is calculated in seconds (duration), not absolute timestamp → not affected by timezone
+- Timezone conversion only in the presentation layer
 
 ### 7.4 Index Strategy
 
 ```sql
--- Lookup tenant via slug (setiap request)
+-- Lookup tenant via slug (every request)
 CREATE INDEX idx_tenant_slug ON "Tenant"("slug");
 
 -- List menu per tenant
 CREATE INDEX idx_menu_item_tenant ON "MenuItem"("tenantId");
 
--- List order per tenant, sorted by time
+-- List orders per tenant, sorted by time
 CREATE INDEX idx_order_tenant_status ON "Order"("tenantId", "status", "createdAt");
 
--- Cari order by customer phone
+-- Find order by customer phone
 CREATE INDEX idx_order_phone ON "Order"("customerPhone");
 
 -- Status log per order
@@ -354,7 +354,7 @@ CREATE INDEX idx_status_log_order ON "OrderStatusLog"("orderId");
 
 ---
 
-## 8. Struktur Folder (Rencana)
+## 8. Folder Structure (Planned)
 
 ```
 kopi-order/
@@ -364,18 +364,18 @@ kopi-order/
 ├── prisma/
 │   ├── schema.prisma
 │   ├── migrations/
-│   └── seed.ts                       # Seed tenant demo + menu sample
+│   └── seed.ts                       # Seed demo tenant + sample menu
 ├── public/
 │   └── assets/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx                # Root layout
-│   │   ├── page.tsx                  # Landing page (daftar kedai)
+│   │   ├── page.tsx                  # Landing page (shop list)
 │   │   ├── [tenantSlug]/
-│   │   │   ├── page.tsx              # Menu kedai (public)
+│   │   │   ├── page.tsx              # Shop menu (public)
 │   │   │   ├── order/
 │   │   │   │   └── [orderId]/
-│   │   │   │       └── page.tsx      # Status order (public)
+│   │   │   │       └── page.tsx      # Order status (public)
 │   │   │   └── layout.tsx
 │   │   ├── api/
 │   │   │   ├── order/
@@ -395,9 +395,9 @@ kopi-order/
 │   │   │               └── route.ts  # PATCH update status
 │   │   └── admin/
 │   │       └── [tenantSlug]/
-│   │           ├── page.tsx          # Dashboard admin
+│   │           ├── page.tsx          # Admin dashboard
 │   │           ├── menu/
-│   │           │   └── page.tsx      # Manajemen menu
+│   │           │   └── page.tsx      # Menu management
 │   │           └── layout.tsx
 │   ├── lib/
 │   │   ├── prisma.ts                 # Prisma client + tenant extension
@@ -407,12 +407,12 @@ kopi-order/
 │   │   ├── MenuList.tsx
 │   │   ├── OrderForm.tsx
 │   │   ├── OrderStatusBadge.tsx
-│   │   ├── OrderCard.tsx             # Untuk dashboard admin
-│   │   └── QueueIndicator.tsx        # Estimasi antrian di halaman menu
+│   │   ├── OrderCard.tsx             # For the admin dashboard
+│   │   └── QueueIndicator.tsx        # Queue estimate on the menu page
 │   └── types/
 │       └── index.ts
 ├── docs/
-│   └── PLAN.md                       # File ini
+│   └── PLAN.md                       # This file
 ├── .env.example
 ├── .gitignore
 ├── next.config.js
@@ -427,7 +427,7 @@ kopi-order/
 
 ### 9.1 Public
 
-| Method | Path | Deskripsi |
+| Method | Path | Description |
 |--------|------|-----------|
 | `GET` | `/api/tenant/[slug]/menu` | List menu items (available only) |
 | `POST` | `/api/order` | Create new order |
@@ -435,80 +435,80 @@ kopi-order/
 
 ### 9.2 Admin (Authenticated)
 
-| Method | Path | Deskripsi |
+| Method | Path | Description |
 |--------|------|-----------|
 | `POST` | `/api/admin/auth` | Login (username + password) |
-| `GET` | `/api/admin/orders` | List orders aktif (pending→ready) |
-| `PATCH` | `/api/admin/orders/[orderId]` | Update status order |
+| `GET` | `/api/admin/orders` | List active orders (pending→ready) |
+| `PATCH` | `/api/admin/orders/[orderId]` | Update order status |
 | `GET` | `/api/admin/menu` | List all menu items |
 | `POST` | `/api/admin/menu` | Create menu item |
 | `PATCH` | `/api/admin/menu/[itemId]` | Update menu item |
 | `DELETE` | `/api/admin/menu/[itemId]` | Delete menu item |
-| `PATCH` | `/api/admin/settings` | Update tenant settings (jam, pause, dll) |
+| `PATCH` | `/api/admin/settings` | Update tenant settings (hours, pause, etc.) |
 
 ---
 
-## 10. Risiko & Asumsi
+## 10. Risks & Assumptions
 
-### 10.1 Asumsi
+### 10.1 Assumptions
 
-| Asumsi | Dampak kalau salah |
+| Assumption | Impact if wrong |
 |--------|-------------------|
-| Customer punya smartphone + internet | Fundamental — tanpa ini platform useless. Asumsi aman (penetrasi smartphone Makassar tinggi) |
-| Kedai bersedia monitor dashboard aktif | Perlu UI sederhana + notifikasi suara. Risiko: barista tidak lihat dashboard → order tidak terproses |
-| Semua order pickup (no delivery) | Simplifikasi besar. Kalau nanti perlu delivery → arsitektur berubah signifikan |
-| 1 tenant = 1 kedai fisik | Aman. Multi-cabang bisa jadi separate tenant |
-| Pembayaran cash on pickup | Aman untuk MVP. Risiko: order fiktif (customer tidak datang ambil) |
-| Menu item prep time bisa diperkirakan manual | ETA tidak akurat kalau estimasi salah. Perlu admin dashboard untuk adjust |
-| Shared schema cukup untuk < 1000 tenant | Aman. Di atas 1000 tenant → perlu reevaluasi noisy neighbor |
+| Customers have smartphones + internet | Fundamental — without this the platform is useless. Safe assumption (high smartphone penetration in Makassar) |
+| Shops are willing to actively monitor the dashboard | Need simple UI + sound notifications. Risk: barista doesn't see the dashboard → orders not processed |
+| All orders are pickup (no delivery) | Major simplification. If delivery is needed later → architecture changes significantly |
+| 1 tenant = 1 physical shop | Safe. Multi-branch can be separate tenants |
+| Cash on pickup payment | Safe for MVP. Risk: fake orders (customer doesn't show up to pick up) |
+| Menu item prep time can be estimated manually | ETA inaccurate if estimates are wrong. Need admin dashboard to adjust |
+| Shared schema is enough for < 1000 tenants | Safe. Above 1000 tenants → need to re-evaluate noisy neighbor |
 
-### 10.2 Risiko
+### 10.2 Risks
 
-| Risiko | Severity | Mitigasi |
+| Risk | Severity | Mitigation |
 |--------|----------|----------|
-| **Order fiktif / tidak diambil** | Medium | MVP: tidak ada charge. Post-MVP: payment upfront. Monitor rate order tidak diambil per tenant. |
-| **Kedai tidak update status tepat waktu** | High | UI dashboard simple (drag-and-drop antar kolom status). Auto-reminder kalau order di satu status > N menit. |
-| **ETA tidak akurat** | Medium | Transparansi: tampilkan "estimasi" bukan "janji". Admin bisa adjust prep time per item. Post-MVP: historical avg. |
-| **Shared schema → data leak kalau query salah** | High | Prisma client extension mandatori. Integration test untuk verify isolasi tenant. Code review untuk semua raw query. |
-| **Noisy neighbor (1 tenant rame ganggu tenant lain)** | Low | Aiven resource monitor. Post-MVP: connection pooling per tenant, read replicas. |
-| **No.HP sebagai identitas → duplikasi** | Low | Phone bukan unique key. Customer bisa pesan >1×. Order lookup via order ID + phone. |
-| **Vercel cold start (lambat)** | Low | Halaman menu statis (ISR). Edge functions untuk API ringan. |
-| **Tanpa notifikasi → customer tidak tahu kopi siap** | Medium | Halaman status live (polling). Post-MVP: WhatsApp notifikasi. |
+| **Fake / unpicked-up orders** | Medium | MVP: no charge. Post-MVP: upfront payment. Monitor per-tenant unpicked-up order rate. |
+| **Shop doesn't update status on time** | High | Simple dashboard UI (drag-and-drop between status columns). Auto-reminder if an order stays in one status > N minutes. |
+| **Inaccurate ETA** | Medium | Transparency: show "estimate" not "promise". Admin can adjust prep time per item. Post-MVP: historical avg. |
+| **Shared schema → data leak if a query is wrong** | High | Mandatory Prisma client extension. Integration tests to verify tenant isolation. Code review for all raw queries. |
+| **Noisy neighbor (1 busy tenant affects others)** | Low | Aiven resource monitor. Post-MVP: per-tenant connection pooling, read replicas. |
+| **Phone no. as identity → duplication** | Low | Phone is not a unique key. Customers can order more than once. Order lookup via order ID + phone. |
+| **Vercel cold start (slow)** | Low | Static menu pages (ISR). Edge functions for lightweight APIs. |
+| **No notifications → customer doesn't know coffee is ready** | Medium | Live status page (polling). Post-MVP: WhatsApp notifications. |
 
 ### 10.3 Key Metrics
 
-| Metric | Target MVP | Cara Ukur |
+| Metric | MVP Target | How to Measure |
 |--------|-----------|-----------|
-| Time-to-first-order (dari tenant daftar → order pertama) | < 10 menit | Timestamp diff |
+| Time-to-first-order (from tenant signup → first order) | < 10 minutes | Timestamp diff |
 | Order completion rate | > 95% (picked_up / total) | DB query |
-| ETA accuracy | ± 5 menit dari actual ready time | Bandingkan ETA vs actual |
-| Dashboard latency | < 2 detik (list orders) | Vercel Analytics |
+| ETA accuracy | ± 5 minutes from actual ready time | Compare ETA vs actual |
+| Dashboard latency | < 2 seconds (order list) | Vercel Analytics |
 
 ---
 
-## 11. Timeline Estimasi
+## 11. Estimated Timeline
 
-| Fase | Durasi | Output |
+| Phase | Duration | Output |
 |------|--------|--------|
-| Setup repo + Prisma schema + seed | 1 hari | Repo, DB schema, seed data |
-| Core API (order + menu + tenant) | 2 hari | Semua endpoint public + admin |
-| Frontend public (menu + order + status) | 2 hari | Halaman customer flow |
-| Dashboard admin | 2 hari | Manajemen order + menu |
-| Queue & ETA calculation | 1 hari | Logika antrian + estimasi |
-| Testing + bugfix | 1 hari | Test coverage critical path |
-| **Total** | **~9 hari** | MVP siap pilot 1–2 kedai |
+| Repo setup + Prisma schema + seed | 1 day | Repo, DB schema, seed data |
+| Core API (order + menu + tenant) | 2 days | All public + admin endpoints |
+| Public frontend (menu + order + status) | 2 days | Customer flow pages |
+| Admin dashboard | 2 days | Order + menu management |
+| Queue & ETA calculation | 1 day | Queue + estimation logic |
+| Testing + bugfix | 1 day | Critical path test coverage |
+| **Total** | **~9 days** | MVP ready for 1–2 shop pilot |
 
 ---
 
 ## 12. Next Steps
 
-1. **Review PM** — feedback terhadap scope, flow, prioritas
-2. **Buat repo GitHub** — `kopi-order` atau nama final
-3. **Setup project** — Next.js + Prisma + Aiven DB
-4. **Implementasi MVP** — sesuai timeline di atas
-5. **Pilot** — 1–2 kedai di Makassar, feedback loop
-6. **Iterasi** — WhatsApp notifikasi, payment, dll
+1. **PM review** — feedback on scope, flow, priorities
+2. **Create GitHub repo** — `kopi-order` or the final name
+3. **Project setup** — Next.js + Prisma + Aiven DB
+4. **Implement MVP** — per the timeline above
+5. **Pilot** — 1–2 shops in Makassar, feedback loop
+6. **Iterate** — WhatsApp notifications, payment, etc.
 
 ---
 
-> **Catatan:** Dokumen ini adalah PRD + technical plan draft. Belum final. Semua keputusan arsitektur (multitenancy model, stack, scope) terbuka untuk diskusi dan revisi setelah review PM.
+> **Note:** This document is a draft PRD + technical plan. Not final. All architectural decisions (multitenancy model, stack, scope) are open for discussion and revision after PM review.
