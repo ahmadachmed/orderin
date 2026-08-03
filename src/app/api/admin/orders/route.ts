@@ -39,6 +39,8 @@ export async function GET() {
       status: o.status,
       paymentStatus: o.paymentStatus,
       paymentMethod: o.paymentMethod,
+      paidAt: o.paidAt,
+      customerTransferNote: o.customerTransferNote,
       etaSeconds: o.etaSeconds,
       createdAt: o.createdAt,
       updatedAt: o.updatedAt,
@@ -52,6 +54,9 @@ export async function GET() {
       statusLogs: o.statusLogs.map((l) => ({
         id: l.id,
         status: l.status,
+        paymentStatus: l.paymentStatus,
+        actorType: l.actorType,
+        actorName: l.actorName,
         note: l.note,
         createdAt: l.createdAt,
       })),

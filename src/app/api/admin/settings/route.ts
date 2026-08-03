@@ -1,8 +1,9 @@
 /**
- * PATCH /api/admin/settings — update the admin's own tenant settings.
- * PLAN §9.2 (§3.3: hours, pause toggle, payment config, max queue).
- * Tenant model is unscoped by design (no tenantId filter); the target id
- * comes from the verified session, never from the request body.
+ * GET /api/admin/settings — read the admin's own tenant settings (issue #7).
+ * Returns the full settings object incl. payment config (QRIS + bank) so the
+ * admin settings page can prefill the form.
+ * PATCH /api/admin/settings — update tenant settings (store info, hours, queue,
+ * payment config). PLAN §9.2.
  */
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +11,25 @@ import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+const SETTINGS_SELECT = {
+  id: true,
+  slug: true,
+  name: true,
+  address: true,
+  phone: true,
+  logoUrl: true,
+  isOpen: true,
+  openTime: true,
+  closeTime: true,
+  timezone: true,
+  maxQueueSize: true,
+  prepTimeBuffer: true,
+  qrisImageUrl: true,
+  qrisCode: true,
+  bankAccountNumber: true,
+  bankName: true,
+} as const;
 
 const STRING_FIELDS = [
   "name",
@@ -24,6 +44,19 @@ const STRING_FIELDS = [
   "bankAccountNumber",
   "bankName",
 ] as const;
+
+export async function GET() {
+  const session = getSession();
+  if (!session) return fail("Unauthorized", 401);
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: session.tenantId },
+    select: SETTINGS_SELECT,
+  });
+  if (!tenant) return fail("Tenant not found", 404);
+
+  return ok(tenant);
+}
 
 export async function PATCH(req: NextRequest) {
   const session = getSession();

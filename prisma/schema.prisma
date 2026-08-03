@@ -101,12 +101,15 @@ model OrderItem {
 }
 
 model OrderStatusLog {
-  id        String      @id @default(uuid()) @db.Uuid
-  orderId   String      @db.Uuid
-  order     Order       @relation(fields: [orderId], references: [id])
-  status    OrderStatus
-  note      String?
-  createdAt DateTime    @default(now())
+  id            String         @id @default(uuid()) @db.Uuid
+  orderId       String         @db.Uuid
+  order         Order          @relation(fields: [orderId], references: [id])
+  status        OrderStatus
+  paymentStatus PaymentStatus? // set when the log records a payment event (issue #7)
+  actorType     String?        // 'BARISTA' | 'CUSTOMER' — who performed the action (issue #7)
+  actorName     String?        // barista username or customer name (issue #7)
+  note          String?
+  createdAt     DateTime       @default(now())
 
   @@index([orderId])
 }

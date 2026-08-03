@@ -25,6 +25,9 @@ export interface OrderItem {
 export interface OrderStatusLog {
   id: string;
   status: OrderStatus;
+  paymentStatus?: PaymentStatus | null;
+  actorType?: "BARISTA" | "CUSTOMER" | null;
+  actorName?: string | null;
   note?: string | null;
   createdAt: string;
 }
