@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * T12 (issue #23): rate limiting tests.
  * Unit + middleware-level. No DB needed — pure in-memory store.

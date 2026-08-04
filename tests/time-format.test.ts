@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * SETTINGS-05 — formatTimeInTimezone unit tests (src/lib/time.ts).
  * Pure function, no DB. Converts a UTC "HH:mm" string to the tenant's

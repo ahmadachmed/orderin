@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * LOGIN-05 + LOGIN-01 + REG-10 — admin session probe / logout / redirect.
  *   - GET    /api/admin/auth → 200 {authenticated:true} | 401 (LOGIN-01)

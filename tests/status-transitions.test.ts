@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Order status state machine + payment gate — issue #8 critical path (PLAN §3.1).
  * Exercises the real PATCH /api/admin/orders/[orderId] handler against a live

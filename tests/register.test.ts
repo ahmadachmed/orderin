@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * T8: Tenant onboarding integration tests.
  * Requires running Postgres with DATABASE_URL set.

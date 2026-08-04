@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Order creation critical path — issue #8 (PLAN §9.1).
  * Exercises the real POST /api/order route handler against a live Postgres:
