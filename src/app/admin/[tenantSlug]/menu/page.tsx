@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  adminLogout,
   createMenuItem,
   deleteMenuItem,
   fetchMenu,
@@ -64,6 +65,13 @@ export default function AdminMenuPage() {
   useEffect(() => {
     if (authError && tenantSlug) router.push(`/admin/${tenantSlug}/login`);
   }, [authError, tenantSlug, router]);
+
+  // LOGIN-05: same logout affordance as the dashboard nav.
+  async function handleLogout() {
+    await adminLogout();
+    router.push("/");
+    router.refresh();
+  }
 
   function openCreate() {
     setForm(EMPTY);
@@ -161,6 +169,13 @@ export default function AdminMenuPage() {
               className="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-800"
             >
               + Add item
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
+            >
+              Logout
             </button>
           </nav>
         </div>

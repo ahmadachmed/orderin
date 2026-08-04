@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchOrders, updateOrder } from "@/lib/admin-api";
+import { adminLogout, fetchOrders, updateOrder } from "@/lib/admin-api";
 import type { Order, OrderStatus } from "@/types/admin";
 import { STATUS_FLOW, canAdvanceToBrewing } from "@/types/admin";
 import StatusColumn from "@/components/admin/StatusColumn";
@@ -66,6 +66,15 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (authError && tenantSlug) router.push(`/admin/${tenantSlug}/login`);
   }, [authError, tenantSlug, router]);
+
+  // LOGIN-05: clear the session cookie server-side, then land on the landing
+  // page. Admin pages are protected — the next visit to /admin/<slug> will
+  // 401 and bounce to login.
+  async function handleLogout() {
+    await adminLogout();
+    router.push("/");
+    router.refresh();
+  }
 
   function applyOrder(updated: Order) {
     setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
@@ -182,6 +191,13 @@ export default function AdminDashboardPage() {
             >
               Shop view ↗
             </a>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
+            >
+              Logout
+            </button>
           </nav>
         </div>
         {notice && (

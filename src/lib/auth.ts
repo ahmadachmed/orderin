@@ -10,6 +10,15 @@ const COOKIE_NAME = "orderin_admin_session";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const SECRET = process.env.SESSION_SECRET ?? "orderin-dev-insecure-secret-change-me";
 
+// SEC-05: fail fast in production — a missing or dev-default SESSION_SECRET
+// means every admin session is forgeable. Refuse to boot instead of shipping
+// a silently broken deployment.
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === "orderin-dev-insecure-secret-change-me") {
+    throw new Error("[orderin] SESSION_SECRET is missing or still the dev default — refusing to start in production");
+  }
+}
+
 export interface AdminSession {
   tenantId: string;
   adminId: string;

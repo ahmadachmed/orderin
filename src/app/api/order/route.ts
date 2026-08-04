@@ -68,9 +68,21 @@ export async function POST(req: NextRequest) {
       throw new HttpError(429, "Order queue is full — please try again in a few minutes");
     }
 
+    // ORDER-07: aggregate duplicate menuItemIds — a customer adding the same
+    // item twice should produce ONE OrderItem row with the summed quantity
+    // (e.g. "Kopi Susu x2" instead of two separate "Kopi Susu x1" rows).
+    const aggregated = new Map<string, number>();
+    for (const item of items) {
+      aggregated.set(item.menuItemId, (aggregated.get(item.menuItemId) || 0) + item.quantity);
+    }
+    const uniqueItems: { menuItemId: string; quantity: number }[] = Array.from(
+      aggregated,
+      ([menuItemId, quantity]) => ({ menuItemId, quantity })
+    );
+
     // Menu item validation can also fail (unavailable / foreign item) — it
     // runs inside the try so its HttpError becomes a clean 4xx response.
-    const ids = Array.from(new Set(items.map((i) => i.menuItemId)));
+    const ids = Array.from(new Set(uniqueItems.map((i) => i.menuItemId)));
     const menuItems = await db.menuItem.findMany({
       where: { id: { in: ids }, isAvailable: true },
     });
@@ -79,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     const byId = new Map(menuItems.map((m) => [m.id, m]));
-    const orderItems = items.map((i) => {
+    const orderItems = uniqueItems.map((i) => {
       const menuItem = byId.get(i.menuItemId)!;
       return {
         menuItemId: menuItem.id,

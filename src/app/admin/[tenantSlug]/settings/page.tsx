@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchSettings, updateSettings } from "@/lib/admin-api";
+import { adminLogout, fetchSettings, updateSettings } from "@/lib/admin-api";
 import type { TenantSettings } from "@/types/admin";
 
 interface FormState {
@@ -62,6 +62,13 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (authError && tenantSlug) router.push(`/admin/${tenantSlug}/login`);
   }, [authError, tenantSlug, router]);
+
+  // LOGIN-05: same logout affordance as the dashboard nav.
+  async function handleLogout() {
+    await adminLogout();
+    router.push("/");
+    router.refresh();
+  }
 
   function set<K extends keyof FormState>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -121,6 +128,13 @@ export default function AdminSettingsPage() {
             >
               Menu
             </a>
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </header>

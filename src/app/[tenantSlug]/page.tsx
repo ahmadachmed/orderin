@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
+import { formatTimeInTimezone } from "@/lib/time";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
@@ -53,8 +54,12 @@ export default async function ShopMenuPage({
   const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
   const open = tenant.isOpen && isWithinHours(tenant.openTime, tenant.closeTime);
+  // SETTINGS-05: show operating hours in the tenant's timezone (default
+  // Asia/Jakarta when unset), not raw UTC.
+  const timezone = tenant.timezone || "Asia/Jakarta";
+  const openDisplay = formatTimeInTimezone(tenant.openTime, timezone);
   const closedMessage = tenant.isOpen
-    ? `Kedai tutup — buka kembali pukul ${tenant.openTime} UTC.`
+    ? `Kedai tutup — buka kembali pukul ${openDisplay} (${timezone}).`
     : "Kedai sedang tutup — pesanan belum bisa diterima.";
 
   return (

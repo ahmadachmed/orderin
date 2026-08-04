@@ -6,6 +6,8 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { validatePasswordMatch } from "@/lib/register-validation";
+import { adminDashboardPath } from "@/lib/admin-api";
 
 function suggestSlug(name: string): string {
   return name
@@ -35,6 +37,7 @@ export default function RegisterPage() {
   const [slug, setSlug] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +84,13 @@ export default function RegisterPage() {
       setError("Password minimal 6 karakter");
       return;
     }
+    // REG-08: confirm-password match must be validated client-side before
+    // hitting the API — a mismatch should never reach the server.
+    const matchError = validatePasswordMatch(password, confirmPassword);
+    if (matchError) {
+      setError(matchError);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -93,7 +103,9 @@ export default function RegisterPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Registration failed");
       }
-      router.push(`/admin/${data.tenant.slug}/login`);
+      // REG-10: the register API already set the session cookie — land the
+      // user straight on the dashboard, no re-login detour.
+      router.push(adminDashboardPath(data.tenant.slug));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -175,6 +187,19 @@ export default function RegisterPage() {
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
           />
           <span className="mt-1 text-xs text-slate-400">Minimal 6 karakter</span>
+        </label>
+
+        <label className="mt-3 block text-sm font-medium text-slate-700">
+          Konfirmasi Password
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={6}
+            autoComplete="new-password"
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+          />
         </label>
 
         {error && (
