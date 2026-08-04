@@ -7,6 +7,7 @@ import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { validatePasswordMatch } from "@/lib/register-validation";
+import { adminDashboardPath } from "@/lib/admin-api";
 
 function suggestSlug(name: string): string {
   return name
@@ -102,7 +103,9 @@ export default function RegisterPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Registration failed");
       }
-      router.push(`/admin/${data.tenant.slug}/login`);
+      // REG-10: the register API already set the session cookie — land the
+      // user straight on the dashboard, no re-login detour.
+      router.push(adminDashboardPath(data.tenant.slug));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");

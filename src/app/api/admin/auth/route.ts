@@ -3,11 +3,11 @@
  * Verifies credentials against TenantAdmin (scoped to the tenant from the
  * slug), then issues an HMAC-signed session cookie.
  */
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, readJson } from "@/lib/api";
 import { verifyPassword } from "@/lib/password";
-import { createSession, sessionCookie } from "@/lib/auth";
+import { createSession, sessionCookie, clearSessionCookie, getSession } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const body = await readJson(req);
@@ -32,5 +32,26 @@ export async function POST(req: NextRequest) {
   const token = createSession(tenant.id, admin.id);
   const res = ok({ ok: true, tenant: { slug: tenant.slug, name: tenant.name } });
   res.headers.set("Set-Cookie", sessionCookie(token));
+  return res;
+}
+
+/**
+ * GET /api/admin/auth — lightweight session probe (LOGIN-01).
+ * No DB query: just verifies the HMAC cookie. 200 {authenticated:true} when
+ * the session is valid, 401 otherwise.
+ */
+export async function GET() {
+  const session = getSession();
+  if (!session) return fail("Unauthorized", 401);
+  return ok({ authenticated: true });
+}
+
+/**
+ * DELETE /api/admin/auth — logout (LOGIN-05). Clears the session cookie.
+ * 204 No Content + Set-Cookie with Max-Age=0.
+ */
+export async function DELETE() {
+  const res = new NextResponse(null, { status: 204 });
+  res.headers.set("Set-Cookie", clearSessionCookie());
   return res;
 }

@@ -52,6 +52,25 @@ export async function adminLogout(): Promise<void> {
   await req("/api/admin/auth", { method: "DELETE" }).catch(() => undefined);
 }
 
+/** Canonical admin dashboard route for a tenant (REG-10 redirect target). */
+export function adminDashboardPath(tenantSlug: string): string {
+  return `/admin/${tenantSlug}`;
+}
+
+/**
+ * Lightweight session probe for the login page (LOGIN-01).
+ * 200 = session valid → the caller should skip the form and go to the
+ * dashboard. Any other response (401/network error) = show login.
+ */
+export async function probeAdminSession(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/auth", { credentials: "include" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchOrders(): Promise<Order[]> {
   const data = await req<Order[] | { orders: Order[] }>("/api/admin/orders");
   return Array.isArray(data) ? data : (data.orders ?? []);
