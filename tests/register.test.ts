@@ -7,6 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma, scoped } from "../src/lib/prisma";
 import { prisma as db } from "../src/lib/db";
 import { hashPassword, verifyPassword } from "../src/lib/password";
+import { validatePasswordMatch } from "../src/lib/register-validation";
 
 const stamp = Date.now();
 const SLUG = `test-reg-${stamp}`;
@@ -181,6 +182,23 @@ describe("tenant isolation after registration", () => {
     });
     expect(admin).not.toBeNull();
     expect(verifyPassword("secret123", admin!.passwordHash)).toBe(true);
+  });
+});
+
+describe("REG-08 — confirm password client-side validation", () => {
+  it("returns 'Password tidak cocok' when password and confirm differ", () => {
+    expect(validatePasswordMatch("abc123", "abc124")).toBe("Password tidak cocok");
+    expect(validatePasswordMatch("abc123", "")).toBe("Password tidak cocok");
+  });
+
+  it("returns null when password and confirm match", () => {
+    expect(validatePasswordMatch("abc123", "abc123")).toBeNull();
+    expect(validatePasswordMatch("kopiEnak123", "kopiEnak123")).toBeNull();
+  });
+
+  it("requires the confirm field to be filled (empty confirm never matches)", () => {
+    // A non-empty password with an empty confirm must not silently pass.
+    expect(validatePasswordMatch("secret123", "")).toBe("Password tidak cocok");
   });
 });
 

@@ -94,6 +94,16 @@ export async function PATCH(req: NextRequest) {
     data.prepTimeBuffer = n;
   }
 
+  // SETTINGS-03: openTime/closeTime must be HH:mm (e.g. 07:00, 21:30).
+  // Without this, invalid values silently break isWithinHours() in lib/time.ts.
+  const HH_MM = /^\d{2}:\d{2}$/;
+  if (body.openTime !== undefined && body.openTime !== null && !HH_MM.test(body.openTime as string)) {
+    return fail("openTime must be HH:mm format", 400);
+  }
+  if (body.closeTime !== undefined && body.closeTime !== null && !HH_MM.test(body.closeTime as string)) {
+    return fail("closeTime must be HH:mm format", 400);
+  }
+
   if (Object.keys(data).length === 0) return fail("Nothing to update", 400);
 
   try {
