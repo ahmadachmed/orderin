@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Tenant isolation integration tests — issue #3 acceptance criterion.
  *
@@ -146,5 +147,29 @@ describe("orders are tenant-scoped", () => {
     const found = await prisma.order.findUnique({ where: { id: order.id } });
     expect(found?.id).toBe(order.id);
     await prisma.order.deleteMany({ where: { id: order.id, tenantId: tenantB.id } });
+  });
+
+  it("PATCH order from tenant B using tenant A scoped client returns 0 count (ISOLATION-03)", async () => {
+    // Mutation attempt: tenant A's scoped client must never be able to touch
+    // tenant B's order — the scoped update is rewritten to updateMany with
+    // tenantId forced, so a foreign id yields count 0 and no row changes.
+    const orderInB = await prisma.order.create({
+      data: {
+        tenantId: tenantB.id,
+        customerName: "Victim",
+        customerPhone: "0814",
+      },
+    });
+
+    const res = (await scoped(tenantA.id).order.update({
+      where: { id: orderInB.id },
+      data: { status: "CONFIRMED" },
+    })) as unknown as { count: number };
+    expect(res.count).toBe(0);
+
+    const untouched = await prisma.order.findUnique({ where: { id: orderInB.id } });
+    expect(untouched?.status).toBe("PENDING");
+
+    await prisma.order.deleteMany({ where: { id: orderInB.id, tenantId: tenantB.id } });
   });
 });

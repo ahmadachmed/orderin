@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Queue & ETA unit tests — issue #8 critical path (PLAN §4.2, lib/queue.ts).
  * Pure functions only; no DB required.

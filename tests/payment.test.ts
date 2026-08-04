@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Payment flow — issue #8 critical path (PLAN §3.1.1).
  * Exercises the real PATCH /api/order/[orderId]/payment handler (public,

@@ -42,6 +42,7 @@ export default function AdminMenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [editing, setEditing] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -76,6 +77,7 @@ export default function AdminMenuPage() {
   function openCreate() {
     setForm(EMPTY);
     setEditing(false);
+    setFormOpen(true);
   }
 
   function openEdit(item: MenuItem) {
@@ -89,6 +91,7 @@ export default function AdminMenuPage() {
       sortOrder: String(item.sortOrder),
     });
     setEditing(true);
+    setFormOpen(true);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -111,6 +114,7 @@ export default function AdminMenuPage() {
       }
       setForm(EMPTY);
       setEditing(false);
+      setFormOpen(false);
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
@@ -189,7 +193,7 @@ export default function AdminMenuPage() {
         )}
 
         {/* Form (create/edit) */}
-        {(editing || form.name || form.price) && (
+        {formOpen && (
           <form
             onSubmit={onSubmit}
             className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -275,6 +279,7 @@ export default function AdminMenuPage() {
                 onClick={() => {
                   setForm(EMPTY);
                   setEditing(false);
+                  setFormOpen(false);
                 }}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >

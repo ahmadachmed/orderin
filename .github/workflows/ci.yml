@@ -52,3 +52,46 @@ jobs:
       - run: npm ci
       - run: npx prisma migrate deploy
       - run: npm test
+
+  # TEST-03 — Playwright E2E happy path (PLAN §11). Label-gated: only runs on
+  # PRs labeled `e2e` so a browser test never blocks the regular CI.
+  e2e:
+    if: contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: orderin
+          POSTGRES_PASSWORD: orderin
+          POSTGRES_DB: orderin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orderin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://orderin:orderin@localhost:5432/orderin_test?schema=public
+      SESSION_SECRET: ci-e2e-insecure-secret-for-playwright
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npx playwright install --with-deps chromium
+      - name: Start dev server
+        run: |
+          npm run dev > /tmp/dev.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          echo "dev server failed to start"
+          cat /tmp/dev.log
+          exit 1
+      - run: npx playwright test

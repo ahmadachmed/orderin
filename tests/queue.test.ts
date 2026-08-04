@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Queue & ETA integration tests — issue #6 acceptance.
  *

@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * SEC-05: SESSION_SECRET fail-fast guard (src/lib/auth.ts).
  * Unit tests — no DB needed.
