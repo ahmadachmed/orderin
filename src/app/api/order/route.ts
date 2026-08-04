@@ -5,7 +5,7 @@
  * (PLAN §4.2, lib/queue.ts).
  */
 import { NextRequest } from "next/server";
-import { prisma, scoped } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { isWithinHours } from "@/lib/time";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
@@ -57,67 +57,84 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = scoped(tenant.id);
+    // ORDER-10 (plan §8, Option A): serialize queue-cap check + order creation
+    // per tenant. A Postgres advisory transaction lock on a deterministic
+    // tenant-scoped key makes check-then-create atomic — two concurrent
+    // requests can no longer both pass the cap. The lock is acquired inside
+    // the same transaction as the create, so it auto-releases on commit or
+    // rollback, and the key is derived from tenant.id so tenant A's orders
+    // never block tenant B. (signed 32-bit fnv-1a style hash → int4 key;
+    // Postgres auto-casts to bigint for pg_advisory_xact_lock)
+    const lockKey = tenant.id
+      .split("")
+      .reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
 
-    // Order cap (PLAN §4.3 / issue #6): refuse once the FIFO queue is full.
-    // Note: check-then-create is not atomic — two concurrent requests can
-    // both pass the cap. Acceptable at MVP queue sizes (≤20); a serialized
-    // transaction is the post-MVP hardening.
-    const queue = await fetchQueue(db, tenant.id);
-    if (queue.length >= tenant.maxQueueSize) {
-      throw new HttpError(429, "Order queue is full — please try again in a few minutes");
-    }
+    const order = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
 
-    // ORDER-07: aggregate duplicate menuItemIds — a customer adding the same
-    // item twice should produce ONE OrderItem row with the summed quantity
-    // (e.g. "Kopi Susu x2" instead of two separate "Kopi Susu x1" rows).
-    const aggregated = new Map<string, number>();
-    for (const item of items) {
-      aggregated.set(item.menuItemId, (aggregated.get(item.menuItemId) || 0) + item.quantity);
-    }
-    const uniqueItems: { menuItemId: string; quantity: number }[] = Array.from(
-      aggregated,
-      ([menuItemId, quantity]) => ({ menuItemId, quantity })
-    );
+      // NOTE: reads/writes use `tx` directly with explicit tenantId filters —
+      // the scoped() wrapper must not wrap a transaction client (Prisma's
+      // deepCloneArgs breaks on the double proxy: "'ownKeys' on proxy: trap
+      // result did not include '$on'").
+      // Order cap (PLAN §4.3 / issue #6): refuse once the FIFO queue is full.
+      const queue = await fetchQueue(tx, tenant.id);
+      if (queue.length >= tenant.maxQueueSize) {
+        throw new HttpError(429, "Order queue is full — please try again in a few minutes");
+      }
 
-    // Menu item validation can also fail (unavailable / foreign item) — it
-    // runs inside the try so its HttpError becomes a clean 4xx response.
-    const ids = Array.from(new Set(uniqueItems.map((i) => i.menuItemId)));
-    const menuItems = await db.menuItem.findMany({
-      where: { id: { in: ids }, isAvailable: true },
-    });
-    if (menuItems.length !== ids.length) {
-      throw new HttpError(422, "One or more menu items are unavailable");
-    }
+      // ORDER-07: aggregate duplicate menuItemIds — a customer adding the same
+      // item twice should produce ONE OrderItem row with the summed quantity
+      // (e.g. "Kopi Susu x2" instead of two separate "Kopi Susu x1" rows).
+      const aggregated = new Map<string, number>();
+      for (const item of items) {
+        aggregated.set(item.menuItemId, (aggregated.get(item.menuItemId) || 0) + item.quantity);
+      }
+      const uniqueItems: { menuItemId: string; quantity: number }[] = Array.from(
+        aggregated,
+        ([menuItemId, quantity]) => ({ menuItemId, quantity })
+      );
 
-    const byId = new Map(menuItems.map((m) => [m.id, m]));
-    const orderItems = uniqueItems.map((i) => {
-      const menuItem = byId.get(i.menuItemId)!;
-      return {
-        menuItemId: menuItem.id,
-        quantity: i.quantity,
-        unitPrice: menuItem.price, // snapshot price at order time
-      };
-    });
+      // Menu item validation can also fail (unavailable / foreign item) — it
+      // runs inside the tx so its HttpError aborts the transaction and
+      // becomes a clean 4xx response.
+      const ids = Array.from(new Set(uniqueItems.map((i) => i.menuItemId)));
+      const menuItems = await tx.menuItem.findMany({
+        where: { id: { in: ids }, isAvailable: true, tenantId: tenant.id },
+      });
+      if (menuItems.length !== ids.length) {
+        throw new HttpError(422, "One or more menu items are unavailable");
+      }
 
-    const ownPrepSeconds = orderItems.reduce(
-      (acc, oi) => acc + (byId.get(oi.menuItemId)?.prepTimeSeconds ?? 0) * oi.quantity,
-      0
-    );
-    // FIFO queue ETA (PLAN §4.2): everything ahead + own prep + tenant buffer.
-    const etaSeconds = withBuffer(etaForNewOrder(queue, ownPrepSeconds), tenant.prepTimeBuffer);
+      const byId = new Map(menuItems.map((m) => [m.id, m]));
+      const orderItems = uniqueItems.map((i) => {
+        const menuItem = byId.get(i.menuItemId)!;
+        return {
+          menuItemId: menuItem.id,
+          quantity: i.quantity,
+          unitPrice: menuItem.price, // snapshot price at order time
+        };
+      });
 
-    const order = await db.order.create({
-      data: {
-        customerName,
-        customerPhone,
-        etaSeconds,
-        etaCalculatedAt: new Date(),
-        paymentMethod: paymentMethod as PaymentMethod | undefined,
-        items: { create: orderItems },
-        statusLogs: { create: { status: "PENDING", note: "Order created" } },
-      } as unknown as Parameters<typeof prisma.order.create>[0]["data"],
-      select: { id: true, status: true, etaSeconds: true },
+      const ownPrepSeconds = orderItems.reduce(
+        (acc, oi) => acc + (byId.get(oi.menuItemId)?.prepTimeSeconds ?? 0) * oi.quantity,
+        0
+      );
+      // FIFO queue ETA (PLAN §4.2): everything ahead + own prep + tenant buffer.
+      const etaSeconds = withBuffer(etaForNewOrder(queue, ownPrepSeconds), tenant.prepTimeBuffer);
+
+      return tx.order.create({
+        data: {
+          tenantId: tenant.id,
+          customerName,
+          customerPhone,
+          etaSeconds,
+          etaCalculatedAt: new Date(),
+          paymentMethod: paymentMethod as PaymentMethod | undefined,
+          items: { create: orderItems },
+          statusLogs: { create: { status: "PENDING", note: "Order created" } },
+        } as unknown as Parameters<typeof prisma.order.create>[0]["data"],
+        select: { id: true, status: true, etaSeconds: true },
+      });
     });
 
     return ok({ orderId: order.id, status: order.status, etaSeconds: order.etaSeconds }, 201);

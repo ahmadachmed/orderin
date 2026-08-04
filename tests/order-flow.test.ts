@@ -363,3 +363,86 @@ describe("POST /api/order — ORDER-07 duplicate menuItemId aggregation", () => 
     expect(body.etaSeconds).toBe(900);
   });
 });
+
+describe("POST /api/order — ORDER-10 concurrent queue-cap race", () => {
+  const QUEUE = ["PENDING", "CONFIRMED", "BREWING"] as const;
+
+  async function activeCount(tenantId: string): Promise<number> {
+    return prisma.order.count({
+      where: { tenantId, status: { in: [...QUEUE] } },
+    });
+  }
+
+  it("two parallel POSTs at queue = max-1 → exactly one 201, one 429", async () => {
+    const fx = await setupTenant({ maxQueueSize: 1, prepTimeBuffer: 0 });
+    fixtures.push(fx);
+    const body = {
+      slug: fx.slug,
+      customerName: "Rini",
+      customerPhone: "0866",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    };
+
+    const results = await Promise.allSettled([postOrder(fx.slug, body), postOrder(fx.slug, body)]);
+    const statuses = results
+      .map((r) => (r.status === "fulfilled" ? r.value.status : -1))
+      .sort((a, b) => a - b);
+
+    // The advisory lock serializes check-then-create: one request creates,
+    // the other re-counts a full queue and gets 429. No overshoot.
+    expect(statuses).toEqual([201, 429]);
+    expect(await activeCount(fx.tenantId)).toBe(1);
+  });
+
+  it("locks are tenant-scoped — two tenants fill their queues concurrently", async () => {
+    const fa = await setupTenant({ maxQueueSize: 1, prepTimeBuffer: 0 });
+    const fb = await setupTenant({ maxQueueSize: 1, prepTimeBuffer: 0 });
+    fixtures.push(fa, fb);
+    const mk = (slug: string, itemId: string, name: string, phone: string) => ({
+      slug,
+      customerName: name,
+      customerPhone: phone,
+      items: [{ menuItemId: itemId, quantity: 1 }],
+    });
+
+    const results = await Promise.allSettled([
+      postOrder(fa.slug, mk(fa.slug, fa.itemAvailable, "A1", "0901")),
+      postOrder(fa.slug, mk(fa.slug, fa.itemAvailable, "A2", "0902")),
+      postOrder(fb.slug, mk(fb.slug, fb.itemAvailable, "B1", "0903")),
+      postOrder(fb.slug, mk(fb.slug, fb.itemAvailable, "B2", "0904")),
+    ]);
+    const statuses = results
+      .map((r) => (r.status === "fulfilled" ? r.value.status : -1))
+      .sort((a, b) => a - b);
+
+    // Both tenants fill to cap at the same time — a global lock would be
+    // a bottleneck; the tenant-scoped key must not block across tenants.
+    expect(statuses).toEqual([201, 201, 429, 429]);
+    expect(await activeCount(fa.tenantId)).toBe(1);
+    expect(await activeCount(fb.tenantId)).toBe(1);
+  });
+
+  it("queue never exceeds maxQueueSize under repeated concurrent pressure", async () => {
+    // 5 rounds × (max=2, 4 parallel POSTs). Without serialization the
+    // check-then-create race would admit 3-4 orders; the lock caps at 2.
+    for (let i = 0; i < 5; i++) {
+      const fx = await setupTenant({ maxQueueSize: 2, prepTimeBuffer: 0 });
+      fixtures.push(fx);
+      const mk = (n: number) => ({
+        slug: fx.slug,
+        customerName: `P${i}-${n}`,
+        customerPhone: `092${i}${n}`,
+        items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+      });
+
+      const results = await Promise.allSettled(
+        Array.from({ length: 4 }, (_, k) => postOrder(fx.slug, mk(k)))
+      );
+      const statuses = results.map((r) => (r.status === "fulfilled" ? r.value.status : -1));
+
+      expect(statuses.filter((s) => s === 201)).toHaveLength(2);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(2);
+      expect(await activeCount(fx.tenantId)).toBe(2); // exactly maxQueueSize, never more
+    }
+  });
+});
