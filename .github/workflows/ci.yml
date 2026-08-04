@@ -11,11 +11,14 @@ jobs:
     env:
       # Dummy URL — prisma validate only needs the var to be present, no connection is made.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+      # Prod guard (SETTINGS-05): build refuses to collect page data when
+      # SESSION_SECRET is missing/dev-default — dummy value for CI.
+      SESSION_SECRET: ci-dummy-secret-not-used-in-prod
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npx prisma validate
@@ -47,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npx prisma migrate deploy
