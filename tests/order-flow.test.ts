@@ -1,4 +1,3 @@
-// @vitest-environment node
 /**
  * Order creation critical path — issue #8 (PLAN §9.1).
  * Exercises the real POST /api/order route handler against a live Postgres:
@@ -82,6 +81,12 @@ describe("POST /api/order — happy path", () => {
     expect(order?.items).toHaveLength(1);
     expect(Number(order?.items[0].unitPrice)).toBe(15000); // snapshot price
     expect(order?.statusLogs[0].status).toBe("PENDING");
+    // T15 §2.2: order is auto-assigned to an OPEN sprint (auto-created on
+    // the tenant's first order after the sprint migration).
+    expect(order?.sprintId).toBeTruthy();
+    const sprint = await prisma.sprint.findUnique({ where: { id: order!.sprintId! } });
+    expect(sprint?.tenantId).toBe(fx.tenantId);
+    expect(sprint?.status).toBe("OPEN");
   });
 
   it("second order's ETA includes the first order's prep (FIFO)", async () => {

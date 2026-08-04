@@ -17,6 +17,7 @@ interface FormState {
   qrisCode: string;
   bankName: string;
   bankAccountNumber: string;
+  sprintDurationDays: string;
 }
 
 export default function AdminSettingsPage() {
@@ -29,6 +30,7 @@ export default function AdminSettingsPage() {
     qrisCode: "",
     bankName: "",
     bankAccountNumber: "",
+    sprintDurationDays: "1",
   });
   const [loaded, setLoaded] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,6 +46,7 @@ export default function AdminSettingsPage() {
         qrisCode: s.qrisCode ?? "",
         bankName: s.bankName ?? "",
         bankAccountNumber: s.bankAccountNumber ?? "",
+        sprintDurationDays: String(s.sprintDurationDays ?? 1),
       });
       setAuthError(false);
       setError(null);
@@ -86,6 +89,7 @@ export default function AdminSettingsPage() {
         qrisCode: form.qrisCode.trim() || null,
         bankName: form.bankName.trim() || null,
         bankAccountNumber: form.bankAccountNumber.trim() || null,
+        sprintDurationDays: Math.floor(Number(form.sprintDurationDays)) || 1,
       });
       setSaved(true);
     } catch (err) {
@@ -229,6 +233,30 @@ export default function AdminSettingsPage() {
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
                   />
                 </div>
+              </div>
+            </section>
+
+            {/* Durasi Sprint */}
+            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-slate-900">Durasi Sprint</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Satu sprint = satu periode retensi order. Board hanya menampilkan order sprint aktif.
+              </p>
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Durasi sprint (hari)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={form.sprintDurationDays}
+                  onChange={(e) => set("sprintDurationDays", e.target.value)}
+                  className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Default 1 hari. Berlaku untuk sprint berikutnya.
+                </p>
               </div>
             </section>
 

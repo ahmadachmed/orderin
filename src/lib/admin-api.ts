@@ -12,7 +12,12 @@
 // Fetch wrappers are normalized so the UI tolerates both
 // `{ orders: [...] }` and bare-array responses from T2.
 
-import type { MenuItem, Order, TenantSettings } from "@/types/admin";
+import type {
+  MenuItem,
+  Order,
+  SprintSummary,
+  TenantSettings,
+} from "@/types/admin";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -137,4 +142,47 @@ export async function updateSettings(
     method: "PATCH",
     body: JSON.stringify(patch),
   });
+}
+
+// ── Sprint history (T15, PLAN §2.1/§4.5) ─────────────────────────────────────
+
+export interface SprintDetailOrder extends Order {
+  total: number;
+}
+
+export interface SprintDetail {
+  sprint: SprintSummary & { createdAt: string };
+  orders: SprintDetailOrder[];
+}
+
+/** GET /api/admin/sprints — all sprints for the admin's tenant (newest first). */
+export async function fetchSprints(): Promise<SprintSummary[]> {
+  const data = await req<{ sprints: SprintSummary[] }>("/api/admin/sprints");
+  return data.sprints ?? [];
+}
+
+/** POST /api/admin/sprints — open a fresh sprint (auto-closes any OPEN one). */
+export async function openSprint(): Promise<{
+  sprint: { id: string; status: string };
+  autoClosed: boolean;
+  carriedOver?: number;
+  archived?: number;
+}> {
+  return req("/api/admin/sprints", { method: "POST" });
+}
+
+/** GET /api/admin/sprints/[sprintId] — one sprint + its orders (FIFO). */
+export async function fetchSprintDetail(
+  sprintId: string,
+): Promise<SprintDetail> {
+  return req(`/api/admin/sprints/${sprintId}`);
+}
+
+/** POST /api/admin/sprints/[sprintId]/close — close + carry-over. */
+export async function closeSprint(sprintId: string): Promise<{
+  newSprintId: string;
+  carriedOver: number;
+  archived: number;
+}> {
+  return req(`/api/admin/sprints/${sprintId}/close`, { method: "POST" });
 }

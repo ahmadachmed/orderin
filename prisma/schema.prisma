@@ -23,6 +23,7 @@ model Tenant {
   timezone        String   @default("Asia/Makassar")
   maxQueueSize    Int      @default(20)
   prepTimeBuffer  Int      @default(0) // additional buffer minutes
+  sprintDurationDays Int   @default(1) // sprint retention period in days
   qrisImageUrl    String? // QRIS image (uploaded by tenant)
   qrisCode        String? // QRIS code string (for display/copy)
   bankAccountNumber String? // Bank account number for manual transfer
@@ -33,6 +34,7 @@ model Tenant {
   menuItems MenuItem[]
   orders    Order[]
   admins    TenantAdmin[]
+  sprints   Sprint[]
 }
 
 model TenantAdmin {
@@ -80,12 +82,15 @@ model Order {
   customerTransferNote String? // customer marks "I have paid" + optional note (bank transfer)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+  sprintId           String?       @db.Uuid
 
   items      OrderItem[]
   statusLogs OrderStatusLog[]
+  sprint     Sprint?   @relation(fields: [sprintId], references: [id])
 
   @@index([tenantId, status, createdAt])
   @@index([customerPhone])
+  @@index([sprintId])
 }
 
 model OrderItem {
@@ -114,6 +119,21 @@ model OrderStatusLog {
   @@index([orderId])
 }
 
+model Sprint {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @db.Uuid
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+  startAt   DateTime
+  endAt     DateTime?
+  status    SprintStatus @default(OPEN)
+  closedAt  DateTime?
+  createdAt DateTime     @default(now())
+
+  orders    Order[]
+
+  @@index([tenantId, status])
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -132,4 +152,9 @@ enum PaymentMethod {
   qris
   bank_transfer
   cash
+}
+
+enum SprintStatus {
+  OPEN
+  CLOSED
 }
