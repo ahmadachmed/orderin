@@ -157,6 +157,7 @@ export async function POST(req: NextRequest) {
         } as unknown as Parameters<typeof prisma.order.create>[0]["data"],
         select: { id: true, status: true, etaSeconds: true },
       });
+    });
 
     return ok({ orderId: order.id, status: order.status, etaSeconds: order.etaSeconds }, 201);
   } catch (e) {
