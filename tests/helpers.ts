@@ -21,6 +21,7 @@ export interface TenantOptions {
   closeTime?: string;
   maxQueueSize?: number;
   prepTimeBuffer?: number; // minutes
+  sprintDurationDays?: number; // T15 §5.4 — sprint retention period
 }
 
 export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixture> {
@@ -35,6 +36,7 @@ export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixtu
       closeTime: opts.closeTime ?? "23:59",
       maxQueueSize: opts.maxQueueSize ?? 20,
       prepTimeBuffer: opts.prepTimeBuffer ?? 5,
+      sprintDurationDays: opts.sprintDurationDays ?? 1, // T15 §5.4
     },
   });
   const admin = await prisma.tenantAdmin.create({
@@ -65,6 +67,9 @@ export async function cleanupTenant(tenantId: string): Promise<void> {
   await prisma.order.deleteMany({ where: { tenantId } });
   await prisma.menuItem.deleteMany({ where: { tenantId } });
   await prisma.tenantAdmin.deleteMany({ where: { tenantId } });
+  // T15 §5.4: POST /api/order auto-creates an OPEN sprint — delete sprints
+  // before the tenant (FK ON DELETE RESTRICT).
+  await prisma.sprint.deleteMany({ where: { tenantId } });
   await prisma.tenant.deleteMany({ where: { id: tenantId } });
 }
 

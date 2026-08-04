@@ -25,6 +25,7 @@ const SETTINGS_SELECT = {
   timezone: true,
   maxQueueSize: true,
   prepTimeBuffer: true,
+  sprintDurationDays: true,
   qrisImageUrl: true,
   qrisCode: true,
   bankAccountNumber: true,
@@ -93,6 +94,13 @@ export async function PATCH(req: NextRequest) {
     }
     data.prepTimeBuffer = n;
   }
+  if (body.sprintDurationDays !== undefined) {
+    const n = Math.floor(Number(body.sprintDurationDays));
+    if (!Number.isFinite(n) || n < 1 || n > 90) {
+      return fail("sprintDurationDays must be an integer 1-90", 400);
+    }
+    data.sprintDurationDays = n;
+  }
 
   // SETTINGS-03: openTime/closeTime must be HH:mm (e.g. 07:00, 21:30).
   // Without this, invalid values silently break isWithinHours() in lib/time.ts.
@@ -120,6 +128,7 @@ export async function PATCH(req: NextRequest) {
         timezone: true,
         maxQueueSize: true,
         prepTimeBuffer: true,
+        sprintDurationDays: true,
         qrisImageUrl: true,
         qrisCode: true,
         bankAccountNumber: true,

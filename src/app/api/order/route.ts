@@ -122,6 +122,27 @@ export async function POST(req: NextRequest) {
       // FIFO queue ETA (PLAN §4.2): everything ahead + own prep + tenant buffer.
       const etaSeconds = withBuffer(etaForNewOrder(queue, ownPrepSeconds), tenant.prepTimeBuffer);
 
+      // T15 §2.2: auto-assign the order to the tenant's OPEN sprint. If no
+      // sprint is OPEN yet (first order after the migration), auto-create one
+      // (startAt = now). Runs inside the same tx as the order create, so the
+      // advisory lock also serializes sprint auto-creation. One-open-sprint is
+      // enforced at the app layer; tenantId filter keeps it tenant-scoped
+      // (this tx client is unscoped by design — see NOTE above).
+      let activeSprint = await tx.sprint.findFirst({
+        where: { tenantId: tenant.id, status: "OPEN" },
+        select: { id: true },
+      });
+      if (!activeSprint) {
+        activeSprint = await tx.sprint.create({
+          data: {
+            tenantId: tenant.id,
+            startAt: new Date(),
+            status: "OPEN",
+          } as unknown as Parameters<typeof prisma.sprint.create>[0]["data"],
+          select: { id: true },
+        });
+      }
+
       return tx.order.create({
         data: {
           tenantId: tenant.id,
@@ -130,6 +151,7 @@ export async function POST(req: NextRequest) {
           etaSeconds,
           etaCalculatedAt: new Date(),
           paymentMethod: paymentMethod as PaymentMethod | undefined,
+          sprintId: activeSprint.id,
           items: { create: orderItems },
           statusLogs: { create: { status: "PENDING", note: "Order created" } },
         } as unknown as Parameters<typeof prisma.order.create>[0]["data"],

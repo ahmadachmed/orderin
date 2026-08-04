@@ -72,6 +72,7 @@ export interface TenantSettings {
   closeTime: string;
   timezone: string;
   maxQueueSize: number;
+  sprintDurationDays: number;
   qrisImageUrl?: string | null;
   qrisCode?: string | null;
   bankAccountNumber?: string | null;
@@ -139,3 +140,23 @@ export function formatDuration(totalSeconds: number): string {
   if (m === 0) return `${s}s`;
   return `${m}m${s > 0 ? ` ${s}s` : ""}`;
 }
+
+// ── Sprint (T15, PLAN §4) ────────────────────────────────────────────────────
+
+export type SprintStatus = "OPEN" | "CLOSED";
+
+/** Row shape of GET /api/admin/sprints (PLAN §2.3/§4.5). */
+export interface SprintSummary {
+  id: string;
+  startAt: string;
+  endAt: string | null;
+  status: SprintStatus;
+  closedAt: string | null;
+  orderCount: number;
+  revenue: number;
+}
+
+export const SPRINT_STATUS_LABELS: Record<SprintStatus, string> = {
+  OPEN: "Open",
+  CLOSED: "Closed",
+};
