@@ -67,6 +67,7 @@ export async function GET(_req: NextRequest, { params }: { params: { orderId: st
   return ok({
     orderId: order.id,
     status,
+    pickupCode: order.pickupCode || null, // null for legacy orders with ""
     etaSeconds,
     etaCalculatedAt: order.etaCalculatedAt,
     paymentStatus: order.paymentStatus,

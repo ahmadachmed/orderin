@@ -91,6 +91,14 @@ export async function PATCH(
         throw new HttpError(422, "Invalid status value");
       }
       assertTransition(order.status, nextStatus);
+      // T16 PICKUP-01: PIN verification gate for READY_FOR_PICKUP → PICKED_UP
+      // Legacy orders with pickupCode="" skip the gate (backward-compatible).
+      if (nextStatus === OrderStatus.PICKED_UP && order.pickupCode !== "") {
+        const enteredPin = typeof body.pickupCode === "string" ? body.pickupCode.trim() : "";
+        if (enteredPin !== order.pickupCode) {
+          throw new HttpError(403, "PIN tidak cocok — verifikasi gagal");
+        }
+      }
       // Payment gate (§3.1.1): cannot start brewing until PAID.
       const effectivePayment =
         data.paymentStatus === undefined ? order.paymentStatus : data.paymentStatus;
