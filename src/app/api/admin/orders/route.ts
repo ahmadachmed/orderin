@@ -55,6 +55,7 @@ export async function GET() {
       customerName: o.customerName,
       customerPhone: o.customerPhone,
       status: o.status,
+      pickupCode: o.pickupCode,
       paymentStatus: o.paymentStatus,
       paymentMethod: o.paymentMethod,
       paidAt: o.paidAt,
