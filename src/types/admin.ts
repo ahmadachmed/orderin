@@ -38,6 +38,7 @@ export interface Order {
   customerName: string;
   customerPhone: string;
   status: OrderStatus;
+  pickupCode: string;
   etaSeconds?: number | null;
   paymentStatus: PaymentStatus;
   paidAt?: string | null;

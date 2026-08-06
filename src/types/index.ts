@@ -64,6 +64,7 @@ export interface StatusLogEntry {
 export interface OrderStatusView {
   orderId: string;
   status: OrderStatus;
+  pickupCode?: string | null;
   etaSeconds: number | null;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod | null;

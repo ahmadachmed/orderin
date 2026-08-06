@@ -181,6 +181,7 @@ export async function PATCH(
       customerName: updated.customerName,
       customerPhone: updated.customerPhone,
       status: updated.status,
+      pickupCode: updated.pickupCode,
       paymentStatus: updated.paymentStatus,
       paymentMethod: updated.paymentMethod,
       paidAt: updated.paidAt,

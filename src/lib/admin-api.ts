@@ -83,7 +83,9 @@ export async function fetchOrders(): Promise<Order[]> {
 
 export async function updateOrder(
   orderId: string,
-  patch: Partial<Pick<Order, "status" | "paymentStatus" | "paymentMethod">>,
+  patch: Partial<
+    Pick<Order, "status" | "paymentStatus" | "paymentMethod" | "pickupCode">
+  >,
 ): Promise<Order> {
   return req<Order>(`/api/admin/orders/${orderId}`, {
     method: "PATCH",

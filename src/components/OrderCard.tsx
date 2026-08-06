@@ -76,6 +76,11 @@ export default function OrderCard({
           <p className="font-mono text-[10px] text-slate-400">
             #{order.id.slice(0, 8).toUpperCase()}
           </p>
+          {order.pickupCode && order.status === "READY_FOR_PICKUP" && (
+            <p className="mt-1 font-mono text-sm font-bold text-amber-700">
+              PIN: {order.pickupCode}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <AdminStatusBadge status={order.status} />

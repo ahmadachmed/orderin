@@ -26,6 +26,11 @@ export default function AdminDashboardPage() {
   const [authError, setAuthError] = useState(false);
   const [dropTarget, setDropTarget] = useState<OrderStatus | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // T16-6 PICKUP-01: PIN input modal for READY_FOR_PICKUP → PICKED_UP.
+  const [pickupPrompt, setPickupPrompt] = useState<{ orderId: string } | null>(null);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [submittingPin, setSubmittingPin] = useState(false);
   const draggedOrder = useRef<Order | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -81,6 +86,14 @@ export default function AdminDashboardPage() {
   }
 
   async function handleStatusChange(orderId: string, status: OrderStatus) {
+    // T16-6 PICKUP-01: READY_FOR_PICKUP → PICKED_UP needs the customer's PIN
+    // (server verifies; 403 on mismatch). Capture it in a modal first.
+    if (status === "PICKED_UP") {
+      setPinInput("");
+      setPinError(null);
+      setPickupPrompt({ orderId });
+      return;
+    }
     try {
       const updated = await updateOrder(orderId, { status });
       applyOrder(updated);
@@ -88,6 +101,33 @@ export default function AdminDashboardPage() {
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
       else showNotice(err instanceof Error ? err.message : "Update failed");
+    }
+  }
+
+  async function confirmPickup() {
+    if (!pickupPrompt) return;
+    const order = orders.find((o) => o.id === pickupPrompt.orderId);
+    // Legacy orders (pickupCode "") skip the gate server-side — PIN optional.
+    const requiresPin = Boolean(order?.pickupCode);
+    const pin = pinInput.trim();
+    if (requiresPin && !/^\d{4}$/.test(pin)) {
+      setPinError("Masukkan PIN 4 digit");
+      return;
+    }
+    setSubmittingPin(true);
+    try {
+      const updated = await updateOrder(pickupPrompt.orderId, {
+        status: "PICKED_UP",
+        pickupCode: pin,
+      });
+      applyOrder(updated);
+      setPickupPrompt(null);
+      showNotice("Order marked picked up");
+    } catch (err) {
+      if ((err as Error & { status?: number }).status === 401) setAuthError(true);
+      else setPinError(err instanceof Error ? err.message : "Verifikasi PIN gagal");
+    } finally {
+      setSubmittingPin(false);
     }
   }
 
@@ -242,6 +282,55 @@ export default function AdminDashboardPage() {
           Tip: drag a card to advance it. 🔒 Brewing requires payment PAID.
         </p>
       </main>
+
+      {pickupPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="text-base font-bold text-slate-900">
+              Verifikasi PIN pengambilan
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Masukkan PIN 4 digit pelanggan untuk menandai pesanan sebagai
+              PICKED_UP.
+            </p>
+            <input
+              autoFocus
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4));
+                setPinError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void confirmPickup();
+              }}
+              inputMode="numeric"
+              placeholder="••••"
+              className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-center font-mono text-2xl tracking-[0.5em] text-slate-900 focus:border-slate-500 focus:outline-none"
+            />
+            {pinError && (
+              <p className="mt-2 text-sm text-rose-600">{pinError}</p>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPickupPrompt(null)}
+                disabled={submittingPin}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmPickup()}
+                disabled={submittingPin}
+                className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60"
+              >
+                {submittingPin ? "Memverifikasi…" : "Konfirmasi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

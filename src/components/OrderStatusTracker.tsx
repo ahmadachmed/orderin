@@ -113,6 +113,16 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
           </div>
         </div>
 
+        {order.pickupCode && order.status === "READY_FOR_PICKUP" && (
+          <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-center">
+            <p className="text-xs text-amber-700">Kode pengambilan</p>
+            <p className="text-3xl font-bold tracking-[0.5em] text-amber-900">
+              {order.pickupCode}
+            </p>
+            <p className="mt-1 text-xs text-amber-600">Tunjukkan kode ini ke barista</p>
+          </div>
+        )}
+
         <StatusTimeline logs={order.statusLogs ?? []} />
 
         {order.etaSeconds != null && !TERMINAL_STATUSES.has(order.status) ? (
