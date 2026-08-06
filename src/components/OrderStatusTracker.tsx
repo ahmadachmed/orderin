@@ -9,7 +9,7 @@ interface OrderStatusTrackerProps {
   initial: OrderStatusView;
 }
 
-const TERMINAL_STATUSES = new Set(["READY_FOR_PICKUP", "PICKED_UP", "CANCELLED"]);
+const TERMINAL_STATUSES = new Set(["PICKED_UP", "CANCELLED"]);
 const POLL_INTERVAL_MS = 5000;
 
 /**
