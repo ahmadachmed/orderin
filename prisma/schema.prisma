@@ -35,6 +35,7 @@ model Tenant {
   orders    Order[]
   admins    TenantAdmin[]
   sprints   Sprint[]
+  customers Customer[]
 }
 
 model TenantAdmin {
@@ -73,6 +74,9 @@ model Order {
   tenant             Tenant        @relation(fields: [tenantId], references: [id])
   customerName       String
   customerPhone      String
+  pickupCode         String         @default("")  // T16: 4-digit PIN for pickup verification
+  customerId         String?        @db.Uuid      // T17: optional account binding
+  customer           Customer?      @relation(fields: [customerId], references: [id])
   status             OrderStatus   @default(PENDING)
   etaSeconds         Int? // estimated ready time in seconds (from now)
   etaCalculatedAt    DateTime? // when ETA was last calculated
@@ -90,6 +94,7 @@ model Order {
 
   @@index([tenantId, status, createdAt])
   @@index([customerPhone])
+  @@index([customerId])
   @@index([sprintId])
 }
 
@@ -132,6 +137,20 @@ model Sprint {
   orders    Order[]
 
   @@index([tenantId, status])
+}
+
+model Customer {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  name         String
+  phone        String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  orders       Order[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
 }
 
 enum OrderStatus {

@@ -32,9 +32,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 /** Models with a `tenantId` column — must always be tenant-filtered. */
-const TENANT_SCOPED = new Set(["MenuItem", "Order", "TenantAdmin", "Sprint"]);
+const TENANT_SCOPED = new Set(["MenuItem", "Order", "TenantAdmin", "Sprint", "Customer"]);
 /** Model delegate names on the client for these models. */
-const SCOPED_DELEGATES = new Set(["menuItem", "order", "tenantAdmin", "sprint"]);
+const SCOPED_DELEGATES = new Set(["menuItem", "order", "tenantAdmin", "sprint", "customer"]);
 /** Ops that carry a `where` (can be tenant-filtered in place). */
 const WHERE_OPS = new Set([
   "findMany",
