@@ -33,12 +33,14 @@ interface Entry {
  * | POST /api/admin/auth | 60s | 5  |
  * | POST /api/order      | 10s | 10 |
  * | GET  /api/slug-check | 10s | 20 |
+ * | POST /api/order/lookup | 60s | 5 |
  */
 export const ROUTE_RATE_LIMITS: Record<string, RateLimitConfig> = {
   "POST /api/register": { windowMs: 60_000, max: 3 },
   "POST /api/admin/auth": { windowMs: 60_000, max: 5 },
   "POST /api/order": { windowMs: 10_000, max: 10 },
   "GET /api/slug-check": { windowMs: 10_000, max: 20 },
+  "POST /api/order/lookup": { windowMs: 60_000, max: 5 },
 };
 
 const store = new Map<string, Entry>();
