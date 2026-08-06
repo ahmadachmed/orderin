@@ -34,6 +34,17 @@ export async function GET(_req: NextRequest, { params }: { params: { orderId: st
           bankName: true,
         },
       },
+      statusLogs: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          status: true,
+          actorType: true,
+          actorName: true,
+          note: true,
+          createdAt: true,
+        },
+      },
     },
   });
 
@@ -74,6 +85,14 @@ export async function GET(_req: NextRequest, { params }: { params: { orderId: st
       (acc, oi) => acc + Number(oi.unitPrice) * oi.quantity,
       0
     ),
+    statusLogs: order.statusLogs.map((l) => ({
+      id: l.id,
+      status: l.status,
+      actorType: l.actorType,
+      actorName: l.actorName,
+      note: l.note,
+      createdAt: l.createdAt,
+    })),
     tenant: order.tenant,
   });
 }

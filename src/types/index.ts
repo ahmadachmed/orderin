@@ -52,6 +52,15 @@ export interface TenantPaymentView {
 }
 
 /** Order status page payload (initial server render + poll response shape). */
+export interface StatusLogEntry {
+  id: string;
+  status: OrderStatus;
+  actorType: string | null;
+  actorName: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
 export interface OrderStatusView {
   orderId: string;
   status: OrderStatus;
@@ -68,5 +77,6 @@ export interface OrderStatusView {
     prepTimeSeconds: number;
   }>;
   total: number;
+  statusLogs?: StatusLogEntry[];
   tenant: TenantPaymentView;
 }
