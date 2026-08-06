@@ -73,6 +73,9 @@ export default function OrderCard({
             {order.customerName}
           </p>
           <p className="text-xs text-slate-500">{order.customerPhone}</p>
+          <p className="font-mono text-[10px] text-slate-400">
+            #{order.id.slice(0, 8).toUpperCase()}
+          </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <AdminStatusBadge status={order.status} />
