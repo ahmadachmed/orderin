@@ -143,6 +143,11 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // T16 PICKUP-01: generate a 4-digit pickup PIN (1000-9999) at order
+      // create. Stored on the order; verified by the barista on
+      // READY_FOR_PICKUP → PICKED_UP (see admin/orders/[orderId]/route.ts).
+      const pickupCode = String(Math.floor(1000 + Math.random() * 9000)); // 1000-9999
+
       return tx.order.create({
         data: {
           tenantId: tenant.id,
@@ -152,6 +157,7 @@ export async function POST(req: NextRequest) {
           etaCalculatedAt: new Date(),
           paymentMethod: paymentMethod as PaymentMethod | undefined,
           sprintId: activeSprint.id,
+          pickupCode, // ← ADD THIS
           items: { create: orderItems },
           statusLogs: { create: { status: "PENDING", note: "Order created" } },
         } as unknown as Parameters<typeof prisma.order.create>[0]["data"],
