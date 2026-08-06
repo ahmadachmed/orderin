@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { OrderStatusView, PaymentMethod } from "@/types";
 import { formatRupiah, formatDuration } from "@/lib/format";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
+import StatusTimeline from "@/components/StatusTimeline";
 
 interface OrderStatusTrackerProps {
   initial: OrderStatusView;
@@ -111,6 +112,8 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
             </p>
           </div>
         </div>
+
+        <StatusTimeline logs={order.statusLogs ?? []} />
 
         {order.etaSeconds != null && !TERMINAL_STATUSES.has(order.status) ? (
           <div className="mt-3 rounded-xl bg-neutral-50 px-4 py-3">
