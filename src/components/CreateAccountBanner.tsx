@@ -8,7 +8,11 @@ interface Props {
   orderId: string;
 }
 
-export default function CreateAccountBanner({ tenantSlug, customerName, customerPhone, orderId }: Props) {
+export default function CreateAccountBanner({
+  tenantSlug,
+  customerName,
+  customerPhone,
+}: Props) {
   const [showForm, setShowForm] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
