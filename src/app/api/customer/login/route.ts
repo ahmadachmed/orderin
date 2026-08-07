@@ -45,6 +45,19 @@ export async function POST(req: NextRequest) {
     return fail("Nomor HP atau password salah", 401);
   }
 
+  // Phone-match bind (T17-5): attach orders placed with this phone before
+  // login to the account (retries any bind that failed at register time).
+  // Best-effort — if it fails, the session below is still issued and the
+  // next login retries the bind.
+  try {
+    await db.order.updateMany({
+      where: { customerPhone: phone, customerId: null },
+      data: { customerId: customer.id },
+    });
+  } catch {
+    // best-effort: ignore bind failure, session is already being issued
+  }
+
   const token = createCustomerSession(tenant.id, customer.id, slug);
   const res = NextResponse.json(
     { ok: true, customerId: customer.id, name: customer.name },
