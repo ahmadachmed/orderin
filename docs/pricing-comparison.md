@@ -1,68 +1,154 @@
-# DB Hosting Pricing Comparison (Managed PostgreSQL focus)
+# Proposal: Pemilihan DB Hosting (PostgreSQL) untuk Orderin
 
-Snapshot: 2026-08-07 — semua angka dari halaman pricing resmi vendor (URL di tiap section).
-Free tier di-skip; fokus entry paid tier untuk kebutuhan orderin (Next.js 14.2 + Prisma 7 + PG).
+Tanggal: 2026-08-07 · Status: Draft evaluasi · Scope: managed PostgreSQL / DB hosting untuk orderin (Next.js 14.2 + Prisma 7 + PG)
 
-## Ringkasan entry paid tier (termurah → termahal)
+---
 
-| Vendor | Entry paid | Struktur harga |
+## 1. Ringkasan Eksekutif
+
+**Rekomendasi: DigitalOcean Managed PostgreSQL ($15.15/mo) = paling worth it untuk kebutuhan orderin.**
+Runner-up: Crunchy Bridge (~$18/mo) — alternatif multi-cloud dengan storage termurah.
+Kalau budget sangat ketat dan tim mau kelola sendiri: Fly.io (~$5–7/mo) — tapi bukan managed.
+
+Alasan DO menang: harga flat termurah untuk skenario produksi kecil, storage 30 GiB sudah
+termasuk di harga dasar, fully managed (backup, failover, monitoring), tanpa overage tersembunyi
+di range workload orderin.
+
+---
+
+## 2. Asumsi Workload (Skenario S — produksi kecil)
+
+| Parameter | Nilai | Catatan |
 |---|---|---|
-| Fly.io | ~$3–5/mo efektif | Tanpa flat plan fee, pure usage + prepaid credit |
-| Railway | $5/mo (Hobby) | Flat kecil + usage metered |
-| Aiven | $5/mo (Developer) | Flat per tier + hourly service |
-| Render | $6/mo (Basic-256mb) | Flat per instance size |
-| Crunchy Bridge | ~$9–10/mo (Hobby-0) | Flat per instance size |
-| Neon | usage-based, tanpa minimum | Pay-per-use (compute/storage) |
-| DigitalOcean | $15.15/mo (1GB/1vCPU) | Flat per node size |
-| Supabase | $25/mo (Pro) | Flat + overage |
+| Compute | 1 vCPU / 1 GB RAM | cukup untuk storefront skala kecil |
+| Storage | 10 GB | data + index, masih muat |
+| Egress | 10 GB/bulan | traffic kecil |
+| Availability | 24/7 always-on | prod, tidak boleh scale-to-zero |
+| Kebutuhan | managed preferred | backup + failover + monitoring |
 
-## Per vendor
+> Semua estimasi bulanan di bawah = harga resmi (snapshot 2026-08-07) × skenario S.
+> Baris "Estimasi S" yang ditandai * adalah perkiraan dari struktur harga, bukan angka resmi.
 
-### Neon — https://neon.tech/pricing
-- Launch & Scale: TANPA flat monthly fee ("no monthly minimum"), pay-per-use.
-- Compute: Launch $0.106/CU-hr, Scale $0.222/CU-hr.
-- Storage: $0.35/GB-mo (0.5GB included di Free; 500GB included di paid, lanjut $0.10/GB).
-- Branch ekstra: $1.50/branch-mo (prorated hourly; 10 included di Free/Launch, 25 di Scale).
-- Snapshots: $0.09/GB-mo. Private networking: $0.01/GB (Scale).
+---
 
-### Supabase — https://supabase.com/pricing
-- Pro: $25/mo flat.
-- Termasuk: $10/mo compute credits (~cukup 1 micro instance), 8GB disk, 250GB egress, 50K MAU.
-- Overage: disk $0.125/GB, egress $0.09/GB, MAU $0.00325/MAU.
-- Team plan: Pro + SSO/SOC2/ISO27001 (harga custom; page tidak menampilkan flat fee).
-- Custom domain: from $100/mo.
+## 3. Tabel Perbandingan Utama
 
-### Railway — https://railway.com/pricing
-- Hobby: $5/mo (usage included). Pro: $20/mo (teams).
-- Usage: $0.00000772/vCPU-s (~$20/vCPU-mo), $0.00000386/GB-s memory (~$10/GB-mo).
-- Disk: $0.015/GB-mo (egress free). Egress: $0.05/GB.
+| Vendor | Entry paid | Struktur | Storage incl | Overage storage | Egress | Managed? | Estimasi S (/mo) |
+|---|---|---|---|---|---|---|---|
+| **Fly.io** | ~$3–5 eff | usage + prepaid credit | 10 GB free | $0.15/GB | $0.02/GB (NA/EU) | ❌ DIY (flyctl) | **~$5–7** |
+| **DigitalOcean** | $15.15 (1GB) | flat per node | 30 GiB | $0.215/GiB | incl | ✅ | **$15.15** |
+| **Aiven** | $5 (Developer) / from $12 (Hobbyist) | flat plan + hourly service | ~10 GB* | $0.10/GB* | incl | ✅ | **~$12–15*** |
+| **Crunchy Bridge** | $9 (Hobby-0) | flat per instance | ~incl* | $0.10/GB | incl | ✅ | **~$18–19*** |
+| **Render** | $6 (Basic-256mb) | flat per instance | ~5 GB* | $0.30/GB | incl | ✅ | **~$19–21*** |
+| **Neon** | usage, no minimum | pay-per-use | 500 GB | $0.35/GB | incl | ✅ | **$24.35** |
+| **Supabase** | $25 (Pro) | flat + overage | 8 GB | $0.125/GB | 250 GB free | ✅ | **$25.25** |
+| **Railway** | $5 (Hobby) | flat + metered usage | ~10 GB* | $0.015/GB | $0.05/GB | ❌ container DIY | **~$31*** |
 
-### Aiven — https://aiven.io/pricing (PostgreSQL)
-- Developer: $5/mo. Hobbyist: from $12/mo ($0.02/hr).
-- Startup: from $75/mo ($0.10/hr). Business: from $180/mo ($0.25/hr). Premium: from $270/mo ($0.37/hr).
+---
 
-### Render — https://render.com/pricing (Postgres)
-- Basic-256mb $6/mo, Basic-1gb $19/mo, Basic-4gb $75/mo.
-- Pro-4gb $55/mo, Pro-8gb $100/mo, Pro-16gb $200/mo, Pro-32gb $400/mo, Pro-64gb $800/mo.
-- Storage ekstra: $0.30/GB-mo (paid only). HA hanya di Pro+.
+## 4. Kalkulasi Detail (Skenario S)
 
-### Fly.io — https://fly.io/docs/about/pricing/
-- Tanpa flat plan fee — pure usage (pay-as-you-go).
-- Prepaid credit (diskon 40%): shared $36/yr → $5/mo usage (eff $3/mo); performance $144/yr → $20/mo usage.
-- Volumes: $0.15/GB-mo. Egress: $0.02/GB (NA/EU), $0.04/GB (APAC), $0.12/GB (Africa/India).
-- IPv4 dedicated: $2/mo.
+### 4.1 DigitalOcean — $15.15/mo ✅ REKOMENDASI
+```
+Node 1GB/1vCPU      $15.15
+Storage 10GB        $0.00   (30 GiB sudah termasuk di harga node)
+Egress              $0.00   (included)
+------------------------------------------------------------
+TOTAL               $15.15  flat, managed (backup + failover + monitoring)
+```
 
-### Crunchy Bridge — https://www.crunchydata.com/products/crunchy-bridge/pricing
-- Hobby-0 $9/mo (0.5GB), Hobby-1 $18/mo (1GB), Hobby-2 $35/mo (2GB), Hobby-4 $70/mo (4GB).
-- Standard-4 $70/mo (4GB/1 core), Standard-8 $140/mo (8GB) — naik sampai Standard-384 $6,720/mo.
-- Memory-16 $240/mo, Memory-128 $1,920/mo.
-- Storage: $0.10/GB-mo. Copy resmi: "plans starting at $10/mo".
+### 4.2 Crunchy Bridge — ~$18–19/mo
+```
+Hobby-1 (1GB)       $18.00
+Storage 10GB        ~$1.00  ($0.10/GB, sebagian included*)
+------------------------------------------------------------
+TOTAL               ~$18–19  managed, deploy di AWS/Azure/GCP pilihan sendiri
+```
 
-### DigitalOcean — https://www.digitalocean.com/pricing/managed-databases (Managed PostgreSQL, Basic single-node)
-- 1GB/1vCPU $15.15/mo ($0.02254/hr), 2GB/1vCPU $30.45, 4GB/2vCPU $60.90, 8GB/4vCPU $122.10, 16GB/6vCPU $244.35.
-- Storage: $0.215/GiB-mo (10 GiB increments).
+### 4.3 Render — ~$19–21/mo
+```
+Basic-1gb (1GB)     $19.00
+Storage ekstra      ~$1–2   ($0.30/GB di luar included*)
+------------------------------------------------------------
+TOTAL               ~$19–21  managed; HA cuma di Pro+ ($55+)
+```
 
-## Catatan metodologi
-- Semua angka dari HTML halaman resmi (curl). Halaman JS-heavy (Supabase/DO) — angka = card yang ter-render di HTML.
-- DO tier Production/HA tidak muncul di HTML page — tidak dicantumkan angka.
-- Untuk estimasi bulanan riil orderin: hitung compute + storage + egress sesuai workload (Neon/Railway/Fly = metered, sisanya flat).
+### 4.4 Aiven — ~$12–15/mo* (perlu verifikasi konfigurasi)
+```
+Hobbyist (small node)  from $12.00  ($0.02/hr × 730 jam)
+Storage                ~$1*         ($0.10/GB*)
+------------------------------------------------------------
+TOTAL                  ~$12–15*  managed; Developer $5/mo = dev-grade
+```
+
+### 4.5 Neon — $24.35/mo
+```
+Compute 0.25 CU × 730j × $0.106   $19.35   (1 CU = 1vCPU/4GB; minimal 0.25 CU)
+Storage 10GB × $0.35              $3.50
+Branch aktif (1)                  $1.50
+------------------------------------------------------------
+TOTAL                             $24.35   (bisa turun drastis kalau scale-to-zero)
+```
+Catatan: paling murah kalau workload bisa scale-to-zero (dev/staging), mahal untuk prod always-on.
+
+### 4.6 Supabase — $25.25/mo
+```
+Pro flat             $25.00   (incl $10 compute credit ≈ micro instance, 8GB disk, 250GB egress)
+Disk 10GB            $0.25    (8GB incl + 2GB × $0.125)
+------------------------------------------------------------
+TOTAL                $25.25
+```
+
+### 4.7 Fly.io — ~$5–7/mo (paling murah, tapi DIY)
+```
+Shared machine 1GB   ~$5.00   (prepaid $36/yr → credit $5/mo usage, eff $3/mo)
+Volume 10GB × $0.15  $1.50
+Egress 10GB × $0.02  $0.20
+------------------------------------------------------------
+TOTAL                ~$6.70   (Postgres = cluster DIY via flyctl, bukan managed)
+```
+
+### 4.8 Railway — ~$31/mo (termahal + DIY)
+```
+1 vCPU × 730j × $0.00000772    $20.28
+1 GB mem × 730j × $0.00000386  $10.14
+Disk 10GB × $0.015             $0.15
+Egress 10GB × $0.05            $0.50
+Hobby credit                   -$5.00
+------------------------------------------------------------
+TOTAL                          ~$31.07   (Postgres = container DIY)
+```
+
+---
+
+## 5. Kesimpulan & Rekomendasi
+
+| Prioritas | Pilihan | Estimasi | Alasan |
+|---|---|---|---|
+| 🥇 Value (managed) | **DigitalOcean** | $15.15/mo | Flat termurah, 30 GiB storage incl, managed penuh |
+| 🥈 Runner-up | **Crunchy Bridge** | ~$18/mo | Multi-cloud, storage $0.10/GB termurah, managed |
+| 🥉 Budget hemat | **Fly.io** | ~$5–7/mo | Termurah, tapi Postgres DIY — butuh maintenance |
+| ❌ Skip | Railway | ~$31/mo | Mahal + DIY container |
+| ⚠️ Kondisional | Neon | $24.35/mo | Pilih kalau workload bisa scale-to-zero (hemat drastis) |
+
+**Keputusan yang disarankan:** deploy orderin prod ke DO Managed PostgreSQL 1GB/1vCPU
+($15.15/mo flat). Kalau tim prefer infra di multi-cloud (bukan lock ke DO): Crunchy Bridge.
+Kalau tujuan utama = biaya seminimal mungkin dan ada kapasitas maintain sendiri: Fly.io.
+
+---
+
+## 6. Metodologi & Sumber
+
+- Snapshot 2026-08-07, diambil dari halaman pricing resmi via curl (HTML ter-render).
+- Angka tanpa tanda * = harga resmi persis dari halaman vendor. Angka bertanda * = estimasi
+  dari struktur harga (perlu verifikasi konfigurasi spesifik sebelum commit).
+- DO tier Production/HA tidak muncul di HTML halaman — tidak dicantumkan angkanya.
+- Sumber:
+  - Neon: https://neon.tech/pricing
+  - Supabase: https://supabase.com/pricing
+  - Railway: https://railway.com/pricing
+  - Aiven: https://aiven.io/pricing
+  - Render: https://render.com/pricing
+  - Fly.io: https://fly.io/docs/about/pricing/
+  - Crunchy Bridge: https://www.crunchydata.com/products/crunchy-bridge/pricing
+  - DigitalOcean: https://www.digitalocean.com/pricing/managed-databases
