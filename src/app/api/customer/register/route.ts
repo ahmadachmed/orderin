@@ -56,6 +56,19 @@ export async function POST(req: NextRequest) {
     } as unknown as Parameters<typeof prisma.customer.create>[0]["data"],
   });
 
+  // Phone-match bind (T17-5): attach orders placed with this phone before
+  // registration to the new account. Best-effort — runs outside the main
+  // flow; if it fails the session below is still issued and the next login
+  // retries the bind.
+  try {
+    await db.order.updateMany({
+      where: { customerPhone: phone, customerId: null },
+      data: { customerId: customer.id },
+    });
+  } catch {
+    // best-effort: ignore bind failure, session is already being issued
+  }
+
   // Issue session cookie immediately (auto-login after register)
   const token = createCustomerSession(tenant.id, customer.id, slug);
   const res = NextResponse.json(
