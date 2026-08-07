@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { MenuItemView, CartLine } from "@/types";
 import { formatRupiah } from "@/lib/format";
 import MenuList from "@/components/MenuList";
@@ -25,6 +26,20 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
   const [customerPhone, setCustomerPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T17-6: customer session probe — auto-attach customerId when logged in.
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  // On mount, check for a customer session cookie via a lightweight API call.
+  useEffect(() => {
+    fetch("/api/customer/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.loggedIn) setCustomerId(d.customerId);
+      })
+      .catch(() => {})
+      .finally(() => setSessionChecked(true));
+  }, []);
 
   const cartLines: CartLine[] = items
     .map((it) => ({ menuItemId: it.id, quantity: quantities[it.id] ?? 0 }))
@@ -66,6 +81,7 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
           items: cartLines,
+          customerId: customerId ?? undefined, // T17-6: auto-attach when logged in
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -119,6 +135,16 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
                 autoComplete="tel"
               />
             </div>
+            {sessionChecked && !customerId ? (
+              <p className="mt-3 text-xs text-neutral-500">
+                <Link
+                  href={`/${tenantSlug}/account/orders`}
+                  className="font-medium text-neutral-700 underline underline-offset-2"
+                >
+                  Simpan pesanan ke akun?
+                </Link>
+              </p>
+            ) : null}
           </div>
 
           {error ? (

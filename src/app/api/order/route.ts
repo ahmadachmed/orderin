@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
   const customerPhone = typeof body.customerPhone === "string" ? body.customerPhone.trim() : "";
   const itemsRaw = Array.isArray(body.items) ? body.items : [];
   const paymentMethod = typeof body.paymentMethod === "string" ? body.paymentMethod : undefined;
+  // T17-6: optional account binding — attach when the customer is logged in.
+  const customerId = typeof body.customerId === "string" ? body.customerId : undefined;
 
   if (!slug || !customerName || !customerPhone) {
     return fail("slug, customerName, customerPhone are required", 400);
@@ -153,6 +155,7 @@ export async function POST(req: NextRequest) {
           tenantId: tenant.id,
           customerName,
           customerPhone,
+          customerId: customerId ?? null, // T17-6: optional account binding
           etaSeconds,
           etaCalculatedAt: new Date(),
           paymentMethod: paymentMethod as PaymentMethod | undefined,
