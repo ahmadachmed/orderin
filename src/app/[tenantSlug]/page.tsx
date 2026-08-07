@@ -6,6 +6,7 @@ import { formatTimeInTimezone } from "@/lib/time";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function ShopMenuPage({
 
   return (
     <main className="pb-10">
+      <ActiveOrderBanner tenantSlug={params.tenantSlug} />
       <header className="mb-4 flex items-center justify-between gap-3">
         <div>
           <Link

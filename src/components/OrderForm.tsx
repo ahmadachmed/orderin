@@ -95,6 +95,23 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
         return;
       }
       router.push(`/${tenantSlug}/order/${orderId}`);
+      // CUST-02 (T16-7): persist active order so the menu page can show a
+      // "Lanjutkan pesanan" banner after tab close / revisit (issue #52).
+      if (typeof window !== "undefined") {
+        try {
+          const active = JSON.parse(localStorage.getItem("orderin_orders") ?? "{}");
+          active[orderId] = {
+            orderId,
+            slug: tenantSlug,
+            customerName: customerName.trim(),
+            customerPhone: customerPhone.trim(),
+            createdAt: Date.now(),
+          };
+          localStorage.setItem("orderin_orders", JSON.stringify(active));
+        } catch {
+          /* localStorage disabled — no-op */
+        }
+      }
     } catch {
       setError("Gagal terhubung ke server. Coba lagi.");
     } finally {

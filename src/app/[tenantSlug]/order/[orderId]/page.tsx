@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { OrderStatusView } from "@/types";
 import OrderStatusTracker from "@/components/OrderStatusTracker";
+import OrderPersistence from "@/components/OrderPersistence";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,7 @@ export default async function OrderStatusPage({
 
   return (
     <main className="pb-10">
+      <OrderPersistence orderId={order.id} slug={order.tenant.slug} />
       <header className="mb-4">
         <Link
           href={`/${order.tenant.slug}`}
