@@ -1,11 +1,10 @@
-import { NextRequest } from "next/server";
 import { scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { getCustomerSession } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const session = getCustomerSession();
   if (!session) return fail("Unauthorized", 401);
 
