@@ -71,6 +71,9 @@ export interface OrderStatusView {
   customerTransferNote: string | null;
   createdAt: string;
   customerName: string;
+  /** Null when the customer is logged in — the "Buat akun" banner (T17-7)
+   *  renders only when this is present (i.e. guest + active order). */
+  customerPhone: string | null;
   items: Array<{
     name: string;
     quantity: number;
