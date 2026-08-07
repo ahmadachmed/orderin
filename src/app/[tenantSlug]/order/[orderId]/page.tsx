@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { getCustomerSession } from "@/lib/customer-auth";
 import { OrderStatusView } from "@/types";
 import OrderStatusTracker from "@/components/OrderStatusTracker";
 
@@ -40,6 +41,10 @@ export default async function OrderStatusPage({
   // the URL so cross-tenant URLs 404 instead of leaking order data.
   if (!order || order.tenant.slug !== params.tenantSlug) notFound();
 
+  // T17-7: guest orders get the "Buat akun" banner — logged-in customers see
+  // no banner, so the phone (banner trigger) is nulled out for them.
+  const customerSession = getCustomerSession();
+
   const view: OrderStatusView = {
     orderId: order.id,
     status: order.status,
@@ -50,6 +55,7 @@ export default async function OrderStatusPage({
     pickupCode: order.pickupCode || null,
     createdAt: order.createdAt.toISOString(),
     customerName: order.customerName,
+    customerPhone: customerSession ? null : order.customerPhone,
     items: order.items.map((oi) => ({
       name: oi.menuItem.name,
       quantity: oi.quantity,

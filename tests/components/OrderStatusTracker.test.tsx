@@ -18,6 +18,7 @@ const baseOrder: OrderStatusView = {
   customerTransferNote: null,
   createdAt: "2026-08-04T08:00:00.000Z",
   customerName: "Budi",
+  customerPhone: "081234567890",
   items: [
     { name: "Espresso", quantity: 2, unitPrice: 18000, prepTimeSeconds: 90 },
     { name: "Kopi Susu Gula Aren", quantity: 1, unitPrice: 22000, prepTimeSeconds: 150 },

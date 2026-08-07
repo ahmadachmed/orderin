@@ -5,6 +5,7 @@ import { OrderStatusView, PaymentMethod } from "@/types";
 import { formatRupiah, formatDuration } from "@/lib/format";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
 import StatusTimeline from "@/components/StatusTimeline";
+import CreateAccountBanner from "@/components/CreateAccountBanner";
 
 interface OrderStatusTrackerProps {
   initial: OrderStatusView;
@@ -140,6 +141,16 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
           </div>
         ) : null}
       </section>
+
+      {/* T17-7: "Buat akun" banner — guest (customerPhone present) + active order */}
+      {order.customerPhone && !TERMINAL_STATUSES.has(order.status) ? (
+        <CreateAccountBanner
+          tenantSlug={order.tenant.slug}
+          customerName={order.customerName}
+          customerPhone={order.customerPhone}
+          orderId={order.orderId}
+        />
+      ) : null}
 
       {/* Items + total */}
       <section className="rounded-2xl border border-neutral-200 bg-white p-4">
