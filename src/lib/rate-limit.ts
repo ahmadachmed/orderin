@@ -42,6 +42,7 @@ export const ROUTE_RATE_LIMITS: Record<string, RateLimitConfig> = {
   "GET /api/slug-check": { windowMs: 10_000, max: 20 },
   "POST /api/order/lookup": { windowMs: 60_000, max: 5 },
   "POST /api/customer/register": { windowMs: 60_000, max: 3 },
+  "POST /api/customer/login": { windowMs: 60_000, max: 10 },
 };
 
 const store = new Map<string, Entry>();
