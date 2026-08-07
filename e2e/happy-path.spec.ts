@@ -21,7 +21,16 @@ const itemName = `Es Teh E2E ${stamp}`;
 test("happy path: register → admin → menu → order → status", async ({ page }) => {
   // 1. Register a new tenant → lands on the admin dashboard (REG-10).
   await page.goto("/register");
-  await page.getByPlaceholder("Kopi Senja Makassar").fill(shopName);
+  // Hydration gate (cold-compile race, see pickup-flow.spec.ts setup notes):
+  // clicking "Daftar" before React attaches onSubmit fires a native form GET
+  // submit that strands navigation. The auto-suggested slug only appears once
+  // React hydrates — wait for it (re-fill if hydration wiped the value).
+  await expect(async () => {
+    await page.getByPlaceholder("Kopi Senja Makassar").fill(shopName);
+    await expect(page.getByPlaceholder("kopi-senja")).not.toHaveValue("", {
+      timeout: 2000,
+    });
+  }).toPass({ timeout: 20_000 });
   await page.getByPlaceholder("kopi-senja").fill(slug);
   await page.getByLabel("Username Admin").fill(username);
   await page.getByLabel("Password Admin").fill(password);
