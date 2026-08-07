@@ -6,9 +6,9 @@ Tanggal: 2026-08-07 · Status: Draft evaluasi · Scope: managed PostgreSQL / DB 
 
 ## 1. Ringkasan Eksekutif
 
-**Rekomendasi baru: SumoPod Managed PostgreSQL (Shared) — Rp 10.000/GB/bln (~$0.65/GB).**
-Untuk skenario S (1GB) = Rp 10.000/bln — termurah di antara semua opsi managed, bahkan kalahkan
-Fly.io DIY. Runner-up: DigitalOcean ($15.15/mo) kalau mau vendor internasional yang mature.
+**Rekomendasi baru: SumoPod Managed PostgreSQL (Shared) — Rp 10.000/GB storage/bln.**
+Untuk skenario S (10GB storage) = Rp 100.000/bln (~$6.5) — tetap termurah managed,
+~2.3x di bawah DigitalOcean ($15.15 ≈ Rp 235rb). Runner-up: DO kalau mau vendor mature.
 
 ---
 
@@ -31,7 +31,7 @@ Fly.io DIY. Runner-up: DigitalOcean ($15.15/mo) kalau mau vendor internasional y
 
 | Vendor | Entry paid | Struktur | Storage incl | Overage storage | Egress | Managed? | Estimasi S (/mo) |
 |---|---|---|---|---|---|---|---|
-| **SumoPod** | **Rp 10.000/GB** (~$0.65/GB) | per GB (shared) | ?* | ?* | incl | ✅ | **~Rp 10–20rb ($0.65–1.3)** |
+| **SumoPod** | **Rp 10.000/GB storage** (~$0.65/GB) | per GB storage (shared) | 0 (harga per GB) | Rp 10.000/GB | incl | ✅ | **Rp 100rb (10GB)** |
 | **Fly.io** | ~$3–5 eff | usage + prepaid credit | 10 GB free | $0.15/GB | $0.02/GB (NA/EU) | ❌ DIY (flyctl) | **~$5–7** |
 | **DigitalOcean** | $15.15 (1GB) | flat per node | 30 GiB | $0.215/GiB | incl | ✅ | **$15.15** |
 | **Aiven** | $5 (Developer) / from $12 (Hobbyist) | flat plan + hourly service | ~10 GB* | $0.10/GB* | incl | ✅ | **~$12–15*** |
@@ -45,13 +45,13 @@ Fly.io DIY. Runner-up: DigitalOcean ($15.15/mo) kalau mau vendor internasional y
 
 ## 4. Kalkulasi Detail (Skenario S)
 
-### 4.1 SumoPod Managed PostgreSQL 16 (Shared) — Rp 10.000/bln ✅ REKOMENDASI BUDGET
+### 4.1 SumoPod Managed PostgreSQL 16 (Shared) — Rp 100.000/bln (10GB) ✅ REKOMENDASI BUDGET
 ```
-PG 16 Shared, 1GB     Rp 10.000   (Rp 10.000/GB)
-Storage               ?*          (belum terverifikasi — mungkin sudah termasuk)
+PG 16 Shared, storage 10GB × Rp 10.000   Rp 100.000
 ------------------------------------------------------------
-TOTAL                 Rp 10.000   (~$0.65) — managed: backup + pooler + IP allowlist
+TOTAL                 Rp 100.000   (~$6.5) — managed: backup + pooler + IP allowlist
 ```
+Harga = per GB storage (Rp 10.000/GB). 5GB = Rp 50.000, 20GB = Rp 200.000 — skala linier.
 Varian: +PostGIS / +pgvector = Rp 12.500/GB. SKU PostGIS sempat "Out of stock" (supply terbatas).
 Catatan: tier SHARED — resource dipakai bareng tenant lain (noisy neighbor), kemungkinan tanpa HA.
 DC Jakarta → latency bagus untuk customer lokal.
@@ -133,18 +133,18 @@ TOTAL                          ~$31.07   (Postgres = container DIY)
 
 | Prioritas | Pilihan | Estimasi | Alasan |
 |---|---|---|---|
-| 🥇 Value (managed, budget) | **SumoPod PG 16 Shared** | Rp 10.000/bln | Termurah jauh, managed, DC Jakarta (latency lokal bagus) |
+| 🥇 Value (managed, budget) | **SumoPod PG 16 Shared** | Rp 100rb (10GB) | Termurah managed, DC Jakarta (latency lokal bagus) |
 | 🥈 Zero-risk (managed) | **DigitalOcean** | $15.15/mo | Vendor mature, 30 GiB storage incl, managed penuh |
 | 🥉 Runner-up | **Crunchy Bridge** | ~$18/mo | Multi-cloud, storage $0.10/GB termurah, managed |
 | 💸 Budget hemat DIY | **Fly.io** | ~$5–7/mo | Termurah USD, tapi Postgres DIY — butuh maintenance |
 | ❌ Skip | Railway | ~$31/mo | Mahal + DIY container |
 | ⚠️ Kondisional | Neon | $24.35/mo | Pilih kalau workload bisa scale-to-zero (hemat drastis) |
 
-**Keputusan yang disarankan:** deploy orderin prod ke **SumoPod Managed PostgreSQL 16 (Shared) 1GB
-(Rp 10.000/bln)** — harga managed termurah, DC Jakarta cocok untuk customer lokal. Syarat sebelum
-commit: konfirmasi detail tier Shared (backup retention, HA, batas storage, uptime SLA) via
-dashboard/support SumoPod. Kalau prefer vendor internasional yang mature: DO Managed PG 1GB
-($15.15/mo). Kalau tim siap maintain sendiri dengan budget minimal: Fly.io.
+**Keputusan yang disarankan:** deploy orderin prod ke **SumoPod Managed PostgreSQL 16 (Shared)
+storage 10GB (Rp 100.000/bln)** — harga managed termurah, DC Jakarta cocok untuk customer lokal.
+Syarat sebelum commit: konfirmasi detail tier Shared (backup retention, HA, RAM/CPU plan, uptime
+SLA) via dashboard/support SumoPod. Kalau prefer vendor internasional yang mature: DO Managed PG
+1GB ($15.15/mo). Kalau tim siap maintain sendiri dengan budget minimal: Fly.io.
 
 ---
 
@@ -153,7 +153,7 @@ dashboard/support SumoPod. Kalau prefer vendor internasional yang mature: DO Man
 - Snapshot 2026-08-07, diambil dari halaman pricing resmi via curl (HTML ter-render).
 - Angka tanpa tanda * = harga resmi persis dari halaman vendor. Angka bertanda * = estimasi
   dari struktur harga (perlu verifikasi konfigurasi spesifik sebelum commit).
-- Harga SumoPod (Rp 10.000/GB, Rp 12.500/GB varian) = dari dashboard akun user (2026-08-07) —
+- Harga SumoPod (Rp 10.000/GB storage, Rp 12.500/GB varian) = dari dashboard akun user (2026-08-07) —
   halaman publik SumoPod tidak menampilkan harga (login-gated).
 - DO tier Production/HA tidak muncul di HTML halaman — tidak dicantumkan angkanya.
 - Konversi USD: kurs ~Rp 15.400/USD (estimasi, bukan angka resmi).
