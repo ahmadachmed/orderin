@@ -39,6 +39,12 @@ const fetchMock = vi.fn();
 
 beforeEach(() => {
   fetchMock.mockReset();
+  // T17-6: OrderForm probes /api/customer/me on mount — default to a
+  // not-logged-in response so plain renders don't hit an undefined return.
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({ loggedIn: false }),
+  });
   push.mockClear();
   vi.stubGlobal("fetch", fetchMock);
 });
