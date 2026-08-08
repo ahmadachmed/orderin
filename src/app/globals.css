@@ -33,6 +33,11 @@
     --border: 0 0% 15%; /* #262626 */
     --input: 0 0% 15%;
     --ring: 24 85% 53%; /* #E87F24 */
+    /* Status tokens (plan §2.1: warning/info/success) — hues match the
+       pre-restyle dot colors (amber-500 / sky-500 / emerald-500). */
+    --warning: 38 92% 50%; /* #f59e0b */
+    --info: 199 89% 48%; /* #0ea5e9 */
+    --success: 160 84% 39%; /* #10b981 */
     /* Token scale (shadcn defaults — values match Tailwind's own defaults,
        so existing utilities render identically). */
     --radius: 0.5rem; /* 8px pills — cards use rounded-xl */
