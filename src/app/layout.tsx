@@ -32,7 +32,7 @@ export default function RootLayout({
       <body className={`${plusJakartaSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
