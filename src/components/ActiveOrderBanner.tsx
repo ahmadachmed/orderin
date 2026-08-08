@@ -36,7 +36,7 @@ export default function ActiveOrderBanner({ tenantSlug }: { tenantSlug: string }
   return (
     <Link
       href={`/${active.slug}/order/${active.orderId}`}
-      className="mb-4 block rounded-xl bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100"
+      className="mb-4 block rounded-xl border border-primary/20 bg-primary/10 p-3 text-primary"
     >
       📋 Lanjutkan pesanan {active.customerName} →
     </Link>
