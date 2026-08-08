@@ -2,6 +2,8 @@
 
 import { MenuItemView } from "@/types";
 import { formatRupiah } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface MenuListProps {
   items: MenuItemView[];
@@ -10,61 +12,87 @@ interface MenuListProps {
 }
 
 /**
- * MenuList — public shop menu (PLAN §8 / issue #4).
- * Presentational item rows with a quantity stepper. Cart state lives in
+ * MenuList — public shop menu (PLAN §2.3 / issue #104).
+ * Card item rows with a quantity stepper. Cart state lives in
  * OrderForm, which owns `quantities` + `onQuantityChange`.
  */
 export default function MenuList({ items, quantities, onQuantityChange }: MenuListProps) {
   if (items.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-neutral-500">
+      <p className="py-10 text-center text-sm text-muted-foreground">
         Menu belum tersedia — coba lagi nanti.
       </p>
     );
   }
 
   return (
-    <ul className="divide-y divide-neutral-100">
+    <ul className="space-y-3">
       {items.map((item) => {
         const qty = quantities[item.id] ?? 0;
         return (
-          <li key={item.id} className="flex items-center gap-3 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="truncate font-semibold text-neutral-900">{item.name}</h3>
-                <span className="shrink-0 text-sm font-medium text-neutral-900">
-                  {formatRupiah(item.price)}
-                </span>
-              </div>
-              {item.description ? (
-                <p className="mt-0.5 line-clamp-2 text-xs text-neutral-500">{item.description}</p>
+          <li key={item.id}>
+            <Card className="flex gap-4 border-border bg-card p-4">
+              {item.imageUrl ? (
+                // Menu images are arbitrary remote URLs (admin uploads) — no
+                // remotePatterns configured, so plain <img> over next/image.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="h-20 w-20 shrink-0 rounded-lg border border-border object-cover"
+                />
               ) : null}
-              <p className="mt-1 text-[11px] text-neutral-400">
-                ±{Math.round(item.prepTimeSeconds / 60)} menit
-              </p>
-            </div>
 
-            {/* Quantity stepper */}
-            <div className="flex shrink-0 items-center gap-2 rounded-full border border-neutral-200 px-1 py-0.5">
-              <button
-                type="button"
-                aria-label={`Kurangi ${item.name}`}
-                disabled={qty === 0}
-                onClick={() => onQuantityChange(item.id, qty - 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-lg font-semibold text-neutral-600 disabled:text-neutral-300"
-              >
-                −
-              </button>
-              <span className="w-5 text-center text-sm font-semibold tabular-nums">{qty}</span>
-              <button
-                type="button"
-                aria-label={`Tambah ${item.name}`}
-                onClick={() => onQuantityChange(item.id, qty + 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-lg font-semibold text-white active:scale-95"
-              >
-                +
-              </button>
-            </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="truncate font-semibold text-foreground">{item.name}</h3>
+                  <span className="shrink-0 text-sm font-medium tabular-nums text-primary">
+                    {formatRupiah(item.price)}
+                  </span>
+                </div>
+                {item.description ? (
+                  <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                    {item.description}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  ±{Math.round(item.prepTimeSeconds / 60)} menit
+                </p>
+              </div>
+
+              {qty === 0 ? (
+                <Button
+                  type="button"
+                  aria-label={`Tambah ${item.name}`}
+                  onClick={() => onQuantityChange(item.id, qty + 1)}
+                  className="h-8 w-8 shrink-0 rounded-full bg-primary p-0 text-primary-foreground"
+                >
+                  +
+                </Button>
+              ) : (
+                <div className="flex shrink-0 items-center gap-1 rounded-full bg-muted p-1">
+                  <Button
+                    type="button"
+                    aria-label={`Kurangi ${item.name}`}
+                    disabled={qty === 0}
+                    onClick={() => onQuantityChange(item.id, qty - 1)}
+                    variant="ghost"
+                    className="h-7 w-7 rounded-full p-0 text-lg font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    −
+                  </Button>
+                  <span className="w-5 text-center text-sm font-semibold tabular-nums">{qty}</span>
+                  <Button
+                    type="button"
+                    aria-label={`Tambah ${item.name}`}
+                    onClick={() => onQuantityChange(item.id, qty + 1)}
+                    className="h-7 w-7 rounded-full bg-primary p-0 text-lg font-semibold text-primary-foreground"
+                  >
+                    +
+                  </Button>
+                </div>
+              )}
+            </Card>
           </li>
         );
       })}
