@@ -33,6 +33,9 @@ export default function MenuList({ items, quantities, onQuantityChange }: MenuLi
           <li key={item.id}>
             <Card className="flex gap-4 border-border bg-card p-4">
               {item.imageUrl ? (
+                // Menu images are arbitrary remote URLs (admin uploads) — no
+                // remotePatterns configured, so plain <img> over next/image.
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.imageUrl}
                   alt={item.name}
