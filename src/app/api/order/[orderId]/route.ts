@@ -12,6 +12,7 @@
 import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
+import { isValidUuid } from "@/lib/uuid";
 import { fetchQueue, etaForOrderInQueue, prepSecondsForItems, withBuffer } from "@/lib/queue";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,10 @@ export async function GET(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const { orderId } = await params;
+
+  // Issue #135: non-UUID orderId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(orderId)) return fail("Order not found", 404);
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {

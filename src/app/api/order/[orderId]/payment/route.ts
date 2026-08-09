@@ -11,6 +11,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { isValidUuid } from "@/lib/uuid";
 import { PaymentMethod } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,11 @@ export async function PATCH(
       { error: "paymentMethod must be qris, bank_transfer or cash" },
       { status: 400 }
     );
+  }
+
+  // Issue #135: non-UUID orderId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(orderId)) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });

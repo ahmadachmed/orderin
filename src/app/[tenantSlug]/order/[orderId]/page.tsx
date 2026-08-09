@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCustomerSession } from "@/lib/customer-auth";
+import { isValidUuid } from "@/lib/uuid";
 import { OrderStatusView } from "@/types";
 import OrderStatusTracker from "@/components/OrderStatusTracker";
 import OrderPersistence from "@/components/OrderPersistence";
@@ -24,6 +25,11 @@ export default async function OrderStatusPage({
   params: Promise<{ tenantSlug: string; orderId: string }>;
 }) {
   const { tenantSlug, orderId } = await params;
+
+  // Issue #135: non-UUID orderId would make Prisma throw (invalid input
+  // syntax for type uuid) → 500. Format-check before any DB call → 404.
+  if (!isValidUuid(orderId)) notFound();
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
