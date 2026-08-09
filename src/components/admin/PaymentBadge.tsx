@@ -11,8 +11,8 @@ export default function PaymentBadge({
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
         paid
-          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-          : "bg-orange-100 text-orange-700 border-orange-300"
+          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
       }`}
     >
       {paid ? "● Paid" : "○ Unpaid"}
