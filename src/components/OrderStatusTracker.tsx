@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { OrderStatusView, PaymentMethod } from "@/types";
 import { formatRupiah, formatDuration } from "@/lib/format";
 import OrderStatusBadge from "@/components/OrderStatusBadge";
 import StatusTimeline from "@/components/StatusTimeline";
 import CreateAccountBanner from "@/components/CreateAccountBanner";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface OrderStatusTrackerProps {
   initial: OrderStatusView;
@@ -98,49 +101,58 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
   return (
     <div className="space-y-4">
       {/* Status */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-4">
+      <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-neutral-400">Status pesanan</p>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Status pesanan</p>
             <div className="mt-1">
               <OrderStatusBadge status={order.status} />
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[11px] uppercase tracking-wide text-neutral-400">No. Pesanan</p>
-            <p className="font-mono text-sm font-semibold text-neutral-900">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">No. Pesanan</p>
+            <p className="text-primary font-bold tabular-nums tracking-wider">
               #{order.orderId.slice(0, 8).toUpperCase()}
             </p>
           </div>
         </div>
 
         {order.pickupCode && order.status === "READY_FOR_PICKUP" && (
-          <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-center">
-            <p className="text-xs text-amber-700">Kode pengambilan</p>
-            <p className="text-3xl font-bold tracking-[0.5em] text-amber-900">
-              {order.pickupCode}
-            </p>
-            <p className="mt-1 text-xs text-amber-600">Tunjukkan kode ini ke barista</p>
+          <div className="mt-4 rounded-xl border border-border bg-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Kode pengambilan</p>
+            <div className="mt-3 flex justify-center gap-2">
+              {order.pickupCode.split("").map((digit, i) => (
+                <span
+                  key={i}
+                  className="flex h-14 w-12 items-center justify-center rounded-lg border border-[#262626] bg-[#1F2020] text-2xl font-bold tabular-nums text-foreground"
+                >
+                  {digit}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Tunjukkan kode ini ke barista</p>
           </div>
         )}
 
-        <StatusTimeline logs={order.statusLogs ?? []} />
+        <div className="mt-4 rounded-xl border border-border bg-card p-4">
+          <StatusTimeline logs={order.statusLogs ?? []} />
+        </div>
 
         {order.etaSeconds != null && !TERMINAL_STATUSES.has(order.status) ? (
-          <div className="mt-3 rounded-xl bg-neutral-50 px-4 py-3">
-            <p className="text-sm text-neutral-600">
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground">
               Estimasi siap:{" "}
-              <span className="font-bold text-neutral-900">
+              <span className="font-bold text-foreground">
                 {formatDuration(order.etaSeconds)}
               </span>{" "}
               dari sekarang
             </p>
-            <p className="mt-0.5 text-xs text-neutral-400">
+            <p className="text-xs text-muted-foreground">
               Perkiraan berdasarkan antrean — bisa lebih cepat atau lebih lambat.
             </p>
           </div>
         ) : null}
-      </section>
+      </Card>
 
       {/* T17-7: "Buat akun" banner — guest (customerPhone present) + active order */}
       {order.customerPhone && !TERMINAL_STATUSES.has(order.status) ? (
@@ -153,41 +165,41 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
       ) : null}
 
       {/* Items + total */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-neutral-900">Pesananmu</h2>
-        <ul className="divide-y divide-neutral-100">
+      <Card className="p-4">
+        <h2 className="mb-2 text-sm font-semibold text-foreground">Pesananmu</h2>
+        <ul className="divide-y divide-border">
           {order.items.map((it, i) => (
             <li key={i} className="flex items-baseline justify-between gap-2 py-2 text-sm">
-              <span className="text-neutral-700">
-                <span className="font-semibold text-neutral-900">{it.quantity}×</span> {it.name}
+              <span className="text-muted-foreground">
+                <span className="font-semibold text-foreground">{it.quantity}×</span> {it.name}
               </span>
-              <span className="tabular-nums text-neutral-600">
+              <span className="tabular-nums text-muted-foreground">
                 {formatRupiah(it.unitPrice * it.quantity)}
               </span>
             </li>
           ))}
         </ul>
-        <div className="mt-2 flex items-baseline justify-between border-t border-neutral-200 pt-3">
-          <span className="text-sm font-semibold text-neutral-900">Total</span>
-          <span className="text-lg font-bold text-neutral-900">{formatRupiah(order.total)}</span>
+        <div className="mt-2 flex items-baseline justify-between border-t border-border pt-3">
+          <span className="text-sm font-semibold text-foreground">Total</span>
+          <span className="text-lg font-bold text-foreground">{formatRupiah(order.total)}</span>
         </div>
-        <p className="mt-1 text-xs text-neutral-400">Atas nama: {order.customerName}</p>
-      </section>
+        <p className="mt-1 text-xs text-muted-foreground">Atas nama: {order.customerName}</p>
+      </Card>
 
       {/* Payment */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-neutral-900">Pembayaran</h2>
+      <Card className="p-4">
+        <h2 className="text-sm font-semibold text-foreground">Pembayaran</h2>
 
         {paid ? (
-          <div className="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          <div className="mt-3 rounded-xl bg-success/10 px-4 py-3 text-sm font-medium text-success">
             ✓ Pembayaran diterima — terima kasih!
           </div>
         ) : order.status === "CANCELLED" ? (
-          <p className="mt-3 text-sm text-neutral-500">Pesanan dibatalkan — tidak perlu membayar.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Pesanan dibatalkan — tidak perlu membayar.</p>
         ) : (
           <>
             {!hasQris && !hasBank ? (
-              <p className="mt-3 rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-500">
+              <p className="mt-3 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
                 Pembayaran akan diarahkan oleh kasir saat pengambilan.
               </p>
             ) : (
@@ -199,8 +211,8 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
                       onClick={() => selectMethod("qris")}
                       className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
                         order.paymentMethod === "qris"
-                          ? "border-neutral-900 bg-neutral-900 text-white"
-                          : "border-neutral-200 text-neutral-700 active:bg-neutral-50"
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-foreground hover:bg-accent"
                       }`}
                     >
                       QRIS
@@ -212,8 +224,8 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
                       onClick={() => selectMethod("bank_transfer")}
                       className={`rounded-xl border px-3 py-2.5 text-sm font-medium transition ${
                         order.paymentMethod === "bank_transfer"
-                          ? "border-neutral-900 bg-neutral-900 text-white"
-                          : "border-neutral-200 text-neutral-700 active:bg-neutral-50"
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-foreground hover:bg-accent"
                       }`}
                     >
                       Transfer Bank
@@ -222,7 +234,7 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
                 </div>
 
                 {order.paymentMethod === "qris" && (
-                  <div className="mt-3 rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+                  <div className="mt-3 rounded-xl bg-muted p-4 text-sm text-foreground">
                     {t?.qrisImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -233,7 +245,7 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
                     ) : (
                       <p className="font-mono text-xs break-all">{t?.qrisCode}</p>
                     )}
-                    <p className="mt-2 text-xs text-neutral-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Scan QRIS senilai <b>{formatRupiah(order.total)}</b> — kasir akan
                       mengonfirmasi setelah pembayaran masuk.
                     </p>
@@ -242,36 +254,36 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
 
                 {order.paymentMethod === "bank_transfer" && (
                   <div className="mt-3 space-y-3">
-                    <div className="rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
-                      <p className="font-semibold text-neutral-900">{t?.bankName}</p>
+                    <div className="rounded-xl bg-muted p-4 text-sm text-foreground">
+                      <p className="font-semibold text-foreground">{t?.bankName}</p>
                       <p className="font-mono text-base font-bold tracking-wide">
                         {t?.bankAccountNumber}
                       </p>
-                      <p className="mt-1 text-xs text-neutral-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Transfer <b>{formatRupiah(order.total)}</b> ke rekening di atas, lalu
                         konfirmasi di bawah.
                       </p>
                     </div>
 
                     {order.customerTransferNote || order.paymentStatus === "UNPAID" ? (
-                      <div className="rounded-xl border border-neutral-200 p-3">
+                      <div className="rounded-xl border border-border p-3">
                         <textarea
                           value={note}
                           onChange={(e) => setNote(e.target.value)}
                           placeholder="Catatan transfer (opsional) — mis. nama pengirim"
                           rows={2}
-                          className="w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none"
+                          className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={markPaid}
                           disabled={markingPaid}
-                          className="mt-2 w-full rounded-full bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white active:scale-95 disabled:opacity-50"
+                          className="mt-2 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
                         >
                           {markingPaid ? "Mengirim..." : "Saya sudah bayar"}
                         </button>
                         {order.customerTransferNote ? (
-                          <p className="mt-2 text-xs text-emerald-700">
+                          <p className="mt-2 text-xs text-success">
                             ✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.
                           </p>
                         ) : null}
@@ -285,11 +297,18 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
         )}
 
         {error ? (
-          <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>
+          <p className="mt-3 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{error}</p>
         ) : null}
-      </section>
+      </Card>
 
-      <p className="pb-4 text-center text-xs text-neutral-400">
+      <Button
+        asChild
+        className="w-full rounded-lg border border-border bg-[#1F2020] py-3 font-semibold text-primary hover:bg-secondary"
+      >
+        <Link href={`/${order.tenant.slug}/account/orders`}>Lihat riwayat pesananmu</Link>
+      </Button>
+
+      <p className="pb-4 text-center text-xs text-muted-foreground">
         Halaman ini diperbarui otomatis setiap 5 detik.
       </p>
     </div>
