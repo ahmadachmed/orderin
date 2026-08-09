@@ -16,12 +16,14 @@ export default async function AccountOrdersPage({
   if (session.tenantSlug !== params.tenantSlug) notFound();
 
   return (
-    <main className="pb-10">
+    // -mx-4/-mt-4 cancel the shared layout's px-4 pt-4 so the dark page bg
+    // spans the whole column (kanon history.html — dark-first).
+    <main className="-mx-4 -mt-4 min-h-screen bg-background px-4 pb-10 pt-4">
       <header className="mb-4">
-        <Link href={`/${params.tenantSlug}`} className="text-xs font-medium text-neutral-400">
+        <Link href={`/${params.tenantSlug}`} className="text-xs font-medium text-muted-foreground">
           ← Kembali ke menu
         </Link>
-        <h1 className="mt-1 text-xl font-extrabold tracking-tight text-neutral-900">
+        <h1 className="mt-1 text-xl font-extrabold tracking-tight text-foreground">
           Riwayat Pesanan
         </h1>
       </header>
