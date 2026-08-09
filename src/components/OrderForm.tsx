@@ -30,6 +30,9 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
   const [customerPhone, setCustomerPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T14-followup: category tabs — selected category filters the menu
+  // client-side; null = "Semua" (all items).
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   // T17-6: customer session probe — auto-attach customerId when logged in.
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -53,6 +56,17 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
     (acc, l) => acc + (items.find((i) => i.id === l.menuItemId)?.price ?? 0) * l.quantity,
     0
   );
+
+  // T14-followup: derive tab list from the menu itself — unique categories
+  // in first-appearance order, so tabs stay in sync with the data (items
+  // without a category show under "Semua" only).
+  const categories = Array.from(
+    new Set(items.map((it) => it.category).filter((c): c is string => Boolean(c)))
+  );
+  const visibleItems =
+    selectedCategory === null
+      ? items
+      : items.filter((it) => it.category === selectedCategory);
 
   const handleQuantityChange = (menuItemId: string, quantity: number) => {
     setQuantities((prev) => {
@@ -125,7 +139,50 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
 
   return (
     <form onSubmit={handleSubmit} className="pb-36">
-      <MenuList items={items} quantities={quantities} onQuantityChange={handleQuantityChange} />
+      {/* Category tabs (PLAN §3.2 / T14-followup): sticky pill bar under the
+          top bar, active tab uses primary. Derived from the menu data, so
+          shops without categories just render "Semua" alone. */}
+      {categories.length > 0 ? (
+        <nav
+          aria-label="Kategori menu"
+          className="sticky top-14 z-30 -mx-4 bg-background px-4 pb-2 pt-3"
+        >
+          <ul className="flex gap-2 overflow-x-auto pb-1">
+            <li>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(null)}
+                aria-pressed={selectedCategory === null}
+                className={
+                  selectedCategory === null
+                    ? "whitespace-nowrap rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                    : "whitespace-nowrap rounded-lg bg-muted px-4 py-2 text-sm font-medium text-muted-foreground"
+                }
+              >
+                Semua
+              </button>
+            </li>
+            {categories.map((cat) => (
+              <li key={cat}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  aria-pressed={selectedCategory === cat}
+                  className={
+                    selectedCategory === cat
+                      ? "whitespace-nowrap rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                      : "whitespace-nowrap rounded-lg bg-muted px-4 py-2 text-sm font-medium text-muted-foreground"
+                  }
+                >
+                  {cat}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+
+      <MenuList items={visibleItems} quantities={quantities} onQuantityChange={handleQuantityChange} />
 
       {!isOpen ? (
         <div className="mt-4 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">

@@ -50,6 +50,7 @@ export default async function ShopMenuPage({
     id: it.id,
     name: it.name,
     description: it.description,
+    category: it.category ?? undefined,
     price: Number(it.price),
     imageUrl: it.imageUrl,
     prepTimeSeconds: it.prepTimeSeconds,

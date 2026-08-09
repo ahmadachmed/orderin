@@ -19,6 +19,7 @@ const items: MenuItemView[] = [
     id: "item-1",
     name: "Espresso",
     description: "Single-origin espresso shot",
+    category: "Minuman",
     price: 18000,
     imageUrl: null,
     prepTimeSeconds: 90,
@@ -28,10 +29,30 @@ const items: MenuItemView[] = [
     id: "item-2",
     name: "Kopi Susu Gula Aren",
     description: null,
+    category: "Minuman",
     price: 22000,
     imageUrl: null,
     prepTimeSeconds: 150,
     sortOrder: 2,
+  },
+  {
+    id: "item-3",
+    name: "Pisang Goreng",
+    description: null,
+    category: "Camilan",
+    price: 15000,
+    imageUrl: null,
+    prepTimeSeconds: 300,
+    sortOrder: 3,
+  },
+  {
+    id: "item-4",
+    name: "Teh Tawar",
+    description: null,
+    price: 8000,
+    imageUrl: null,
+    prepTimeSeconds: 60,
+    sortOrder: 4,
   },
 ];
 
@@ -58,8 +79,33 @@ describe("OrderForm", () => {
     render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
     expect(screen.getByText("Espresso")).toBeInTheDocument();
     expect(screen.getByText("Kopi Susu Gula Aren")).toBeInTheDocument();
+    expect(screen.getByText("Pisang Goreng")).toBeInTheDocument();
+    expect(screen.getByText("Teh Tawar")).toBeInTheDocument();
     expect(screen.getByText("Rp 18.000")).toBeInTheDocument();
     expect(screen.getByText("Rp 22.000")).toBeInTheDocument();
+    expect(screen.getByText("Rp 15.000")).toBeInTheDocument();
+  });
+
+  it("renders category tabs derived from the menu (Semua + unique categories)", () => {
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+    expect(screen.getByRole("button", { name: "Semua" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Minuman" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Camilan" })).toBeInTheDocument();
+    // No category tab for unset categories — those items only appear under "Semua".
+    expect(screen.queryByRole("button", { name: "Teh Tawar" })).not.toBeInTheDocument();
+  });
+
+  it("filters the menu when a category tab is selected", () => {
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+    fireEvent.click(screen.getByRole("button", { name: "Minuman" }));
+    expect(screen.getByText("Espresso")).toBeInTheDocument();
+    expect(screen.getByText("Kopi Susu Gula Aren")).toBeInTheDocument();
+    expect(screen.queryByText("Pisang Goreng")).not.toBeInTheDocument();
+    expect(screen.queryByText("Teh Tawar")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Semua" }));
+    expect(screen.getByText("Pisang Goreng")).toBeInTheDocument();
+    expect(screen.getByText("Teh Tawar")).toBeInTheDocument();
   });
 
   it("increments and decrements quantity with +/− buttons", () => {
