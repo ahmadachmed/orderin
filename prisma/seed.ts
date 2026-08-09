@@ -44,11 +44,14 @@ async function main() {
   await prisma.menuItem.deleteMany({ where: { tenantId: tenant.id } });
 
   const menu = [
-    { name: "Espresso", description: "Single-origin espresso shot", price: 18000, prepTimeSeconds: 90, sortOrder: 1 },
-    { name: "Kopi Susu Gula Aren", description: "Iced milk coffee with palm sugar", price: 22000, prepTimeSeconds: 150, sortOrder: 2 },
-    { name: "Cappuccino", description: "Espresso with steamed milk foam", price: 25000, prepTimeSeconds: 120, sortOrder: 3 },
-    { name: "Americano", description: "Espresso topped with hot water", price: 20000, prepTimeSeconds: 90, sortOrder: 4 },
-    { name: "Matcha Latte", description: "Iced matcha latte with oat milk", price: 24000, prepTimeSeconds: 150, sortOrder: 5 },
+    { name: "Espresso", description: "Single-origin espresso shot", price: 18000, prepTimeSeconds: 90, sortOrder: 1, category: "Minuman" },
+    { name: "Kopi Susu Gula Aren", description: "Iced milk coffee with palm sugar", price: 22000, prepTimeSeconds: 150, sortOrder: 2, category: "Minuman" },
+    { name: "Cappuccino", description: "Espresso with steamed milk foam", price: 25000, prepTimeSeconds: 120, sortOrder: 3, category: "Minuman" },
+    { name: "Americano", description: "Espresso topped with hot water", price: 20000, prepTimeSeconds: 90, sortOrder: 4, category: "Minuman" },
+    { name: "Matcha Latte", description: "Iced matcha latte with oat milk", price: 24000, prepTimeSeconds: 150, sortOrder: 5, category: "Minuman" },
+    { name: "Pisang Goreng", description: "Crispy fried banana with chocolate drizzle", price: 15000, prepTimeSeconds: 300, sortOrder: 6, category: "Camilan" },
+    { name: "Roti Bakar", description: "Grilled toast with butter and sugar", price: 12000, prepTimeSeconds: 240, sortOrder: 7, category: "Camilan" },
+    { name: "Nasi Kuning", description: "Turmeric rice with fried egg and sambal", price: 20000, prepTimeSeconds: 480, sortOrder: 8, category: "Makanan" },
   ];
 
   for (const item of menu) {

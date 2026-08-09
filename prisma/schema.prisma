@@ -55,6 +55,7 @@ model MenuItem {
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
   name            String
   description     String?
+  category        String? // menu grouping — e.g. "Minuman", "Makanan", "Camilan" (T14-followup)
   price           Decimal  @db.Decimal(10, 2)
   imageUrl        String?
   prepTimeSeconds Int      @default(120) // estimated prep time per item

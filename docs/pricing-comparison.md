@@ -6,13 +6,9 @@ Tanggal: 2026-08-07 · Status: Draft evaluasi · Scope: managed PostgreSQL / DB 
 
 ## 1. Ringkasan Eksekutif
 
-**Rekomendasi: DigitalOcean Managed PostgreSQL ($15.15/mo) = paling worth it untuk kebutuhan orderin.**
-Runner-up: Crunchy Bridge (~$18/mo) — alternatif multi-cloud dengan storage termurah.
-Kalau budget sangat ketat dan tim mau kelola sendiri: Fly.io (~$5–7/mo) — tapi bukan managed.
-
-Alasan DO menang: harga flat termurah untuk skenario produksi kecil, storage 30 GiB sudah
-termasuk di harga dasar, fully managed (backup, failover, monitoring), tanpa overage tersembunyi
-di range workload orderin.
+**Rekomendasi baru: SumoPod Managed PostgreSQL (Shared) — Rp 10.000/GB storage/bln.**
+Untuk skenario S (10GB storage) = Rp 100.000/bln (~$6.5) — tetap termurah managed,
+~2.3x di bawah DigitalOcean ($15.15 ≈ Rp 235rb). Runner-up: DO kalau mau vendor mature.
 
 ---
 
@@ -35,6 +31,7 @@ di range workload orderin.
 
 | Vendor | Entry paid | Struktur | Storage incl | Overage storage | Egress | Managed? | Estimasi S (/mo) |
 |---|---|---|---|---|---|---|---|
+| **SumoPod** | **Rp 10.000/GB storage** (~$0.65/GB) | per GB storage (shared) | 0 (harga per GB) | Rp 10.000/GB | incl | ✅ | **Rp 100rb (10GB)** |
 | **Fly.io** | ~$3–5 eff | usage + prepaid credit | 10 GB free | $0.15/GB | $0.02/GB (NA/EU) | ❌ DIY (flyctl) | **~$5–7** |
 | **DigitalOcean** | $15.15 (1GB) | flat per node | 30 GiB | $0.215/GiB | incl | ✅ | **$15.15** |
 | **Aiven** | $5 (Developer) / from $12 (Hobbyist) | flat plan + hourly service | ~10 GB* | $0.10/GB* | incl | ✅ | **~$12–15*** |
@@ -48,7 +45,18 @@ di range workload orderin.
 
 ## 4. Kalkulasi Detail (Skenario S)
 
-### 4.1 DigitalOcean — $15.15/mo ✅ REKOMENDASI
+### 4.1 SumoPod Managed PostgreSQL 16 (Shared) — Rp 100.000/bln (10GB) ✅ REKOMENDASI BUDGET
+```
+PG 16 Shared, storage 10GB × Rp 10.000   Rp 100.000
+------------------------------------------------------------
+TOTAL                 Rp 100.000   (~$6.5) — managed: backup + pooler + IP allowlist
+```
+Harga = per GB storage (Rp 10.000/GB). 5GB = Rp 50.000, 20GB = Rp 200.000 — skala linier.
+Varian: +PostGIS / +pgvector = Rp 12.500/GB. SKU PostGIS sempat "Out of stock" (supply terbatas).
+Catatan: tier SHARED — resource dipakai bareng tenant lain (noisy neighbor), kemungkinan tanpa HA.
+DC Jakarta → latency bagus untuk customer lokal.
+
+### 4.2 DigitalOcean — $15.15/mo ✅ REKOMENDASI ZERO-RISK
 ```
 Node 1GB/1vCPU      $15.15
 Storage 10GB        $0.00   (30 GiB sudah termasuk di harga node)
@@ -57,7 +65,7 @@ Egress              $0.00   (included)
 TOTAL               $15.15  flat, managed (backup + failover + monitoring)
 ```
 
-### 4.2 Crunchy Bridge — ~$18–19/mo
+### 4.3 Crunchy Bridge — ~$18–19/mo
 ```
 Hobby-1 (1GB)       $18.00
 Storage 10GB        ~$1.00  ($0.10/GB, sebagian included*)
@@ -65,7 +73,7 @@ Storage 10GB        ~$1.00  ($0.10/GB, sebagian included*)
 TOTAL               ~$18–19  managed, deploy di AWS/Azure/GCP pilihan sendiri
 ```
 
-### 4.3 Render — ~$19–21/mo
+### 4.4 Render — ~$19–21/mo
 ```
 Basic-1gb (1GB)     $19.00
 Storage ekstra      ~$1–2   ($0.30/GB di luar included*)
@@ -73,7 +81,7 @@ Storage ekstra      ~$1–2   ($0.30/GB di luar included*)
 TOTAL               ~$19–21  managed; HA cuma di Pro+ ($55+)
 ```
 
-### 4.4 Aiven — ~$12–15/mo* (perlu verifikasi konfigurasi)
+### 4.5 Aiven — ~$12–15/mo* (perlu verifikasi konfigurasi)
 ```
 Hobbyist (small node)  from $12.00  ($0.02/hr × 730 jam)
 Storage                ~$1*         ($0.10/GB*)
@@ -81,7 +89,7 @@ Storage                ~$1*         ($0.10/GB*)
 TOTAL                  ~$12–15*  managed; Developer $5/mo = dev-grade
 ```
 
-### 4.5 Neon — $24.35/mo
+### 4.6 Neon — $24.35/mo
 ```
 Compute 0.25 CU × 730j × $0.106   $19.35   (1 CU = 1vCPU/4GB; minimal 0.25 CU)
 Storage 10GB × $0.35              $3.50
@@ -91,7 +99,7 @@ TOTAL                             $24.35   (bisa turun drastis kalau scale-to-ze
 ```
 Catatan: paling murah kalau workload bisa scale-to-zero (dev/staging), mahal untuk prod always-on.
 
-### 4.6 Supabase — $25.25/mo
+### 4.7 Supabase — $25.25/mo
 ```
 Pro flat             $25.00   (incl $10 compute credit ≈ micro instance, 8GB disk, 250GB egress)
 Disk 10GB            $0.25    (8GB incl + 2GB × $0.125)
@@ -99,7 +107,7 @@ Disk 10GB            $0.25    (8GB incl + 2GB × $0.125)
 TOTAL                $25.25
 ```
 
-### 4.7 Fly.io — ~$5–7/mo (paling murah, tapi DIY)
+### 4.8 Fly.io — ~$5–7/mo (termurah USD, tapi DIY)
 ```
 Shared machine 1GB   ~$5.00   (prepaid $36/yr → credit $5/mo usage, eff $3/mo)
 Volume 10GB × $0.15  $1.50
@@ -108,7 +116,7 @@ Egress 10GB × $0.02  $0.20
 TOTAL                ~$6.70   (Postgres = cluster DIY via flyctl, bukan managed)
 ```
 
-### 4.8 Railway — ~$31/mo (termahal + DIY)
+### 4.9 Railway — ~$31/mo (termahal + DIY)
 ```
 1 vCPU × 730j × $0.00000772    $20.28
 1 GB mem × 730j × $0.00000386  $10.14
@@ -125,15 +133,18 @@ TOTAL                          ~$31.07   (Postgres = container DIY)
 
 | Prioritas | Pilihan | Estimasi | Alasan |
 |---|---|---|---|
-| 🥇 Value (managed) | **DigitalOcean** | $15.15/mo | Flat termurah, 30 GiB storage incl, managed penuh |
-| 🥈 Runner-up | **Crunchy Bridge** | ~$18/mo | Multi-cloud, storage $0.10/GB termurah, managed |
-| 🥉 Budget hemat | **Fly.io** | ~$5–7/mo | Termurah, tapi Postgres DIY — butuh maintenance |
+| 🥇 Value (managed, budget) | **SumoPod PG 16 Shared** | Rp 100rb (10GB) | Termurah managed, DC Jakarta (latency lokal bagus) |
+| 🥈 Zero-risk (managed) | **DigitalOcean** | $15.15/mo | Vendor mature, 30 GiB storage incl, managed penuh |
+| 🥉 Runner-up | **Crunchy Bridge** | ~$18/mo | Multi-cloud, storage $0.10/GB termurah, managed |
+| 💸 Budget hemat DIY | **Fly.io** | ~$5–7/mo | Termurah USD, tapi Postgres DIY — butuh maintenance |
 | ❌ Skip | Railway | ~$31/mo | Mahal + DIY container |
 | ⚠️ Kondisional | Neon | $24.35/mo | Pilih kalau workload bisa scale-to-zero (hemat drastis) |
 
-**Keputusan yang disarankan:** deploy orderin prod ke DO Managed PostgreSQL 1GB/1vCPU
-($15.15/mo flat). Kalau tim prefer infra di multi-cloud (bukan lock ke DO): Crunchy Bridge.
-Kalau tujuan utama = biaya seminimal mungkin dan ada kapasitas maintain sendiri: Fly.io.
+**Keputusan yang disarankan:** deploy orderin prod ke **SumoPod Managed PostgreSQL 16 (Shared)
+storage 10GB (Rp 100.000/bln)** — harga managed termurah, DC Jakarta cocok untuk customer lokal.
+Syarat sebelum commit: konfirmasi detail tier Shared (backup retention, HA, RAM/CPU plan, uptime
+SLA) via dashboard/support SumoPod. Kalau prefer vendor internasional yang mature: DO Managed PG
+1GB ($15.15/mo). Kalau tim siap maintain sendiri dengan budget minimal: Fly.io.
 
 ---
 
@@ -142,7 +153,10 @@ Kalau tujuan utama = biaya seminimal mungkin dan ada kapasitas maintain sendiri:
 - Snapshot 2026-08-07, diambil dari halaman pricing resmi via curl (HTML ter-render).
 - Angka tanpa tanda * = harga resmi persis dari halaman vendor. Angka bertanda * = estimasi
   dari struktur harga (perlu verifikasi konfigurasi spesifik sebelum commit).
+- Harga SumoPod (Rp 10.000/GB storage, Rp 12.500/GB varian) = dari dashboard akun user (2026-08-07) —
+  halaman publik SumoPod tidak menampilkan harga (login-gated).
 - DO tier Production/HA tidak muncul di HTML halaman — tidak dicantumkan angkanya.
+- Konversi USD: kurs ~Rp 15.400/USD (estimasi, bukan angka resmi).
 - Sumber:
   - Neon: https://neon.tech/pricing
   - Supabase: https://supabase.com/pricing
@@ -152,3 +166,4 @@ Kalau tujuan utama = biaya seminimal mungkin dan ada kapasitas maintain sendiri:
   - Fly.io: https://fly.io/docs/about/pricing/
   - Crunchy Bridge: https://www.crunchydata.com/products/crunchy-bridge/pricing
   - DigitalOcean: https://www.digitalocean.com/pricing/managed-databases
+  - SumoPod: https://sumopod.com (harga dari dashboard akun, publik tidak ditampilkan)

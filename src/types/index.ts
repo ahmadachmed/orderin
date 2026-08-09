@@ -29,6 +29,7 @@ export interface MenuItemView {
   id: string;
   name: string;
   description: string | null;
+  category?: string;
   price: number;
   imageUrl: string | null;
   prepTimeSeconds: number;
