@@ -135,7 +135,7 @@ async function placeOrder(page: Page, customerName: string) {
 
 /** The admin dashboard card for one order, scoped by customer name. */
 function orderCard(page: Page, customerName: string) {
-  return page.locator("div.rounded-lg.border.bg-white", { hasText: customerName });
+  return page.locator("div.rounded-xl.border.bg-card", { hasText: customerName });
 }
 
 /** Advance an order card PENDING → CONFIRMED → PAID → BREWING → READY_FOR_PICKUP. */
