@@ -1,13 +1,14 @@
 // Admin-scoped status badge (T4). T3 owns the shared components/OrderStatusBadge.
 import type { OrderStatus } from "@/types/admin";
 
+// Dark-first styles per PLAN §2.1 badge table (bg-X/10 text-X border-X/20).
 const STYLES: Record<OrderStatus, string> = {
-  PENDING: "bg-amber-100 text-amber-800 border-amber-300",
-  CONFIRMED: "bg-blue-100 text-blue-800 border-blue-300",
-  BREWING: "bg-violet-100 text-violet-800 border-violet-300",
-  READY_FOR_PICKUP: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  PICKED_UP: "bg-slate-200 text-slate-600 border-slate-300",
-  CANCELLED: "bg-rose-100 text-rose-700 border-rose-300",
+  PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  CONFIRMED: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  BREWING: "bg-primary/10 text-primary border-primary/20",
+  READY_FOR_PICKUP: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  PICKED_UP: "bg-muted text-muted-foreground border-border",
+  CANCELLED: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const LABELS: Record<OrderStatus, string> = {

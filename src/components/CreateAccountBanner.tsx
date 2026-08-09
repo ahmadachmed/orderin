@@ -1,5 +1,9 @@
 "use client";
 import { useState } from "react";
+import { Lock } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   tenantSlug: string;
@@ -46,49 +50,52 @@ export default function CreateAccountBanner({
   };
 
   return (
-    <div className="rounded-xl bg-blue-50 px-4 py-3">
+    <Card className="p-4">
       {!showForm ? (
         <>
-          <p className="text-sm font-medium text-blue-800">
+          <p className="text-sm font-medium text-foreground">
             🔒 Buat akun & simpan pesanan ini
           </p>
-          <p className="mt-1 text-xs text-blue-600">
+          <p className="mt-1 text-xs text-muted-foreground">
             Dapatkan riwayat pesanan dan akses lintas perangkat.
           </p>
-          <button
+          <Button
             onClick={() => setShowForm(true)}
-            className="mt-2 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white"
+            className="mt-2"
+            size="sm"
           >
             Buat Akun
-          </button>
+          </Button>
         </>
       ) : (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-blue-800">Buat akun</p>
-          <input
-            type="password"
-            placeholder="Password (min 6 karakter)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm"
-          />
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          <p className="text-sm font-medium text-foreground">Buat akun</p>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="password"
+              placeholder="Password (min 6 karakter)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2">
-            <button
-              onClick={handleRegister}
-              className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white"
-            >
+            <Button onClick={handleRegister} size="sm">
               Daftar
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setShowForm(false)}
-              className="text-xs text-blue-500"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
             >
               Batal
-            </button>
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
