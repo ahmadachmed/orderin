@@ -10,7 +10,7 @@ import { getCustomerSession } from "@/lib/customer-auth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = getCustomerSession();
+  const session = await getCustomerSession();
   if (!session) return ok({ loggedIn: false });
   return ok({ loggedIn: true, customerId: session.customerId });
 }

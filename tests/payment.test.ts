@@ -21,7 +21,7 @@ async function patchPayment(orderId: string, body: Record<string, unknown>) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  return PATCH(req, { params: { orderId } });
+  return PATCH(req, { params: Promise.resolve({ orderId }) });
 }
 
 afterAll(async () => {

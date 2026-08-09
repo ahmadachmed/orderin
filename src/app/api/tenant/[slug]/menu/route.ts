@@ -9,8 +9,12 @@ import { ok, fail } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: { slug: string } }) {
-  const tenant = await prisma.tenant.findUnique({ where: { slug: params.slug } });
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
+  const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Tenant not found", 404);
 
   const items = await scoped(tenant.id).menuItem.findMany({

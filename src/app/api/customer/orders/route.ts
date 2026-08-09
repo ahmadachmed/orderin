@@ -5,7 +5,7 @@ import { getCustomerSession } from "@/lib/customer-auth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = getCustomerSession();
+  const session = await getCustomerSession();
   if (!session) return fail("Unauthorized", 401);
 
   const db = scoped(session.tenantId);

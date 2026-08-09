@@ -35,7 +35,7 @@ const fixtures: TenantFixture[] = [];
 
 async function postClose(sprintId: string) {
   return closeSprintRoute(new NextRequest(`http://localhost/api/admin/sprints/${sprintId}/close`, { method: "POST" }), {
-    params: { sprintId },
+    params: Promise.resolve({ sprintId }),
   });
 }
 
@@ -118,7 +118,7 @@ describe("GET /api/admin/sprints/[sprintId]", () => {
 
   it("returns 404 for an unknown sprint", async () => {
     const res = await getSprintDetail(new NextRequest("http://localhost/x"), {
-      params: { sprintId: "00000000-0000-0000-0000-000000000000" },
+      params: Promise.resolve({ sprintId: "00000000-0000-0000-0000-000000000000" }),
     });
     expect(res.status).toBe(404);
   });
@@ -142,7 +142,7 @@ describe("GET /api/admin/sprints/[sprintId]", () => {
     });
 
     const res = await getSprintDetail(new NextRequest("http://localhost/x"), {
-      params: { sprintId: sprint.id },
+      params: Promise.resolve({ sprintId: sprint.id }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();

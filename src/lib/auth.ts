@@ -58,8 +58,8 @@ export function verifySession(token: string | undefined | null): AdminSession | 
 }
 
 /** Read + verify the session from the current request (route handler only). */
-export function getSession(): AdminSession | null {
-  return verifySession(cookies().get(COOKIE_NAME)?.value);
+export async function getSession(): Promise<AdminSession | null> {
+  return verifySession((await cookies()).get(COOKIE_NAME)?.value);
 }
 
 export function sessionCookie(token: string): string {

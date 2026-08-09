@@ -238,7 +238,7 @@ describe("T17-9 — /[tenantSlug]/account/orders page", () => {
   });
 
   it("redirects to the tenant home when there is no session", async () => {
-    await expect(AccountOrdersPage({ params: { tenantSlug: fx.slug } })).rejects.toThrow(
+    await expect(AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fx.slug }) })).rejects.toThrow(
       "__REDIRECT__"
     );
     expect(navMock.redirect).toHaveBeenCalledWith(`/${fx.slug}`);
@@ -247,14 +247,14 @@ describe("T17-9 — /[tenantSlug]/account/orders page", () => {
   it("404s when the session belongs to a different tenant slug", async () => {
     tokenStore.current = makeSession(fx.tenantId, customerId, "some-other-shop");
     await expect(
-      AccountOrdersPage({ params: { tenantSlug: fx.slug } })
+      AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fx.slug }) })
     ).rejects.toThrow("__NOT_FOUND__");
     expect(navMock.notFound).toHaveBeenCalled();
   });
 
   it("renders the history page for a valid session", async () => {
     tokenStore.current = makeSession(fx.tenantId, customerId, fx.slug);
-    const el = await AccountOrdersPage({ params: { tenantSlug: fx.slug } });
+    const el = await AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fx.slug }) });
     // <main> with the AccountOrdersList client component inside.
     expect(el.type).toBe("main");
     const children = Array.isArray(el.props.children) ? el.props.children : [el.props.children];

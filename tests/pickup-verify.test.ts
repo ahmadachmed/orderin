@@ -49,7 +49,7 @@ async function patchOrderReq(orderId: string, body: Record<string, unknown>) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  return patchOrder(req, { params: { orderId } });
+  return patchOrder(req, { params: Promise.resolve({ orderId }) });
 }
 
 /** Advance an order to READY_FOR_PICKUP (CONFIRMED → PAID → BREWING → READY). */

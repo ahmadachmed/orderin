@@ -193,21 +193,21 @@ describe("T17-12 — cross-tenant cookie replay is refused", () => {
 
   it("A's session cookie on B's account page → 404; B's on A's page → 404", async () => {
     tokenStore.current = tokenA;
-    await expect(AccountOrdersPage({ params: { tenantSlug: fxB.slug } })).rejects.toThrow(
+    await expect(AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fxB.slug }) })).rejects.toThrow(
       "__NOT_FOUND__"
     );
     expect(navMock.notFound).toHaveBeenCalled();
 
     navMock.notFound.mockClear();
     tokenStore.current = tokenB;
-    await expect(AccountOrdersPage({ params: { tenantSlug: fxA.slug } })).rejects.toThrow(
+    await expect(AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fxA.slug }) })).rejects.toThrow(
       "__NOT_FOUND__"
     );
     expect(navMock.notFound).toHaveBeenCalled();
   });
 
   it("no session at all → account page redirects to the tenant home", async () => {
-    await expect(AccountOrdersPage({ params: { tenantSlug: fxA.slug } })).rejects.toThrow(
+    await expect(AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fxA.slug }) })).rejects.toThrow(
       "__REDIRECT__"
     );
     expect(navMock.redirect).toHaveBeenCalledWith(`/${fxA.slug}`);
