@@ -9,25 +9,26 @@ export const dynamic = "force-dynamic";
 export default async function AccountOrdersPage({
   params,
 }: {
-  params: { tenantSlug: string };
+  params: Promise<{ tenantSlug: string }>;
 }) {
-  const session = verifyCustomerSession(cookies().get("orderin_customer_session")?.value);
-  if (!session) redirect(`/${params.tenantSlug}`);
-  if (session.tenantSlug !== params.tenantSlug) notFound();
+  const { tenantSlug } = await params;
+  const session = verifyCustomerSession((await cookies()).get("orderin_customer_session")?.value);
+  if (!session) redirect(`/${tenantSlug}`);
+  if (session.tenantSlug !== tenantSlug) notFound();
 
   return (
     // -mx-4/-mt-4 cancel the shared layout's px-4 pt-4 so the dark page bg
     // spans the whole column (kanon history.html — dark-first).
     <main className="-mx-4 -mt-4 min-h-screen bg-background px-4 pb-10 pt-4">
       <header className="mb-4">
-        <Link href={`/${params.tenantSlug}`} className="text-xs font-medium text-muted-foreground">
+        <Link href={`/${tenantSlug}`} className="text-xs font-medium text-muted-foreground">
           ← Kembali ke menu
         </Link>
         <h1 className="mt-1 text-xl font-extrabold tracking-tight text-foreground">
           Riwayat Pesanan
         </h1>
       </header>
-      <AccountOrdersList tenantSlug={params.tenantSlug} />
+      <AccountOrdersList tenantSlug={tenantSlug} />
     </main>
   );
 }

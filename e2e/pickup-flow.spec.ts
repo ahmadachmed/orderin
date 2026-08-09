@@ -32,7 +32,7 @@
  *    "OrderItem", "OrderStatusLog", "Sprint", "TenantAdmin").
  */
 import "dotenv/config";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
 import { Client } from "pg";
 
 const db = new Client({ connectionString: process.env.DATABASE_URL });
@@ -40,6 +40,29 @@ const tenantsToClean: string[] = [];
 
 let shop: { slug: string } | null = null;
 let adminCreds: { username: string; password: string } = { username: "", password: "" };
+
+/**
+ * POST with 429 backoff. Register is rate-limited 60s/3 per IP on the shared
+ * dev server and other specs register their own tenants in the same run, so a
+ * previous window can still be live when this file starts. Retry after the
+ * window slides (same pattern as happy-path.spec.ts / customer-account.spec.ts).
+ */
+async function postWithRetry(
+  request: APIRequestContext,
+  path: string,
+  data: Record<string, unknown>,
+  expectStatus: number
+) {
+  for (let attempt = 1; ; attempt++) {
+    const res = await request.post(path, { data });
+    if (res.status() === 429 && attempt < 3) {
+      await new Promise((r) => setTimeout(r, 61_000));
+      continue;
+    }
+    expect(res.status()).toBe(expectStatus);
+    return res;
+  }
+}
 
 test.beforeAll(async ({ request }) => {
   await db.connect();
@@ -52,15 +75,12 @@ test.beforeAll(async ({ request }) => {
   const username = `admin${stamp}`;
   const password = "e2e-test-pass-123";
 
-  const regRes = await request.post("/api/register", {
-    data: {
-      name: `E2E PIN Kedai ${stamp}`,
-      slug,
-      username,
-      password,
-    },
-  });
-  expect(regRes.status()).toBe(201);
+  await postWithRetry(request, "/api/register", {
+    name: `E2E PIN Kedai ${stamp}`,
+    slug,
+    username,
+    password,
+  }, 201);
 
   const settingsRes = await request.patch("/api/admin/settings", {
     data: { openTime: "00:00", closeTime: "23:59" },

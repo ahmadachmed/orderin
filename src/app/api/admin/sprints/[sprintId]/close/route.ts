@@ -14,9 +14,10 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { sprintId: string } }
+  { params }: { params: Promise<{ sprintId: string }> }
 ) {
-  const session = getSession();
+  const { sprintId } = await params;
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const tenant = await prisma.tenant.findUnique({
@@ -27,7 +28,7 @@ export async function POST(
   try {
     const res = await closeSprint(
       session.tenantId,
-      params.sprintId,
+      sprintId,
       tenant?.prepTimeBuffer ?? 0
     );
     return ok(res);

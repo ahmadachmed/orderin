@@ -11,7 +11,7 @@ import { parseMenuFields } from "@/lib/menu-fields";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const items = await scoped(session.tenantId).menuItem.findMany({
@@ -31,7 +31,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const body = await readJson(req);

@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
  * the session is valid, 401 otherwise.
  */
 export async function GET() {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
   return ok({ authenticated: true });
 }

@@ -19,7 +19,7 @@ const ACTIVE_STATUSES = [
 ];
 
 export async function GET() {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const db = scoped(session.tenantId);

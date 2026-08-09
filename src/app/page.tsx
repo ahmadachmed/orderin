@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { Search, ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { TenantSummary } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import ShopSearchForm from "@/components/ShopSearchForm";
 
 export const dynamic = "force-dynamic";
 
@@ -44,26 +42,7 @@ export default async function Home() {
 
       {/* Search / Slug Input Card (kanon beranda.html) */}
       <section className="flex flex-col gap-5 rounded-xl border border-border bg-card p-5 shadow-lg">
-        <div className="flex flex-col gap-3">
-          <label
-            htmlFor="shop-search"
-            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-          >
-            Masukkan Nama Kedai
-          </label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="shop-search"
-              placeholder="kopi-senja"
-              className="h-12 rounded-lg border-border bg-background pl-11"
-            />
-          </div>
-        </div>
-        <Button className="h-auto w-full rounded-xl py-3.5 font-bold shadow-lg shadow-primary/20">
-          <span>Lanjut</span>
-          <ArrowRight className="h-5 w-5" />
-        </Button>
+        <ShopSearchForm />
       </section>
 
       {/* Tenant Grid */}
