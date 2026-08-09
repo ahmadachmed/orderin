@@ -48,7 +48,7 @@ describe("isValidUuid (lib/uuid)", () => {
 describe("invalid orderId → 404 (issue #135)", () => {
   it("GET /api/order/[orderId] returns 404 for malformed uuid", async () => {
     const req = new NextRequest("http://localhost/api/order/xxx", { method: "GET" });
-    const res = await getOrder(req, { params: { orderId: "xxx" } });
+    const res = await getOrder(req, { params: Promise.resolve({ orderId: "xxx" }) });
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Order not found" });
   });
@@ -59,7 +59,7 @@ describe("invalid orderId → 404 (issue #135)", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ paymentMethod: "qris" }),
     });
-    const res = await patchPayment(req, { params: { orderId: "xxx" } });
+    const res = await patchPayment(req, { params: Promise.resolve({ orderId: "xxx" }) });
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Order not found" });
   });
@@ -77,7 +77,7 @@ describe("invalid orderId → 404 (issue #135)", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status: "CONFIRMED" }),
     });
-    const res = await patchAdminOrder(req, { params: { orderId: "xxx" } });
+    const res = await patchAdminOrder(req, { params: Promise.resolve({ orderId: "xxx" }) });
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Order not found" });
   });
@@ -88,7 +88,7 @@ describe("invalid orderId → 404 (issue #135)", () => {
       { method: "GET" }
     );
     const res = await getOrder(req, {
-      params: { orderId: "00000000-0000-4000-8000-000000000000" },
+      params: Promise.resolve({ orderId: "00000000-0000-4000-8000-000000000000" }),
     });
     expect(res.status).toBe(404);
   });
