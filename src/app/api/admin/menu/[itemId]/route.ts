@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const session = getSession();
+  const { itemId } = await params;
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const body = await readJson(req);
@@ -27,12 +28,12 @@ export async function PATCH(
 
     const db = scoped(session.tenantId);
     const res = (await db.menuItem.update({
-      where: { id: params.itemId },
+      where: { id: itemId },
       data,
     })) as unknown as { count: number };
     if (res.count === 0) throw new HttpError(404, "Menu item not found");
     const updated = await db.menuItem.findFirst({
-      where: { id: params.itemId },
+      where: { id: itemId },
       select: {
         id: true,
         tenantId: true,
@@ -55,22 +56,23 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const session = getSession();
+  const { itemId } = await params;
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   try {
     const db = scoped(session.tenantId);
     // Refuse if referenced by any order (snapshot integrity).
     const refs = await prisma.orderItem.count({
-      where: { menuItemId: params.itemId },
+      where: { menuItemId: itemId },
     });
     if (refs > 0) {
       throw new HttpError(409, "Menu item is referenced by orders and cannot be deleted");
     }
     const res = (await db.menuItem.delete({
-      where: { id: params.itemId },
+      where: { id: itemId },
     })) as unknown as { count: number };
     if (res.count === 0) throw new HttpError(404, "Menu item not found");
 

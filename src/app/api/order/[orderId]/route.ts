@@ -16,9 +16,13 @@ import { fetchQueue, etaForOrderInQueue, prepSecondsForItems, withBuffer } from 
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: { orderId: string } }) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
+) {
+  const { orderId } = await params;
   const order = await prisma.order.findUnique({
-    where: { id: params.orderId },
+    where: { id: orderId },
     include: {
       items: {
         include: { menuItem: { select: { name: true, prepTimeSeconds: true } } },

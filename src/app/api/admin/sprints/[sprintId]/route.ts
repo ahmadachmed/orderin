@@ -13,14 +13,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { sprintId: string } }
+  { params }: { params: Promise<{ sprintId: string }> }
 ) {
-  const session = getSession();
+  const { sprintId } = await params;
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const db = scoped(session.tenantId);
   const sprint = await db.sprint.findFirst({
-    where: { id: params.sprintId },
+    where: { id: sprintId },
     include: {
       _count: { select: { orders: true } },
       orders: {

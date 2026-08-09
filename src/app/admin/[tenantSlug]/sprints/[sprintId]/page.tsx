@@ -3,16 +3,13 @@
 // Sprint detail page (T15, PLAN §4.1/§4.6): /admin/[tenantSlug]/sprints/[sprintId].
 // Header nav + SprintDetail component (readonly order list, close action).
 
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { adminLogout } from "@/lib/admin-api";
 import SprintDetail from "@/components/admin/SprintDetail";
 
-export default function AdminSprintDetailPage({
-  params,
-}: {
-  params: { tenantSlug: string; sprintId: string };
-}) {
+export default function AdminSprintDetailPage() {
   const router = useRouter();
+  const params = useParams<{ tenantSlug: string; sprintId: string }>();
   const tenantSlug = params.tenantSlug;
 
   async function handleLogout() {

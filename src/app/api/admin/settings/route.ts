@@ -47,7 +47,7 @@ const STRING_FIELDS = [
 ] as const;
 
 export async function GET() {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const tenant = await prisma.tenant.findUnique({
@@ -60,7 +60,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const body = await readJson(req);

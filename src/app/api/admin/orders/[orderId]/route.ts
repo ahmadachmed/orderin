@@ -40,9 +40,10 @@ function assertTransition(current: OrderStatus, next: OrderStatus) {
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
-  const session = getSession();
+  const { orderId } = await params;
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const body = await readJson(req);
@@ -62,7 +63,7 @@ export async function PATCH(
 
   try {
     const db = scoped(session.tenantId);
-    const order = await db.order.findFirst({ where: { id: params.orderId } });
+    const order = await db.order.findFirst({ where: { id: orderId } });
     if (!order) throw new HttpError(404, "Order not found");
 
     // Barista identity for the audit log (issue #7: who marked paid).

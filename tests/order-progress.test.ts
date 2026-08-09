@@ -54,7 +54,7 @@ async function lookupReq(slug: string, phone: string, ip: string) {
 
 async function getOrderReq(orderId: string) {
   const req = new NextRequest(`http://localhost/api/order/${orderId}`, { method: "GET" });
-  return getOrder(req, { params: { orderId } });
+  return getOrder(req, { params: Promise.resolve({ orderId }) });
 }
 
 async function patchOrderReq(orderId: string, body: Record<string, unknown>) {
@@ -63,7 +63,7 @@ async function patchOrderReq(orderId: string, body: Record<string, unknown>) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  return patchOrder(req, { params: { orderId } });
+  return patchOrder(req, { params: Promise.resolve({ orderId }) });
 }
 
 afterAll(async () => {

@@ -15,7 +15,7 @@ import { PaymentStatus, SprintStatus } from "@/generated/prisma/enums";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const db = scoped(session.tenantId);
@@ -57,7 +57,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const session = getSession();
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   const tenant = await prisma.tenant.findUnique({

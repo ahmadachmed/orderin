@@ -36,9 +36,10 @@ function isWithinHours(open: string, close: string, now: Date = new Date()): boo
 export default async function ShopMenuPage({
   params,
 }: {
-  params: { tenantSlug: string };
+  params: Promise<{ tenantSlug: string }>;
 }) {
-  const tenant = await prisma.tenant.findUnique({ where: { slug: params.tenantSlug } });
+  const { tenantSlug } = await params;
+  const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) notFound();
 
   const items = await prisma.menuItem.findMany({
@@ -116,7 +117,7 @@ export default async function ShopMenuPage({
           <p className="text-xs text-muted-foreground">{tenant.address}</p>
         ) : null}
 
-        <ActiveOrderBanner tenantSlug={params.tenantSlug} />
+        <ActiveOrderBanner tenantSlug={tenantSlug} />
 
         {/* Queue estimate above the menu (PLAN §3.2) */}
         <QueueIndicator queueSeconds={queueSeconds} isOpen={open} />

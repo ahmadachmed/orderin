@@ -58,8 +58,8 @@ export function verifyCustomerSession(token: string | undefined | null): Custome
 }
 
 /** Read + verify the customer session from the current request (route handler only). */
-export function getCustomerSession(): CustomerSession | null {
-  return verifyCustomerSession(cookies().get(COOKIE_NAME)?.value);
+export async function getCustomerSession(): Promise<CustomerSession | null> {
+  return verifyCustomerSession((await cookies()).get(COOKIE_NAME)?.value);
 }
 
 export function customerSessionCookie(token: string): string {
