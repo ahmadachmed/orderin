@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { User, Phone } from "lucide-react";
 import { MenuItemView, CartLine } from "@/types";
 import { formatRupiah } from "@/lib/format";
 import MenuList from "@/components/MenuList";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface OrderFormProps {
   tenantSlug: string;
@@ -119,71 +123,78 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
     }
   };
 
-  const inputCls =
-    "w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-400 focus:outline-none";
-
   return (
-    <form onSubmit={handleSubmit} className="pb-28">
+    <form onSubmit={handleSubmit} className="pb-36">
       <MenuList items={items} quantities={quantities} onQuantityChange={handleQuantityChange} />
 
       {!isOpen ? (
-        <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="mt-4 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
           {closedMessage ?? "Kedai tutup saat ini — pesanan belum bisa diterima."}
         </div>
       ) : (
         <>
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-neutral-900">Data kamu</h2>
+          <Card className="mt-6 border-border bg-card p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Data kamu</h2>
             <div className="space-y-3">
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Nama"
-                className={inputCls}
-                autoComplete="name"
-              />
-              <input
-                type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="Nomor HP (mis. 0812xxxx)"
-                className={inputCls}
-                autoComplete="tel"
-              />
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Nama"
+                  className="h-11 rounded-xl bg-background pl-9"
+                  autoComplete="name"
+                />
+              </div>
+              <div className="relative">
+                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Nomor HP (mis. 0812xxxx)"
+                  className="h-11 rounded-xl bg-background pl-9"
+                  autoComplete="tel"
+                />
+              </div>
             </div>
             {sessionChecked && !customerId ? (
-              <p className="mt-3 text-xs text-neutral-500">
+              <p className="mt-3 text-xs text-muted-foreground">
                 <Link
                   href={`/${tenantSlug}/account/orders`}
-                  className="font-medium text-neutral-700 underline underline-offset-2"
+                  className="font-medium text-muted-foreground underline underline-offset-2"
                 >
                   Simpan pesanan ke akun?
                 </Link>
               </p>
             ) : null}
-          </div>
+          </Card>
 
           {error ? (
-            <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>
+            <p className="mt-3 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{error}</p>
           ) : null}
 
-          {/* Sticky bottom summary bar — mobile-web-first */}
-          <div className="fixed inset-x-0 bottom-0 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
-            <div className="mx-auto flex max-w-md items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] text-neutral-500">Total</p>
-                <p className="text-lg font-bold text-neutral-900">
-                  {formatRupiah(total)}
-                </p>
+          {/* Sticky bottom summary bar — matches Stitch menu.html bottom cart bar */}
+          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur-lg">
+            <div className="mx-auto max-w-md px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[11px] uppercase tracking-widest text-muted-foreground">
+                    Total Pesanan
+                  </span>
+                  <span className="text-lg font-bold tabular-nums text-primary">
+                    {formatRupiah(total)}
+                  </span>
+                </div>
               </div>
-              <button
+              <Button
                 type="submit"
                 disabled={submitting || cartLines.length === 0}
-                className="rounded-full bg-neutral-900 px-6 py-3 text-sm font-semibold text-white active:scale-95 disabled:opacity-40"
+                className="mt-3 h-auto w-full rounded-xl py-3.5 font-bold shadow-lg shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Memproses..." : "Buat Pesanan"}
-              </button>
+              </Button>
             </div>
           </div>
         </>
