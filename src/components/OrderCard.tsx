@@ -4,6 +4,8 @@
 // Shows customer name, items, totals, payment status; exposes lifecycle
 // actions: mark paid, advance/regress status, cancel (pending only).
 // Respects the payment gate: BREWING is blocked until paymentStatus=PAID.
+// Restyle per PLAN §2.5 — className/structure only; props, handlers, and
+// label texts are unchanged (E2E contract).
 
 import { useMemo } from "react";
 import type { Order, OrderStatus } from "@/types/admin";
@@ -13,6 +15,8 @@ import {
   formatPrice,
   isStuck,
 } from "@/types/admin";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import AdminStatusBadge from "./admin/AdminStatusBadge";
 import PaymentBadge from "./admin/PaymentBadge";
 
@@ -59,25 +63,25 @@ export default function OrderCard({
     order.status === "PICKED_UP" || order.status === "CANCELLED";
 
   return (
-    <div
+    <Card
       draggable={!isTerminal}
       onDragStart={(e) => onDragStart?.(e, order)}
       onDragEnd={onDragEnd}
-      className={`rounded-lg border bg-white p-3 shadow-sm transition ${
-        stuck ? "border-rose-400 ring-2 ring-rose-200" : "border-slate-200"
+      className={`p-3 transition ${
+        stuck ? "border-destructive ring-2 ring-destructive/20" : ""
       } ${isTerminal ? "opacity-60" : "cursor-grab hover:shadow-md active:cursor-grabbing"}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-slate-900">
+          <p className="truncate font-semibold text-foreground">
             {order.customerName}
           </p>
-          <p className="text-xs text-slate-500">{order.customerPhone}</p>
-          <p className="font-mono text-[10px] text-slate-400">
+          <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
+          <p className="font-mono text-[10px] text-muted-foreground">
             #{order.id.slice(0, 8).toUpperCase()}
           </p>
           {order.pickupCode && order.status === "READY_FOR_PICKUP" && (
-            <p className="mt-1 font-mono text-sm font-bold text-amber-700">
+            <p className="mt-1 font-mono text-sm font-bold tabular-nums text-primary">
               PIN: {order.pickupCode}
             </p>
           )}
@@ -89,7 +93,7 @@ export default function OrderCard({
       </div>
 
       {/* Items */}
-      <ul className="mt-2 space-y-0.5 text-sm text-slate-700">
+      <ul className="mt-2 space-y-0.5 text-sm text-foreground">
         {(order.items ?? []).map((it) => (
           <li key={it.id} className="flex justify-between gap-2">
             <span className="truncate">
@@ -103,21 +107,21 @@ export default function OrderCard({
           </li>
         ))}
         {!order.items?.length && (
-          <li className="italic text-slate-400">No items</li>
+          <li className="italic text-muted-foreground">No items</li>
         )}
       </ul>
 
-      <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-xs text-slate-500">
+      <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
         <span className="tabular-nums">
           Total {formatPrice(total)}
           {order.etaSeconds != null && (
-            <span className="ml-2 text-slate-400">
+            <span className="ml-2 text-muted-foreground">
               ETA {formatDuration(order.etaSeconds)}
             </span>
           )}
         </span>
         {stuck && (
-          <span className="font-semibold text-rose-600">
+          <span className="font-semibold text-destructive">
             Stuck {">"}10m
           </span>
         )}
@@ -125,19 +129,19 @@ export default function OrderCard({
 
       {/* Payment gate hint */}
       {brewingBlocked && (
-        <p className="mt-2 rounded bg-orange-50 px-2 py-1 text-xs text-orange-700">
+        <p className="mt-2 rounded bg-primary/10 p-2 text-xs text-primary">
           🔒 Mark payment PAID before brewing
         </p>
       )}
 
       {/* Customer transfer info (issue #7: surfaced on the admin card) */}
       {order.customerTransferNote && (
-        <p className="mt-2 rounded bg-sky-50 px-2 py-1 text-xs text-sky-800">
+        <p className="mt-2 rounded bg-sky-500/10 px-2 py-1 text-xs text-sky-400">
           💬 {order.customerTransferNote}
         </p>
       )}
       {order.paidAt && (
-        <p className="mt-1 text-xs text-emerald-700">
+        <p className="mt-1 text-xs text-emerald-400">
           ✓ Paid {new Date(order.paidAt).toLocaleString("id-ID")}
           {order.paymentMethod ? ` via ${order.paymentMethod.replaceAll("_", " ")}` : ""}
         </p>
@@ -147,33 +151,36 @@ export default function OrderCard({
       {!isTerminal && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {order.paymentStatus === "UNPAID" && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => onMarkPaid(order.id)}
-              className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700"
             >
               Mark paid
-            </button>
+            </Button>
           )}
           {next && (
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={() => onStatusChange(order.id, next)}
               disabled={brewingBlocked}
               title={brewingBlocked ? "Payment must be PAID first" : `Advance to ${next}`}
-              className="rounded-md bg-slate-800 px-2 py-1 text-xs font-medium text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               → {next.replaceAll("_", " ").toLowerCase()}
-            </button>
+            </Button>
           )}
           {order.status === "PENDING" && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => onCancel(order.id)}
-              className="rounded-md border border-rose-300 px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
             >
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
