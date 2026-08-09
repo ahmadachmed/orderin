@@ -22,14 +22,16 @@ export const dynamic = "force-dynamic";
 export default async function OrderStatusPage({
   params,
 }: {
-  params: { tenantSlug: string; orderId: string };
+  params: Promise<{ tenantSlug: string; orderId: string }>;
 }) {
+  const { tenantSlug, orderId } = await params;
+
   // Issue #135: non-UUID orderId would make Prisma throw (invalid input
   // syntax for type uuid) → 500. Format-check before any DB call → 404.
-  if (!isValidUuid(params.orderId)) notFound();
+  if (!isValidUuid(orderId)) notFound();
 
   const order = await prisma.order.findUnique({
-    where: { id: params.orderId },
+    where: { id: orderId },
     include: {
       items: {
         include: { menuItem: { select: { name: true, prepTimeSeconds: true } } },
@@ -49,11 +51,11 @@ export default async function OrderStatusPage({
 
   // UUID is unguessable (bearer token), but still verify the slug matches
   // the URL so cross-tenant URLs 404 instead of leaking order data.
-  if (!order || order.tenant.slug !== params.tenantSlug) notFound();
+  if (!order || order.tenant.slug !== tenantSlug) notFound();
 
   // T17-7: guest orders get the "Buat akun" banner — logged-in customers see
   // no banner, so the phone (banner trigger) is nulled out for them.
-  const customerSession = getCustomerSession();
+  const customerSession = await getCustomerSession();
 
   const view: OrderStatusView = {
     orderId: order.id,

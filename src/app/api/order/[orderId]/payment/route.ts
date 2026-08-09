@@ -20,8 +20,9 @@ const METHODS = new Set<string>(["qris", "bank_transfer", "cash"]);
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
+  const { orderId } = await params;
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -41,11 +42,11 @@ export async function PATCH(
   }
 
   // Issue #135: non-UUID orderId → Prisma uuid cast error → 500. 404 instead.
-  if (!isValidUuid(params.orderId)) {
+  if (!isValidUuid(orderId)) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  const order = await prisma.order.findUnique({ where: { id: params.orderId } });
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
   if (order.paymentStatus === "PAID") {
     return NextResponse.json({ error: "Order already paid" }, { status: 409 });
@@ -64,7 +65,7 @@ export async function PATCH(
   }
 
   const updated = await prisma.order.update({
-    where: { id: params.orderId },
+    where: { id: orderId },
     data: update,
     select: {
       id: true,

@@ -41,13 +41,14 @@ function assertTransition(current: OrderStatus, next: OrderStatus) {
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
-  const session = getSession();
+  const { orderId } = await params;
+  const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
 
   // Issue #135: non-UUID orderId → Prisma uuid cast error → 500. 404 instead.
-  if (!isValidUuid(params.orderId)) return fail("Order not found", 404);
+  if (!isValidUuid(orderId)) return fail("Order not found", 404);
 
   const body = await readJson(req);
   if (!body) return fail("Invalid JSON body", 400);
@@ -66,7 +67,7 @@ export async function PATCH(
 
   try {
     const db = scoped(session.tenantId);
-    const order = await db.order.findFirst({ where: { id: params.orderId } });
+    const order = await db.order.findFirst({ where: { id: orderId } });
     if (!order) throw new HttpError(404, "Order not found");
 
     // Barista identity for the audit log (issue #7: who marked paid).

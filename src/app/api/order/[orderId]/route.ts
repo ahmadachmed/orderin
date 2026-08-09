@@ -17,12 +17,17 @@ import { fetchQueue, etaForOrderInQueue, prepSecondsForItems, withBuffer } from 
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: { params: { orderId: string } }) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ orderId: string }> }
+) {
+  const { orderId } = await params;
+
   // Issue #135: non-UUID orderId → Prisma uuid cast error → 500. 404 instead.
-  if (!isValidUuid(params.orderId)) return fail("Order not found", 404);
+  if (!isValidUuid(orderId)) return fail("Order not found", 404);
 
   const order = await prisma.order.findUnique({
-    where: { id: params.orderId },
+    where: { id: orderId },
     include: {
       items: {
         include: { menuItem: { select: { name: true, prepTimeSeconds: true } } },
