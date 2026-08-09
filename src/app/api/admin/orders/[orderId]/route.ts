@@ -15,6 +15,7 @@ import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { isValidUuid } from "@/lib/uuid";
 import { recalculateQueueEtas, QUEUE_STATUSES } from "@/lib/queue";
 import { OrderStatus, PaymentStatus, PaymentMethod } from "@/generated/prisma/enums";
 
@@ -44,6 +45,9 @@ export async function PATCH(
 ) {
   const session = getSession();
   if (!session) return fail("Unauthorized", 401);
+
+  // Issue #135: non-UUID orderId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(params.orderId)) return fail("Order not found", 404);
 
   const body = await readJson(req);
   if (!body) return fail("Invalid JSON body", 400);

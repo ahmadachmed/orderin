@@ -75,7 +75,9 @@ test("happy path: register → admin → menu → order → status", async ({ pa
   // 6. Status page: PENDING badge + payment options.
   await page.waitForURL(new RegExp(`/${slug}/order/[0-9a-f-]{36}$`));
   await expect(page.getByText("Menunggu konfirmasi")).toBeVisible();
-  await expect(page.getByText("Pembayaran")).toBeVisible();
+  // Issue #135 fix run: page also renders "Pembayaran akan diarahkan oleh
+  // kasir…" hint text — scope to the section heading (strict-mode safe).
+  await expect(page.getByRole("heading", { name: "Pembayaran" })).toBeVisible();
   await expect(page.getByRole("button", { name: "QRIS" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Transfer Bank" })).toBeVisible();
 });
