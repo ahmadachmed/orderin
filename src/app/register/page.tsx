@@ -218,7 +218,7 @@ export default function RegisterPage() {
 
         <p className="mt-4 text-center text-sm text-slate-500">
           Sudah punya kedai?{" "}
-          <Link href="/" className="font-medium text-sky-600 hover:text-sky-700">
+          <Link href="/login" className="font-medium text-sky-600 hover:text-sky-700">
             Login di sini
           </Link>
         </p>
