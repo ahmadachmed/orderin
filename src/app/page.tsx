@@ -83,15 +83,6 @@ export default async function Home() {
         </ul>
       )}
 
-      {/* Secondary Action (kanon beranda.html) */}
-      <section className="text-center">
-        <Link
-          href="/register"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Pemilik kedai? Masuk
-        </Link>
-      </section>
     </main>
   );
 }
