@@ -1,84 +1,27 @@
 id,area,scenario,preconditions,steps,expected,status,gap_type,severity,notes
-REG-01,Register,Register tenant baru sukses,DB kosong atau slug unik,Buka /register > isi Nama/Slug/Username/Password > submit,201 + redirect ke admin login,IMPLEMENTED,,,
-REG-02,Register,Slug otomatis dari nama,Belum edit slug,Ketik nama 'Kopi Senja Makassar',Slug terisi otomatis 'kopi-senja-makassar' (lowercase+dash),IMPLEMENTED,,,
-REG-03,Register,Slug sudah dipakai,Slug 'kopi-senja' exist,Tik slug 'kopi-senja',Indikator 'Slug sudah dipakai' merah (debounce 500ms),IMPLEMENTED,,,
-REG-04,Register,Slug format invalid,Form slug diisi 'UPPER_BAD!',Submit / perhatikan indikator,Indikator format error tampil; POST ditolak 400,IMPLEMENTED,,,
-REG-05,Register,Submit slug duplicate race,Dua request paralel slug sama,POST /api/register bersamaan,P2002 catch > 409 'Slug sudah dipakai',IMPLEMENTED,,,
-REG-06,Register,Password < 6 karakter,Form diisi password '12345',Submit,Error 'Password minimal 6 karakter' tanpa hit API,IMPLEMENTED,,,
-REG-07,Register,Username > 50 karakter,Username 51 char,Submit,400 'Username maksimal 50 karakter',IMPLEMENTED,,,
-REG-08,Register,Konfirmasi password,TIDAK ADA field confirm password,Isi password typo (beda dgn confirm),Tidak bisa terdeteksi; salah ketik tidak terlihat,GAP,UX,Medium,Form tidak punya field confirm password
-REG-09,Register,Rate limit / anti-spam,TIDAK ADA rate limiting,POST /api/register berulang (100x),Bisa spam create tenant tak terbatas,GAP,SECURITY,High,Perlu rate limit (per IP) + optional email verification
-REG-10,Register,Redirect setelah sukses,Session cookie sudah di-set di response register,Submit sukses,Redirect ke /admin/<slug>/login PADAHAL session sudah aktif,GAP,UX,Medium,Harusnya redirect ke dashboard; login page tidak cek session existing
-LOGIN-01,Admin Login,Login sukses,Kredensial valid (tenant kopi-senja/admin),POST /api/admin/auth,200 + Set-Cookie session,IMPLEMENTED,,,
-LOGIN-02,Admin Login,Login salah password,Kredensial salah,POST dengan password salah,401 'Invalid credentials',IMPLEMENTED,,,
-LOGIN-03,Admin Login,Login tenant tidak ada,Slug tidak exist,POST dengan slug fiktif,401 (bukan 404; anti enum),IMPLEMENTED,,,
-LOGIN-04,Admin Login,Brute force protection,TIDAK ADA rate limit / lockout,100x login salah beruntun,Semua diproses tanpa delay,GAP,SECURITY,High,Perlu rate limit per IP/username + lockout
-LOGIN-05,Admin Login,Logout,TIDAK ADA tombol logout di UI,Login lalu cari tombol logout,adminLogout() ada di lib tapi TIDAK dipakai komponen mana pun,GAP,FUNCTIONAL,High,User tidak bisa logout; session 7 hari tidak bisa diakhiri
-LOGIN-06,Admin Login,Ubah password,TIDAK ADA endpoint/fitur,Cari menu ganti password,Tidak ada opsi ubah password,GAP,FUNCTIONAL,Medium,Admin tidak bisa ganti password
-LOGIN-07,Admin Login,Session expiry,Session TTL 7 hari,Login lalu tunggu 7 hari,Cookie expire > 401,GAP,UX,Low,TTL fix 7 hari; tidak ada sliding/refresh; tidak ada revoke (stateless by design MVP)
-SETTINGS-01,Settings,GET settings,Login admin,GET /api/admin/settings,200 + data tenant lengkap,IMPLEMENTED,,,
-SETTINGS-02,Settings,PATCH jam operasional,Login admin,Update openTime/closeTime,200 + tersimpan,IMPLEMENTED,,,
-SETTINGS-03,Settings,Validasi format HH:mm,TIDAK ada validasi format waktu,PATCH openTime='abc',Tersimpan string invalid; order hours check rusak,GAP,FUNCTIONAL,Medium,Harus validasi regex ^\d{2}:\d{2}$ di settings PATCH
-SETTINGS-04,Settings,Validasi timezone,TIDAK ada validasi value timezone,PATCH timezone='Mars/Olympus',Tersimpan,GAP,FUNCTIONAL,Low,Timezone disimpan tapi tidak dipakai kalkulasi (by design all-UTC); validasi opsional
-SETTINGS-05,Settings,Timezone display,customer/landing pakai UTC string,Buka menu page jam buka,Badge 'Buka 07:00-21:00 UTC' padahal timezone Asia/Makassar,GAP,UX,Medium,PLAN 7.3: konversi di presentation layer belum diimplement; user Makassar lihat UTC
-SETTINGS-06,Settings,QRIS + bank config,Login admin,PATCH qrisCode/bankAccountNumber,200 + tersimpan,IMPLEMENTED,,,
-ORDER-01,Order,Create order sukses,Tenant open + item available,POST /api/order dengan 2 item,201 + orderId + etaSeconds,IMPLEMENTED,,,
-ORDER-02,Order,Order saat shop closed,isOpen=false,POST /api/order,422 'Shop is closed',IMPLEMENTED,,,
-ORDER-03,Order,Order di luar jam operasional,Jam di luar openTime-closeTime,POST /api/order,422 'Shop is closed; opens at X',IMPLEMENTED,,,
-ORDER-04,Order,Queue penuh,Queue = maxQueueSize (default 20),POST /api/order,429 'Order queue is full',IMPLEMENTED,,,
-ORDER-05,Order,Item unavailable,Item isAvailable=false,POST /api/order dengan item itu,422 'One or more menu items are unavailable',IMPLEMENTED,,,
-ORDER-06,Order,Quantity invalid,quantity=0 / -1 / 100,POST /api/order,400,IMPLEMENTED,,,
-ORDER-07,Order,Duplicate item id,Item sama 2x di items[],POST /api/order dgn item duplikat,ids di-dedupe utk validasi; orderItems tidak di-aggregate,GAP,FUNCTIONAL,Low,Cek perilaku aktual: 2 baris OrderItem terpisah vs digabung
-ORDER-08,Order,Rate limit / spam order,TIDAK ADA rate limiting,POST /api/order 50x cepat,Semua diterima (sampai cap queue),GAP,SECURITY,Medium,Perlu rate limit per IP; cap queue jadi satu-satunya guard
-ORDER-09,Order,Validasi customerPhone,TIDAK ADA format validation,Phone 'abc!!',Diterima,IMPLEMENTED,,,MVP: free text by design; optional format check post-MVP
-ORDER-10,Order,Queue cap race,Check-then-create non-atomic (komentar kode),2 request paralel saat queue=19,2x lolos cap; queue 21,GAP,SECURITY,Medium,Diakui di komentar kode (L63-65); serialized transaction post-MVP
-ORDER-11,Order,Order oleh customer tanpa login,OrderId UUID = bearer token,Tidak ada auth di POST /api/order,By design (MVP),IMPLEMENTED,,,
-STATUS-01,Order Status,Status page sukses,Order valid,Buka /[slug]/order/[orderId],200 + detail order + tenant payment info,IMPLEMENTED,,,
-STATUS-02,Order Status,Cross-tenant URL check,Order tenant A; URL pakai slug tenant B,Buka URL tsb,404 (slug mismatch),IMPLEMENTED,,,
-STATUS-03,Order Status,Order tidak ada,OrderId random,Buka status page,404,IMPLEMENTED,,,
-STATUS-04,Order Status,Polling 5 detik,Status page terbuka,Perubahan status dari admin,Status ter-update otomatis <=5s,IMPLEMENTED,,,POLL_INTERVAL_MS=5000 di OrderStatusTracker
-STATUS-05,Order Status,Error handling polling,TIDAK ada error state,Network fail saat polling,Fetch gagal; tidak ada fallback/retry indicator,GAP,UX,Low,Tracker tidak handle fetch error dengan visible state
-STATUS-06,Order Status,ETA tampil,Status PENDING/CONFIRMED/BREWING,GET /api/order/[id],etaSeconds durasi,IMPLEMENTED,,,
-STATUS-07,Order Status,ETA ready=0,Status READY_FOR_PICKUP,GET /api/order/[id],etaSeconds=0,IMPLEMENTED,,,
-STATUS-08,Order Status,ETA selesai=null,Status PICKED_UP/CANCELLED,GET /api/order/[id],etaSeconds=null,IMPLEMENTED,,,
-PAY-01,Payment,Pilih metode QRIS,Order UNPAID,PATCH /api/order/[id]/payment paymentMethod=qris,200 + tersimpan,IMPLEMENTED,,,
-PAY-02,Payment,I have paid bank transfer,Order UNPAID,PATCH paymentMethod=bank_transfer + note,200 + log CUSTOMER 'I have paid',IMPLEMENTED,,,
-PAY-03,Payment,Mark paid oleh barista,Login admin,PATCH status+paymentStatus=PAID,200 + paidAt + audit log BARISTA,IMPLEMENTED,,,
-PAY-04,Payment,Payment gate brewing,Order UNPAID,Transisi CONFIRMED>BREWING,409 'Payment must be PAID before order can brew',IMPLEMENTED,,,
-PAY-05,Payment,Order sudah paid,Order PAID,Customer PATCH payment ulang,409 'Order already paid',IMPLEMENTED,,,
-PAY-06,Payment,Unpaid reversal,Order PAID,Admin PATCH paymentStatus=UNPAID,200 + paidAt null + log,IMPLEMENTED,,,
-PAY-07,Payment,Fake payment confirmation,Penanda 'I have paid' advisory saja,Barista tidak verifikasi (by design),Risiko unpaid dianggap paid; proses manual barista,GAP,SECURITY,Medium,Diakui PLAN 10.1 (assumption); mitigasi: audit log sudah ada
-ADMIN-01,Admin Dashboard,List active orders,Login admin,GET /api/admin/orders,List PENDING>READY_FOR_PICKUP FIFO,IMPLEMENTED,,,
-ADMIN-02,Admin Dashboard,Transisi status valid,Pending order,CONFIRMED>BREWING>READY>PICKED_UP,Setiap step 200 + statusLog,IMPLEMENTED,,,
-ADMIN-03,Admin Dashboard,Transisi invalid,BREWING order,PATCH > PICKED_UP langsung,422 'Invalid status transition',IMPLEMENTED,,,
-ADMIN-04,Admin Dashboard,Cancel dari pending,Pending order,Transisi PENDING>CANCELLED,200 + eta null + recalc queue,IMPLEMENTED,,,
-ADMIN-05,Admin Dashboard,ETA recalc saat order keluar queue,3 order antre,Order pertama READY,ETA order 2-3 mengecil,IMPLEMENTED,,,recalculateQueueEtas
-ADMIN-06,Admin Dashboard,Auto-refresh dashboard,TIDAK ada polling di halaman admin (OrderCard statis),Barista buka dashboard,Order baru tidak muncul tanpa manual refresh,GAP,FUNCTIONAL,High,PLAN assumption 10.1: barista monitor dashboard; perlu auto-refresh/polling seperti status page
-ADMIN-07,Admin Dashboard,Pagination / filter,TIDAK ada pagination/filter,100+ order aktif,List semua tanpa batas,GAP,FUNCTIONAL,Low,Skala MVP kecil; post-MVP
-ADMIN-08,Admin Dashboard,History order selesai,TIDAK ada view history,Order PICKED_UP,Menghilang dari list tanpa arsip,GAP,FUNCTIONAL,Low,By design (active only); post-MVP
-MENU-01,Menu CRUD,Create item,Login admin,POST /api/admin/menu,201,IMPLEMENTED,,,
-MENU-02,Menu CRUD,Update item,Item exist,PATCH /api/admin/menu/[id],200 + updated,IMPLEMENTED,,,
-MENU-03,Menu CRUD,Delete item tanpa referensi,Item tidak dipakai order,DELETE,200 ok,IMPLEMENTED,,,
-MENU-04,Menu CRUD,Delete item ter-referensi,Item ada di order history,DELETE,409 'referenced by orders',IMPLEMENTED,,,
-MENU-05,Menu CRUD,Toggle availability,Item exist,PATCH isAvailable=false,200 + hilang dari public menu,IMPLEMENTED,,,
-MENU-06,Menu CRUD,Item tenant lain tidak bisa diakses,Login tenant A; item tenant B,PATCH menu item tenant B,Scoped; 404/0 count,IMPLEMENTED,,,Scoped extension
-MENU-07,Menu CRUD,Image upload,TIDAK ada upload endpoint,imageUrl hanya string manual,Harus paste URL eksternal,GAP,FUNCTIONAL,Low,Post-MVP (PLAN 6.2 menu image upload)
-ISOLATION-01,Tenant Isolation,Menu tidak bocor antar tenant,Tenant A & B punya item,GET menu tenant A,Item B tidak muncul,IMPLEMENTED,,,
-ISOLATION-02,Tenant Isolation,Order tidak bocor,Login tenant A,GET /api/admin/orders,Order tenant B tidak muncul,IMPLEMENTED,,,Scoped extension fail-closed
-ISOLATION-03,Tenant Isolation,Cross-tenant update ditolak,Tenant A session,PATCH order tenant B,Scoped; 404,GAP,VERIFY,Medium,Test belum ada utk cross-tenant order PATCH (tenant-isolation.test.ts 8 test; cek cakupan)
-SEC-01,Security,Session cookie flags,Cookie HttpOnly+SameSite=Lax,Inspect Set-Cookie,Secure hanya di production (dev tanpa Secure; wajar),IMPLEMENTED,,,
-SEC-02,Security,Session tamper,Token diedit 1 char,GET protected route,verifySession null (HMAC),IMPLEMENTED,,,
-SEC-03,Security,CSRF protection,SameSite=Lax saja,POST via cross-site form,Protected utk top-level nav (Lax); subdomain attack vector tersisa,GAP,SECURITY,Low,Post-MVP: origin check / CSRF token
-SEC-04,Security,Slug-check abuse,TIDAK ada rate limit,GET /api/slug-check spam,Enumeration slug mungkin,GAP,SECURITY,Low,Public endpoint tanpa limit
-SEC-05,Security,SESSION_SECRET default,process.env.SESSION_SECRET fallback dev,Deploy tanpa set env,Secret 'orderin-dev-insecure-secret-change-me' dipakai prod,GAP,SECURITY,Critical,Harus fail-fast di production kalau SESSION_SECRET default
-DEPLOY-01,Deploy,Vercel + Aiven,Belum deploy,App hanya jalan lokal docker,Belum ada environment prod,GAP,DEPLOYMENT,High,Menunggu keputusan user (deploy ditunda)
-DEPLOY-02,Deploy,CI pipeline,Ada .github/workflows/ci.yml,T7 commit,CI lint+typecheck+build,IMPLEMENTED,,,
-DEPLOY-03,Deploy,E2E production,TIDAK ada smoke test di CI,Deploy ke Vercel,Belum ada validasi runtime prod,GAP,TEST,Medium,Post-deploy
-TEST-01,Test Coverage,Unit/integration tests,Ada 7 file test,Run vitest,102/102 pass,IMPLEMENTED,,,
-TEST-02,Test Coverage,Test UI components,TIDAK ada component test (OrderForm/Tracker),UI behavior,Belum ter-cover automated,GAP,TEST,Medium,Manual/browser test diperlukan
-TEST-03,Test Coverage,E2E browser flow,TIDAK ada E2E (Playwright dll),Register>order>payment>status,Belum ter-cover,GAP,TEST,High,Flow lintas-halaman tidak ada automated test
-CUST-01,Order Status,Timeline riwayat status untuk customer,Order aktif,Buka halaman status /[slug]/order/[id],User melihat step yang sudah dilalui (menunggu→dikonfirmasi→dibuat→siap),GAP,UX,Medium,statusLogs tersimpan di DB (lengkap dgn actorName) tapi GET customer tidak mereturn-nya; UI hanya badge status tunggal (OrderStatusTracker.tsx:99-128)
-CUST-02,Order Status,Re-entry halaman status setelah link hilang,Tab ditutup / link hilang,Buka lagi URL order,Ada cara menemukan order kembali,GAP,FUNCTIONAL,High,URL UUID fire-and-forget; TIDAK ada localStorage & TIDAK ada endpoint lookup by phone (grep kosong) → user kehilangan akses progress selamanya; kemungkinan besar ini inti keluhan 'tidak bisa melihat progress'
-CUST-03,Order Status,Live update berhenti saat READY_FOR_PICKUP,Page status dibiarkan terbuka,Barista move READY→PICKED_UP,Page tetap update ke 'Selesai',VERIFY,VERIFY,Low,"TERMINAL_STATUSES termasuk READY_FOR_PICKUP → interval di-clear saat READY (OrderStatusTracker.tsx:12,36-38); page frozen, perlu reload manual"
-PICKUP-01,Order Pickup,Verifikasi identitas pengambil order,Order READY_FOR_PICKUP,Customer datang klaim order,Barista bisa memastikan pengambil = pemesan,GAP,SECURITY,High,Tidak ada PIN/kode verifikasi; siapa pun yang tahu nama (atau menguping) bisa klaim order; kode #XXXXXXXX di halaman customer TIDAK ditampilkan di kartu barista → tidak bisa cross-check
-PICKUP-02,Order Pickup,Kode order tampil di dashboard barista,Order aktif,Lihat OrderCard admin,Barista melihat kode yg sama dengan halaman customer,GAP,UX,Medium,Kartu barista hanya nama + nomor HP penuh (OrderCard.tsx:72-76); kode #FA44BDA6 hanya muncul di sisi customer (OrderStatusTracker.tsx:109-111) — fix termurah: tampilkan kode di kartu barista
+REG-01,Landing,"Daftar kedai tampil di landing (nama, alamat, jam, status Buka/Tutup)",Seed tenant kopi-senja,Buka /,"Kartu tenant muncul dengan nama, alamat, jam buka, badge Buka",IMPLEMENTED,,,
+SHOP-01,Shop,Menu tampil per kategori (Semua/Minuman/Camilan/Makanan),Tenant dengan menu ber-kategori,"Buka /kopi-senja, klik tab kategori",Item terfilter sesuai kategori,IMPLEMENTED,,,
+SHOP-02,Shop,Tambah item via stepper +/-,Menu tersedia,Klik + pada item,"Qty bertambah, tombol Buat Pesanan aktif",IMPLEMENTED,,,
+ORDER-01,Order,Buat pesanan (nama+HP) -> redirect ke status page,"Tenant buka, item di cart","Isi nama+HP, klik Buat Pesanan","Redirect ke /<slug>/order/<uuid>, order PENDING",IMPLEMENTED,,,
+STATUS-01,Status,Status page: badge + #CODE + ETA,Order aktif,Buka status page,"Badge status, #FC97FBB8, Estimasi siap: X menit",IMPLEMENTED,,,
+STATUS-02,Status,Polling 5s: status advance dari admin ter-reflect,"Order PENDING, admin session","Advance status di admin, tunggu 6s di customer",Badge berubah tanpa reload,IMPLEMENTED,,,
+STATUS-03,Status,Timeline statusLogs dirender customer,Order dengan >=2 transisi,Lihat status page,"Entri timeline (Pesanan dibuat, Dikonfirmasi, dll) + actor + jam",IMPLEMENTED,,,
+STATUS-04,Status,Pickup PIN tampil saat READY_FOR_PICKUP,Order READY,Lihat status page,4 digit PIN kotak besar + teks Tunjukkan kode ini ke barista,IMPLEMENTED,,,
+PAY-01,Payment,Status paid ter-reflect di customer,Order PAID,Lihat status page,Pembayaran diterima - terima kasih!,IMPLEMENTED,,,
+ADMIN-01,Admin,Login barista,Seed admin,Login /admin/<slug>/login,Masuk dashboard,IMPLEMENTED,,,
+ADMIN-02,Admin,Board kolom status + advance + drag + auto-refresh 5s,Order PENDING,Klik Mark paid / -> confirmed / Cancel,"Status pindah kolom, notice muncul",IMPLEMENTED,,,
+ADMIN-03,Admin,Barista card nampilin #CODE + PIN saat READY,Order READY,Lihat board,"Card: nama, HP, #CODE, PIN: 6579",IMPLEMENTED,,,
+ADMIN-04,Admin,Menu management CRUD + toggle available,Admin session,Buka /admin/<slug>/menu,"Tabel item, Edit/Delete/Available",IMPLEMENTED,,,
+ADMIN-05,Admin,Sprint: buka baru + riwayat + omzet,Admin session,Buka /admin/<slug>/sprints,"Tabel sprint: tanggal, status, #order, omzet PAID",IMPLEMENTED,,,
+ADMIN-06,Admin,Payment config QRIS + bank,Admin session,Buka /admin/<slug>/settings,Form QRIS image/code + bank name/account + simpan,IMPLEMENTED,,,
+CANCEL-01,Order,"Cancel flow dari admin, tampilan customer",Order aktif,"Cancel di admin, buka status page customer","Badge Dibatalkan, Pesanan dibatalkan - tidak perlu membayar",IMPLEMENTED,,,
+ACCT-01,Account,"Register customer -> riwayat, order guest auto-attach by HP",Order guest dgn HP X,Register dgn HP yang sama,"Redirect riwayat, order tampil, session aktif",IMPLEMENTED,,,
+ACCT-02,Account,Re-entry: banner Lanjutkan pesanan dari localStorage,"Order aktif, tab ditutup",Buka /<slug> lagi,Banner Lanjutkan pesanan -> status page,IMPLEMENTED,,,
+LOOKUP-01,API,POST /api/order/lookup cari order aktif by phone,Order aktif dgn phone,"POST {slug, phone}","OrderId + status + nama, rate limited 5/min",IMPLEMENTED,,,
+SEARCH-01,Landing,Search by NAMA kedai (label) harusnya nemu kedai,Tenant kopi-senja,Ketik 'Kopi Senja Makassar' + Enter,Harusnya ke /kopi-senja; aktual: redirect /kopi-senja-makassar -> 404 mentah Next.js,GAP,UX,High,ShopSearchForm.tsx:34-48 cuma normalizeSlug->router.push; tidak ada lookup. Ketik 'kopi' juga 404. Ada /api/slug-check & /api/order/lookup tapi tidak dipakai.
+SEARCH-02,Landing,404 non-existent slug tampil halaman ramah,Slug tak ada,Buka /xxx-tidak-ada,"404 page Next.js default, tanpa opsi kembali/search",GAP,UX,Low,Tenant page notFound() -> default Next 404. Tidak ada custom not-found.
+QUEUE-01,Status,Posisi antrean (ke-berapa) tampil di status page,Order dalam queue,Lihat status page,Hanya ETA; tidak ada 'Antrean ke-N'. Rule PLAN: posisi + ETA,GAP,FUNCTIONAL,High,src/types/index.ts:65 OrderStatusView tanpa field posisi; src/lib/queue.ts:56 etaForOrderInQueue sudah hitung idx (FIFO) tapi tidak diekspos ke GET /api/order/[orderId] maupun UI.
+ACCT-03,Account,Link Lihat riwayat pesananmu tanpa login,"Guest, tanpa session",Klik Lihat riwayat pesananmu,Silent redirect balik ke /<slug> tanpa pesan login,GAP,UX,Medium,src/app/[tenantSlug]/account/orders/page.tsx:16 redirect(`/${tenantSlug}`). Seharusnya redirect ke login dgn next param atau tampilkan prompt.
+LAND-01,Landing,Jam operasional konsisten dgn timezone tenant,Tenant Asia/Makassar,Bandingkan landing vs shop page,Landing: 'Buka 07:00-21:00 UTC' mentah; shop: convert ke tz tenant,GAP,UX,Medium,src/app/page.tsx:66 raw openTime-closeTime UTC. [tenantSlug]/page.tsx:70 formatTimeInTimezone. Landing harus pakai helper yang sama.
+STATUS-05,Status,Timeline tidak menampilkan label duplikat utk log PAID,Order PAID,Lihat timeline,Log 'Marked PAID via dashboard' (status PENDING) tampil 'Pesanan dibuat' duplikat,GAP,UX,Low,StatusTimeline.tsx:4-11 STATUS_LABELS key by status; log PAID berstatus PENDING -> label salah. ActorName 'admin' ada tapi label statusnya menyesatkan.
+STATUS-06,Status,ETA disembunyikan saat READY_FOR_PICKUP,Order READY,Lihat status page,Masih tampil 'Estimasi siap: <1 menit dari sekarang' padahal sudah siap,GAP,UX,Low,OrderStatusTracker.tsx:141 TERMINAL_STATUSES hanya PICKED_UP/CANCELLED; READY masih render ETA.
