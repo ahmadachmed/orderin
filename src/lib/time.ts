@@ -33,3 +33,34 @@ export function formatTimeInTimezone(utcHHmm: string, timezone: string): string 
   // Normalize the "24:00" midnight quirk some engines emit for 00:xx.
   return local === "24:00" ? "00:00" : local;
 }
+
+/**
+ * T25-2 — detect whether an operating-hours range crosses midnight in the
+ * tenant's timezone. Converts both UTC "HH:mm" strings via
+ * formatTimeInTimezone, then checks close < open post-conversion.
+ * Pure function, no side effects. Invalid timezone falls back to
+ * comparing the raw UTC values (close < open → overnight in UTC).
+ */
+export function isOvernightHours(openUtc: string, closeUtc: string, timezone: string): boolean {
+  const openLocal = formatTimeInTimezone(openUtc, timezone);
+  const closeLocal = formatTimeInTimezone(closeUtc, timezone);
+  return closeLocal < openLocal;
+}
+
+/**
+ * T25-2 — format operating hours for display. Returns local-time labels
+ * (via formatTimeInTimezone) plus whether the range wraps past midnight
+ * (isOvernight), so callers can append the "besok" marker. Invalid
+ * timezone → raw UTC strings (callers add the "UTC" suffix).
+ */
+export function formatOperatingHours(
+  openUtc: string,
+  closeUtc: string,
+  timezone: string,
+): { openDisplay: string; closeDisplay: string; isOvernight: boolean } {
+  return {
+    openDisplay: formatTimeInTimezone(openUtc, timezone),
+    closeDisplay: formatTimeInTimezone(closeUtc, timezone),
+    isOvernight: isOvernightHours(openUtc, closeUtc, timezone),
+  };
+}
