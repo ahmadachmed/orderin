@@ -206,11 +206,11 @@ describe("T17-12 — cross-tenant cookie replay is refused", () => {
     expect(navMock.notFound).toHaveBeenCalled();
   });
 
-  it("no session at all → account page redirects to the tenant home", async () => {
+  it("no session at all → account page redirects to login with ?next (T20 ACCT-03)", async () => {
     await expect(AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fxA.slug }) })).rejects.toThrow(
       "__REDIRECT__"
     );
-    expect(navMock.redirect).toHaveBeenCalledWith(`/${fxA.slug}`);
+    expect(navMock.redirect).toHaveBeenCalledWith(`/${fxA.slug}/login?next=account/orders`);
   });
 
   it("A's cookie never exposes B's order history via the orders API", async () => {

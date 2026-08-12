@@ -254,10 +254,38 @@ test("login + bind-on-login: existing account picks up the order; logout works",
   await expect(page.getByText("Menunggu konfirmasi")).toBeVisible();
 
   // Logout → redirected to the shop; the account page no longer resolves
-  // (server-side redirect back to the shop without a session).
+  // without a session (T20 ACCT-03: it now redirects to login with ?next
+  // instead of silently back to the shop).
   await page.getByRole("button", { name: "Keluar" }).click();
   await page.waitForURL(`**/${shop!.slug}`);
   await page.goto(`/${shop!.slug}/account/orders`);
-  await page.waitForURL(`**/${shop!.slug}`);
-  expect(page.url()).not.toContain("/account/orders");
+  await page.waitForURL(`**/${shop!.slug}/login**`);
+  expect(page.url()).toContain("next=account/orders");
+});
+
+test("guest riwayat link redirects to login?next=account/orders; login returns to riwayat", async ({ page }) => {
+  const stamp = Date.now();
+  const customer = `Riwayat Cust ${stamp}`;
+
+  // Guest order → status page carries the "Lihat riwayat pesananmu" link.
+  // Use the existing account's phone so bind-on-login attaches this order.
+  await placeOrder(page, customer, existingCustomer.phone);
+  // Button asChild wraps a Link → role is link, not button.
+  await page.getByRole("link", { name: "Lihat riwayat pesananmu" }).click();
+
+  // T20 ACCT-03: no silent redirect — guest lands on login with the target.
+  await page.waitForURL(`**/${shop!.slug}/login**`);
+  expect(page.url()).toContain("next=account/orders");
+  await expect(page.getByText("Login untuk lihat riwayat")).toBeVisible();
+
+  // Login → back to the riwayat page (next target), order visible.
+  await page.getByPlaceholder("Nomor HP (mis. 0812xxxx)").fill(existingCustomer.phone);
+  await page.getByPlaceholder("Password").fill(CUSTOMER_PASSWORD);
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await page.waitForURL(`**/${shop!.slug}/account/orders`);
+  await expect(page.getByRole("heading", { name: "Riwayat Pesanan" })).toBeVisible();
+  // Test 3 bound an earlier order to the same account — this test's order is
+  // one of possibly several with the same item/status, so scope to the first.
+  await expect(page.getByText(`1× ${ITEM_NAME}`).first()).toBeVisible();
+  await expect(page.getByText("Menunggu konfirmasi").first()).toBeVisible();
 });

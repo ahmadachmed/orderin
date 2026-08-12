@@ -237,11 +237,11 @@ describe("T17-9 — /[tenantSlug]/account/orders page", () => {
     customerId = customer.id;
   });
 
-  it("redirects to the tenant home when there is no session", async () => {
+  it("redirects to login with ?next=account/orders when there is no session (T20 ACCT-03)", async () => {
     await expect(AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fx.slug }) })).rejects.toThrow(
       "__REDIRECT__"
     );
-    expect(navMock.redirect).toHaveBeenCalledWith(`/${fx.slug}`);
+    expect(navMock.redirect).toHaveBeenCalledWith(`/${fx.slug}/login?next=account/orders`);
   });
 
   it("404s when the session belongs to a different tenant slug", async () => {

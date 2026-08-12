@@ -13,7 +13,9 @@ export default async function AccountOrdersPage({
 }) {
   const { tenantSlug } = await params;
   const session = verifyCustomerSession((await cookies()).get("orderin_customer_session")?.value);
-  if (!session) redirect(`/${tenantSlug}`);
+  // T20 ACCT-03 (docs/T18-plan.md GAP 2): no silent redirect — send guests to
+  // login with ?next so they land back here after authenticating.
+  if (!session) redirect(`/${tenantSlug}/login?next=account/orders`);
   if (session.tenantSlug !== tenantSlug) notFound();
 
   return (
