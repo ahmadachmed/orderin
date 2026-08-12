@@ -65,6 +65,22 @@ export function etaForOrderInQueue(
   return total;
 }
 
+/**
+ * 1-based FIFO position of an order in the queue (T19 / issue #147).
+ * Same ordering as etaForOrderInQueue: oldest first, id tiebreak.
+ * Returns null when orderId is not in the queue (e.g. non-queue statuses
+ * like READY_FOR_PICKUP / PICKED_UP / CANCELLED are simply absent from the
+ * queue, so they get null — position 1 means "next to be served").
+ */
+export function queuePositionForOrder(
+  queue: readonly QueueEntry[],
+  orderId: string
+): number | null {
+  const sorted = sortQueue(queue);
+  const idx = sorted.findIndex((e) => e.id === orderId);
+  return idx === -1 ? null : idx + 1;
+}
+
 /** ETA for a brand-new order: everything currently in the queue + own prep. */
 export function etaForNewOrder(queue: readonly QueueEntry[], ownPrepSeconds: number): number {
   return sortQueue(queue).reduce((acc, e) => acc + e.prepSeconds, 0) + ownPrepSeconds;

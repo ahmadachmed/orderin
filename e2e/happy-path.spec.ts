@@ -123,6 +123,9 @@ test("happy path: landing search → shop → admin → menu → order → statu
   // 5. Status page: PENDING badge + payment options.
   await page.waitForURL(new RegExp(`/${slug}/order/[0-9a-f-]{36}$`));
   await expect(page.getByText("Menunggu konfirmasi")).toBeVisible();
+  // T19 / issue #147: fresh tenant → this is the only order in the queue,
+  // so the status page must show the 1-based position "Antrean ke-1".
+  await expect(page.getByText("Antrean ke-1")).toBeVisible();
   // Issue #135 fix run: page also renders "Pembayaran akan diarahkan oleh
   // kasir…" hint text — scope to the section heading (strict-mode safe).
   await expect(page.getByRole("heading", { name: "Pembayaran" })).toBeVisible();

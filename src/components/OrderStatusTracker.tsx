@@ -138,6 +138,17 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
           <StatusTimeline logs={order.statusLogs ?? []} />
         </div>
 
+        {/* T19 / issue #147: 1-based FIFO queue position — in-queue statuses
+            (PENDING/CONFIRMED/BREWING) only; API returns null otherwise. */}
+        {order.queuePosition != null && !TERMINAL_STATUSES.has(order.status) ? (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground">Posisi antrean</p>
+            <p className="font-bold text-foreground">
+              Antrean ke-{order.queuePosition}
+            </p>
+          </div>
+        ) : null}
+
         {order.etaSeconds != null &&
         !TERMINAL_STATUSES.has(order.status) &&
         order.status !== "READY_FOR_PICKUP" ? (
