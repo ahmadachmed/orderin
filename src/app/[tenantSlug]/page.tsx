@@ -3,20 +3,13 @@ import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
-import { formatTimeInTimezone } from "@/lib/time";
+import { isWithinHours, formatOperatingHours } from "@/lib/time";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export const dynamic = "force-dynamic";
-
-/** HH:mm UTC operating-hours check (provisional copy — T2 owns lib/time.ts). */
-function isWithinHours(open: string, close: string, now: Date = new Date()): boolean {
-  const hm = now.toISOString().slice(11, 16);
-  if (open <= close) return hm >= open && hm < close;
-  return hm >= open || hm < close; // wraps past midnight
-}
 
 /**
  * Shop menu page — /[tenantSlug] (PLAN §3.2 / issue #111).
@@ -64,10 +57,15 @@ export default async function ShopMenuPage({
   const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
   const open = tenant.isOpen && isWithinHours(tenant.openTime, tenant.closeTime);
-  // SETTINGS-05: show operating hours in the tenant's timezone (default
-  // Asia/Jakarta when unset), not raw UTC.
+  // T25-5: operating hours in the tenant's timezone (default Asia/Jakarta
+  // when unset), with the "besok" marker when the range wraps past midnight.
   const timezone = tenant.timezone || "Asia/Jakarta";
-  const openDisplay = formatTimeInTimezone(tenant.openTime, timezone);
+  const { openDisplay, closeDisplay, isOvernight } = formatOperatingHours(
+    tenant.openTime,
+    tenant.closeTime,
+    timezone,
+  );
+  const hoursLabel = `Buka ${openDisplay}–${closeDisplay}${isOvernight ? " besok" : ""}`;
   const closedMessage = tenant.isOpen
     ? `Kedai tutup — buka kembali pukul ${openDisplay} (${timezone}).`
     : "Kedai sedang tutup — pesanan belum bisa diterima.";
@@ -109,6 +107,10 @@ export default async function ShopMenuPage({
               <History className="h-5 w-5" />
             </Link>
           </div>
+        </div>
+        {/* T25-5: operating hours under the header row (timezone-local, "besok" when overnight) */}
+        <div className="mx-auto max-w-md px-4 pb-1.5">
+          <p className="text-[11px] text-muted-foreground">{hoursLabel}</p>
         </div>
       </header>
 
