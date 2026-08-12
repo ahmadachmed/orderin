@@ -92,11 +92,11 @@ export const STATUS_FLOW: OrderStatus[] = [
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  BREWING: "Brewing",
-  READY_FOR_PICKUP: "Ready",
-  PICKED_UP: "Picked up",
-  CANCELLED: "Cancelled",
+  CONFIRMED: "Dikonfirmasi",
+  BREWING: "Diracik",
+  READY_FOR_PICKUP: "Siap Diambil",
+  PICKED_UP: "Selesai",
+  CANCELLED: "Dibatalkan",
 };
 
 // Payment gate: brewing may only start once payment is confirmed (PLAN §3.1.1).
@@ -158,6 +158,6 @@ export interface SprintSummary {
 }
 
 export const SPRINT_STATUS_LABELS: Record<SprintStatus, string> = {
-  OPEN: "Open",
-  CLOSED: "Closed",
+  OPEN: "Buka",
+  CLOSED: "Tutup",
 };
