@@ -13,11 +13,11 @@ const STYLES: Record<OrderStatus, string> = {
 
 const LABELS: Record<OrderStatus, string> = {
   PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  BREWING: "Brewing",
-  READY_FOR_PICKUP: "Ready",
-  PICKED_UP: "Picked up",
-  CANCELLED: "Cancelled",
+  CONFIRMED: "Dikonfirmasi",
+  BREWING: "Diracik",
+  READY_FOR_PICKUP: "Siap Diambil",
+  PICKED_UP: "Selesai",
+  CANCELLED: "Dibatalkan",
 };
 
 export default function AdminStatusBadge({

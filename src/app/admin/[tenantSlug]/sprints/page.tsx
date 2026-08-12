@@ -53,7 +53,7 @@ export default function AdminSprintsPage() {
               href={`/admin/${tenantSlug}`}
               className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
             >
-              Dashboard
+              Dasbor
             </a>
             <a
               href={`/admin/${tenantSlug}/menu`}
@@ -65,7 +65,7 @@ export default function AdminSprintsPage() {
               href={`/admin/${tenantSlug}/settings`}
               className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
             >
-              Payment
+              Pembayaran
             </a>
             <a
               href={`/admin/${tenantSlug}/sprints`}
@@ -86,7 +86,7 @@ export default function AdminSprintsPage() {
               onClick={() => void handleLogout()}
               className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
             >
-              Logout
+              Keluar
             </button>
           </nav>
         </div>

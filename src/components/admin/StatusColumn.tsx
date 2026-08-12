@@ -60,7 +60,7 @@ export default function StatusColumn({
       </div>
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
         {orders.length === 0 && (
-          <p className="py-6 text-center text-xs text-slate-400">Empty</p>
+          <p className="py-6 text-center text-xs text-slate-400">Kosong</p>
         )}
         {orders.map((o) => (
           <OrderCard
