@@ -252,6 +252,79 @@ describe("ShopSearchForm — LAND-01 timezone display", () => {
     render(<ShopSearchForm tenants={noTz} />);
     expect(screen.getByText(/Buka 08:00–17:00 UTC/)).toBeInTheDocument();
   });
+
+  it("falls back to raw UTC times when the tenant has an invalid timezone", () => {
+    const badTz = [
+      {
+        slug: "kopi-hitam",
+        name: "Kopi Hitam",
+        address: null,
+        isOpen: true,
+        phone: null,
+        openTime: "08:00",
+        closeTime: "17:00",
+        timezone: "Not/AZone",
+      },
+    ];
+    render(<ShopSearchForm tenants={badTz} />);
+    expect(screen.getByText(/Buka 08:00–17:00 UTC/)).toBeInTheDocument();
+  });
+});
+
+describe("ShopSearchForm — T25-5 overnight marker (issue #166)", () => {
+  it("appends 'besok' when the converted range wraps past midnight", () => {
+    // 07:00–21:00 UTC → 15:00–05:00 WITA: close < open → overnight.
+    const overnight = [
+      {
+        slug: "kopi-senja",
+        name: "Kopi Senja",
+        address: "Jl. Senja No. 1",
+        isOpen: true,
+        phone: "0812",
+        openTime: "07:00",
+        closeTime: "21:00",
+        timezone: "Asia/Makassar",
+      },
+    ];
+    render(<ShopSearchForm tenants={overnight} />);
+    expect(screen.getByText(/Buka 15:00–05:00 besok/)).toBeInTheDocument();
+  });
+
+  it("shows no marker for same-day hours", () => {
+    // 00:00–12:00 UTC → 08:00–20:00 WITA: close > open → same day.
+    const normal = [
+      {
+        slug: "kopi-senja",
+        name: "Kopi Senja",
+        address: null,
+        isOpen: true,
+        phone: null,
+        openTime: "00:00",
+        closeTime: "12:00",
+        timezone: "Asia/Makassar",
+      },
+    ];
+    render(<ShopSearchForm tenants={normal} />);
+    expect(screen.getByText(/Buka 08:00–20:00/)).toBeInTheDocument();
+    expect(screen.queryByText(/besok/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the UTC suffix (no marker) when timezone is missing", () => {
+    const noTz = [
+      {
+        slug: "kopi-senja",
+        name: "Kopi Senja",
+        address: null,
+        isOpen: true,
+        phone: null,
+        openTime: "22:00",
+        closeTime: "04:00",
+      },
+    ];
+    render(<ShopSearchForm tenants={noTz} />);
+    expect(screen.getByText(/Buka 22:00–04:00 UTC/)).toBeInTheDocument();
+    expect(screen.queryByText(/besok/)).not.toBeInTheDocument();
+  });
 });
 
 describe("ShopSearchForm — T24 suggestion dropdown (issue #153)", () => {
