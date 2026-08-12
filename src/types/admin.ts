@@ -73,6 +73,7 @@ export interface TenantSettings {
   closeTime: string;
   timezone: string;
   maxQueueSize: number;
+  prepTimeBuffer: number;
   sprintDurationDays: number;
   qrisImageUrl?: string | null;
   qrisCode?: string | null;
