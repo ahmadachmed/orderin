@@ -68,12 +68,34 @@ describe("OrderStatusTracker", () => {
   });
 
   it("hides the ETA for terminal statuses", () => {
+    for (const status of ["PICKED_UP", "CANCELLED"] as const) {
+      const { unmount } = render(<OrderStatusTracker initial={{ ...baseOrder, status, etaSeconds: 120 }} />);
+      expect(screen.queryByText(/Estimasi siap:/)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("hides the ETA when the order is READY_FOR_PICKUP even if etaSeconds is set", () => {
+    // STATUS-06 (#151): API sets etaSeconds=0 for READY, formatDuration(0) → "<1 menit",
+    // which would render "Estimasi siap: <1 menit dari sekarang" on an order that is already ready.
     render(
       <OrderStatusTracker
-        initial={{ ...baseOrder, status: "READY_FOR_PICKUP", etaSeconds: null }}
+        initial={{ ...baseOrder, status: "READY_FOR_PICKUP", etaSeconds: 0, pickupCode: "1234" }}
       />
     );
     expect(screen.queryByText(/Estimasi siap:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/<1 menit/)).not.toBeInTheDocument();
+    // pickup code card still shows
+    expect(screen.getByText("Kode pengambilan")).toBeInTheDocument();
+  });
+
+  it("still shows the ETA for non-terminal, non-ready statuses", () => {
+    for (const status of ["PENDING", "CONFIRMED", "BREWING"] as const) {
+      const { unmount } = render(<OrderStatusTracker initial={{ ...baseOrder, status, etaSeconds: 120 }} />);
+      expect(screen.getByText(/Estimasi siap:/)).toBeInTheDocument();
+      expect(screen.getByText("±2 menit")).toBeInTheDocument();
+      unmount();
+    }
   });
 
   it("shows QRIS and bank transfer payment options from tenant config", () => {
