@@ -23,6 +23,7 @@ export default async function Home() {
       isOpen: true,
       openTime: true,
       closeTime: true,
+      timezone: true,
     },
   });
 
