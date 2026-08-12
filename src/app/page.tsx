@@ -39,6 +39,21 @@ export default async function Home() {
         </p>
       </section>
 
+      {/* Lacak Pesanan CTA (T25 ITEM 1 / issue #167) — scrolls to the shop
+          search grid below; the actual lookup entry point lives in each shop
+          header (OrderLookupForm) since the API is tenant-scoped. */}
+      <section className="flex flex-col gap-1">
+        <a
+          href="#shop-search"
+          className="text-sm font-semibold text-primary underline-offset-4 transition-colors hover:text-primary/80 hover:underline"
+        >
+          Lacak Pesanan
+        </a>
+        <p className="text-xs text-muted-foreground">
+          Cari kedai lalu gunakan tombol Lacak di halaman kedai.
+        </p>
+      </section>
+
       {/* Search card + tenant grid (filtered live by the query) */}
       <ShopSearchForm tenants={tenants} />
 
