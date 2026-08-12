@@ -3,20 +3,31 @@
 // Customer login — /[tenantSlug]/login (P1P2 plan §3.5, Stitch mobile/login.html).
 // POST /api/customer/login (T17-3): phone + password → HMAC customer session
 // cookie. On success the customer lands on their order history ("Login untuk
-// lihat riwayat").
+// lihat riwayat") — or the ?next= target when they arrived via a login
+// redirect (T20 ACCT-03, docs/T18-plan.md GAP 2).
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Phone, Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-export default function CustomerLoginPage() {
+function CustomerLoginForm() {
   const params = useParams<{ tenantSlug: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const tenantSlug = params.tenantSlug;
+
+  // T20 ACCT-03: after login, return to the ?next= target (tenant-relative
+  // path, sanitized to block open redirect / path traversal); default = the
+  // order history page the login screen has always landed on.
+  const rawNext = searchParams.get("next");
+  const next =
+    rawNext && /^[a-zA-Z0-9/_-]+$/.test(rawNext) && !rawNext.startsWith("//")
+      ? rawNext
+      : "account/orders";
 
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +46,7 @@ export default function CustomerLoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "Gagal masuk");
-      router.push(`/${tenantSlug}/account/orders`);
+      router.push(`/${tenantSlug}/${next}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal masuk");
@@ -105,5 +116,14 @@ export default function CustomerLoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// useSearchParams needs a Suspense boundary during static prerender (Next 15).
+export default function CustomerLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <CustomerLoginForm />
+    </Suspense>
   );
 }
