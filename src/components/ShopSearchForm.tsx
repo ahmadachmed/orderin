@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatTimeInTimezone } from "@/lib/time";
+import { formatOperatingHours } from "@/lib/time";
 
 /** Same pattern as src/app/api/slug-check/route.ts (T8). */
 export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -57,6 +57,35 @@ export function filterTenants(tenants: ShopTenant[], raw: string): ShopTenant[] 
     (t) =>
       t.name.toLowerCase().includes(q) || (slug.length > 0 && t.slug.includes(slug))
   );
+}
+
+/**
+ * T25-5 — operating-hours label for the landing card. Converts the UTC
+ * "HH:mm" pair to the tenant's timezone via formatOperatingHours and appends
+ * the "besok" marker when the range wraps past midnight (close < open
+ * post-conversion). Null or invalid timezone → raw UTC + "UTC" suffix.
+ */
+export function formatHoursLabel(
+  open: string,
+  close: string,
+  timezone: string | null | undefined,
+  phone?: string | null,
+): string {
+  const suffix = ` · ${phone ?? "—"}`;
+  if (!timezone) return `Buka ${open}–${close} UTC${suffix}`;
+  let valid = true;
+  try {
+    Intl.DateTimeFormat("en-GB", { timeZone: timezone });
+  } catch {
+    valid = false;
+  }
+  if (!valid) return `Buka ${open}–${close} UTC${suffix}`;
+  const { openDisplay, closeDisplay, isOvernight } = formatOperatingHours(
+    open,
+    close,
+    timezone,
+  );
+  return `Buka ${openDisplay}–${closeDisplay}${isOvernight ? " besok" : ""}${suffix}`;
 }
 
 interface ShopSearchFormProps {
@@ -205,9 +234,7 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
                       ) : null}
                       {t.openTime && t.closeTime ? (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {t.timezone
-                            ? `Buka ${formatTimeInTimezone(t.openTime, t.timezone)}–${formatTimeInTimezone(t.closeTime, t.timezone)} · ${t.phone ?? "—"}`
-                            : `Buka ${t.openTime}–${t.closeTime} UTC · ${t.phone ?? "—"}`}
+                          {formatHoursLabel(t.openTime, t.closeTime, t.timezone, t.phone)}
                         </p>
                       ) : null}
                     </div>
