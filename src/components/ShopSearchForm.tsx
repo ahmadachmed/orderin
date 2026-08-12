@@ -5,7 +5,9 @@
  *
  * Client component: receives the server-fetched tenant list as a prop and
  * filters it live as the user types (name case-insensitive substring OR
- * normalized-slug substring). On submit:
+ * normalized-slug substring). While typing, a suggestion dropdown (issue
+ * #153) lists up to 5 matching kedai under the input — clicking one opens
+ * the shop directly. On submit:
  *   - exactly one exact name/slug match  → redirect /[slug]
  *   - multiple matches                   → keep the filtered grid visible
  *   - zero matches                       → inline "Kedai tidak ditemukan" alert
@@ -67,6 +69,13 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   const visible = filterTenants(tenants, value);
+  // Issue #153 — suggestion dropdown: up to 5 matches while typing.
+  const suggestions = value.trim() ? visible.slice(0, 5) : [];
+
+  function handleSuggestionClick(slug: string) {
+    setError(null);
+    router.push(`/${slug}`);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -130,6 +139,41 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
               <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
+            ) : null}
+            {suggestions.length > 0 ? (
+              <Card className="mt-1 overflow-hidden rounded-xl border-border shadow-lg">
+                <ul role="listbox" aria-label="Saran kedai" className="divide-y divide-border">
+                  {suggestions.map((t: ShopTenant) => (
+                    <li key={t.slug} role="option">
+                      <button
+                        type="button"
+                        onClick={() => handleSuggestionClick(t.slug)}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-muted active:scale-[0.99]"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-bold text-foreground">
+                            {t.name}
+                          </span>
+                          {t.address ? (
+                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                              {t.address}
+                            </span>
+                          ) : null}
+                        </span>
+                        <Badge
+                          className={`shrink-0 ${
+                            t.isOpen
+                              ? "border-success/20 bg-success/10 text-success"
+                              : "border-border bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {t.isOpen ? "Buka" : "Tutup"}
+                        </Badge>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
             ) : null}
           </div>
           <Button

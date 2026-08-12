@@ -253,3 +253,83 @@ describe("ShopSearchForm — LAND-01 timezone display", () => {
     expect(screen.getByText(/Buka 08:00–17:00 UTC/)).toBeInTheDocument();
   });
 });
+
+describe("ShopSearchForm — T24 suggestion dropdown (issue #153)", () => {
+  it("renders up to 5 suggestions under the input for a partial keyword", () => {
+    const many = Array.from({ length: 7 }, (_, i) => ({
+      slug: `kedai-${i + 1}`,
+      name: `Kedai Kopi ${i + 1}`,
+      address: `Jl. No. ${i + 1}`,
+      isOpen: i % 2 === 0,
+    }));
+    render(<ShopSearchForm tenants={many} />);
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kedai" },
+    });
+    const listbox = screen.getByRole("listbox", { name: "Saran kedai" });
+    expect(listbox).toBeInTheDocument();
+    expect(screen.getAllByRole("option")).toHaveLength(5);
+  });
+
+  it("clicking a suggestion pushes /[slug] without submitting", () => {
+    render(<ShopSearchForm tenants={TENANTS} />);
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "senja" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Kopi Senja/ }));
+    expect(push).toHaveBeenCalledWith("/kopi-senja");
+  });
+
+  it("shows name, address and status badge on each suggestion", () => {
+    render(<ShopSearchForm tenants={TENANTS} />);
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kopi" },
+    });
+    const option = screen.getByRole("option", { name: /Kopi Hitam/ });
+    expect(option).toHaveTextContent("Tutup");
+    expect(screen.getByRole("option", { name: /Kopi Senja/ })).toHaveTextContent(
+      "Jl. Senja No. 1"
+    );
+  });
+
+  it("hides the dropdown when the query is empty", () => {
+    render(<ShopSearchForm tenants={TENANTS} />);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kopi" },
+    });
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "" },
+    });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("hides the dropdown on zero matches and keeps the existing alert behavior", () => {
+    render(<ShopSearchForm tenants={TENANTS} />);
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kedai-tidak-ada" },
+    });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Kedai tidak ditemukan");
+  });
+
+  it("keeps Enter behavior unchanged: exact match redirects, multiple keeps grid", () => {
+    render(<ShopSearchForm tenants={TENANTS} />);
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kopi-senja" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    expect(push).toHaveBeenCalledWith("/kopi-senja");
+    push.mockClear();
+
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kopi" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: /Kopi Senja/ })).toBeInTheDocument();
+  });
+});
