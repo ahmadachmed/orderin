@@ -141,4 +141,33 @@ describe("OrderStatusTracker", () => {
     );
     expect(screen.getByText("✓ Pembayaran diterima — terima kasih!")).toBeInTheDocument();
   });
+
+  it("renders PAID timeline entries with the note as subtitle (STATUS-05)", () => {
+    render(
+      <OrderStatusTracker
+        initial={{
+          ...baseOrder,
+          statusLogs: [
+            {
+              id: "log-1",
+              status: "PENDING",
+              actorType: "system",
+              actorName: "customer",
+              note: null,
+              createdAt: "2026-08-04T08:00:00.000Z",
+            },
+            {
+              id: "log-2",
+              status: "PENDING",
+              actorType: "admin",
+              actorName: "admin",
+              note: "Marked PAID via dashboard",
+              createdAt: "2026-08-04T08:05:00.000Z",
+            },
+          ],
+        }}
+      />
+    );
+    expect(screen.getByText("Marked PAID via dashboard")).toBeInTheDocument();
+  });
 });
