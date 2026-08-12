@@ -67,6 +67,9 @@ export interface OrderStatusView {
   status: OrderStatus;
   pickupCode?: string | null;
   etaSeconds: number | null;
+  /** 1-based FIFO queue position (T19 / issue #147). Null when the order is
+   *  not in the queue (READY_FOR_PICKUP / PICKED_UP / CANCELLED). */
+  queuePosition: number | null;
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod | null;
   customerTransferNote: string | null;

@@ -13,6 +13,7 @@ const baseOrder: OrderStatusView = {
   orderId: "11111111-2222-3333-4444-555555555555",
   status: "PENDING",
   etaSeconds: 120,
+  queuePosition: null,
   paymentStatus: "UNPAID",
   paymentMethod: null,
   customerTransferNote: null,
@@ -65,6 +66,26 @@ describe("OrderStatusTracker", () => {
     // formatDuration(120) → "±2 menit"
     expect(screen.getByText(/Estimasi siap:/)).toBeInTheDocument();
     expect(screen.getByText("±2 menit")).toBeInTheDocument();
+  });
+
+  it("renders 'Antrean ke-N' when queuePosition is present (T19)", () => {
+    render(<OrderStatusTracker initial={{ ...baseOrder, queuePosition: 2 }} />);
+    expect(screen.getByText("Antrean ke-2")).toBeInTheDocument();
+    expect(screen.getByText("Posisi antrean")).toBeInTheDocument();
+  });
+
+  it("hides the queue position when queuePosition is null (T19)", () => {
+    render(<OrderStatusTracker initial={{ ...baseOrder, queuePosition: null }} />);
+    expect(screen.queryByText(/Antrean ke-/)).not.toBeInTheDocument();
+  });
+
+  it("hides the queue position for terminal statuses even if present (T19)", () => {
+    render(
+      <OrderStatusTracker
+        initial={{ ...baseOrder, status: "READY_FOR_PICKUP", queuePosition: null, etaSeconds: 0 }}
+      />
+    );
+    expect(screen.queryByText(/Antrean ke-/)).not.toBeInTheDocument();
   });
 
   it("hides the ETA for terminal statuses", () => {

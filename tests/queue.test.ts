@@ -20,6 +20,7 @@ import {
   etaForOrderInQueue,
   isQueueFull,
   prepSecondsForItems,
+  queuePositionForOrder,
   recalculateQueueEtas,
   sortQueue,
   withBuffer,
@@ -188,6 +189,35 @@ describe("ETA calculation (PLAN §4.2)", () => {
     const expected = 540 + 60 + 120 + 60; // queue + own + 1 min buffer
     expect(Math.abs(eta - expected)).toBeLessThanOrEqual(300); // acceptance tolerance
     expect(eta).toBe(expected); // deterministic seed → exact
+  });
+});
+
+describe("queue position (T19 / issue #147)", () => {
+  it("returns 1-based FIFO position for in-queue orders", async () => {
+    const queue = await fetchQueue(scoped(tenantQ.id), tenantQ.id);
+    expect(queuePositionForOrder(queue, orderIds[0])).toBe(1);
+    expect(queuePositionForOrder(queue, orderIds[1])).toBe(2);
+  });
+
+  it("returns null for an order not in the queue", async () => {
+    const queue = await fetchQueue(scoped(tenantQ.id), tenantQ.id);
+    // Unknown id — never in the queue.
+    expect(queuePositionForOrder(queue, "00000000-0000-0000-0000-000000000000")).toBeNull();
+  });
+
+  it("returns null on an empty queue", async () => {
+    const queue = await fetchQueue(scoped(tenantEmpty.id), tenantEmpty.id);
+    expect(queue.length).toBe(0);
+    expect(queuePositionForOrder(queue, "any-id")).toBeNull();
+  });
+
+  it("is 1-based — first in line is ke-1, not ke-0 (pure, no DB)", () => {
+    const queue = [
+      { id: "o1", createdAt: new Date("2026-08-01T00:00:00Z"), prepSeconds: 600 },
+      { id: "o2", createdAt: new Date("2026-08-01T00:05:00Z"), prepSeconds: 300 },
+    ];
+    expect(queuePositionForOrder(queue, "o1")).toBe(1);
+    expect(queuePositionForOrder(queue, "o2")).toBe(2);
   });
 });
 

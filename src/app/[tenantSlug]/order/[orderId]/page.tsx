@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { isValidUuid } from "@/lib/uuid";
+import { QUEUE_STATUSES, fetchQueue, queuePositionForOrder } from "@/lib/queue";
 import { OrderStatusView } from "@/types";
 import OrderStatusTracker from "@/components/OrderStatusTracker";
 import OrderPersistence from "@/components/OrderPersistence";
@@ -57,10 +58,20 @@ export default async function OrderStatusPage({
   // no banner, so the phone (banner trigger) is nulled out for them.
   const customerSession = await getCustomerSession();
 
+  // T19 / issue #147: 1-based FIFO queue position for the initial render
+  // (polling keeps it fresh afterwards). Only queue statuses have a position.
+  const queueStatus = String(order.status);
+  let queuePosition: number | null = null;
+  if ((QUEUE_STATUSES as readonly string[]).includes(queueStatus)) {
+    const queue = await fetchQueue(prisma, order.tenantId);
+    queuePosition = queuePositionForOrder(queue, order.id);
+  }
+
   const view: OrderStatusView = {
     orderId: order.id,
     status: order.status,
     etaSeconds: order.etaSeconds,
+    queuePosition,
     paymentStatus: order.paymentStatus,
     paymentMethod: order.paymentMethod,
     customerTransferNote: order.customerTransferNote,

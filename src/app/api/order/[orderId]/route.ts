@@ -13,7 +13,7 @@ import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { isValidUuid } from "@/lib/uuid";
-import { fetchQueue, etaForOrderInQueue, prepSecondsForItems, withBuffer } from "@/lib/queue";
+import { fetchQueue, etaForOrderInQueue, prepSecondsForItems, queuePositionForOrder, withBuffer } from "@/lib/queue";
 
 export const dynamic = "force-dynamic";
 
@@ -61,16 +61,23 @@ export async function GET(
 
   const status = String(order.status);
   let etaSeconds: number | null = order.etaSeconds;
+  let queuePosition: number | null = null;
   if (status === "READY_FOR_PICKUP") {
     etaSeconds = 0; // coffee is ready — no wait
   } else if (status === "PICKED_UP" || status === "CANCELLED") {
     etaSeconds = null; // done / cancelled — no ETA
-  } else if (etaSeconds === null || etaSeconds === undefined) {
-    // Pre-T5 row without a stored ETA: compute live from the current queue.
+  } else {
+    // In-queue (PENDING/CONFIRMED/BREWING, T19 / issue #147): 1-based FIFO
+    // position, recomputed every poll so it tracks orders ahead leaving the
+    // queue. The same queue fetch also backs the pre-T5 ETA fallback.
     const queue = await fetchQueue(scoped(order.tenantId), order.tenantId);
-    const ahead = etaForOrderInQueue(queue, order.id);
-    const own = prepSecondsForItems(order.items);
-    etaSeconds = withBuffer(ahead ?? own, order.tenant.prepTimeBuffer);
+    queuePosition = queuePositionForOrder(queue, order.id);
+    if (etaSeconds === null || etaSeconds === undefined) {
+      // Pre-T5 row without a stored ETA: compute live from the current queue.
+      const ahead = etaForOrderInQueue(queue, order.id);
+      const own = prepSecondsForItems(order.items);
+      etaSeconds = withBuffer(ahead ?? own, order.tenant.prepTimeBuffer);
+    }
   }
 
   return ok({
@@ -78,6 +85,7 @@ export async function GET(
     status,
     pickupCode: order.pickupCode || null, // null for legacy orders with ""
     etaSeconds,
+    queuePosition,
     etaCalculatedAt: order.etaCalculatedAt,
     paymentStatus: order.paymentStatus,
     paymentMethod: order.paymentMethod,
