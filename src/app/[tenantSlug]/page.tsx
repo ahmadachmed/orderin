@@ -8,6 +8,7 @@ import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
+import OrderLookupForm from "@/components/OrderLookupForm";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,8 @@ export default async function ShopMenuPage({
             >
               {open ? "Buka" : "Tutup"}
             </span>
+            {/* T25 ITEM 1 (issue #167): manual order lookup entry point. */}
+            <OrderLookupForm tenantSlug={tenantSlug} />
             <Link
               href={`/${tenant.slug}/account/orders`}
               aria-label="Riwayat pesanan"
