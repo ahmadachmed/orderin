@@ -138,7 +138,9 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
           <StatusTimeline logs={order.statusLogs ?? []} />
         </div>
 
-        {order.etaSeconds != null && !TERMINAL_STATUSES.has(order.status) ? (
+        {order.etaSeconds != null &&
+        !TERMINAL_STATUSES.has(order.status) &&
+        order.status !== "READY_FOR_PICKUP" ? (
           <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
             <p className="text-sm text-muted-foreground">
               Estimasi siap:{" "}
