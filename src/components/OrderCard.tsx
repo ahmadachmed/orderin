@@ -14,6 +14,7 @@ import {
   formatDuration,
   formatPrice,
   isStuck,
+  STATUS_LABELS,
 } from "@/types/admin";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -107,7 +108,7 @@ export default function OrderCard({
           </li>
         ))}
         {!order.items?.length && (
-          <li className="italic text-muted-foreground">No items</li>
+          <li className="italic text-muted-foreground">Tidak ada item</li>
         )}
       </ul>
 
@@ -116,13 +117,13 @@ export default function OrderCard({
           Total {formatPrice(total)}
           {order.etaSeconds != null && (
             <span className="ml-2 text-muted-foreground">
-              ETA {formatDuration(order.etaSeconds)}
+              Estimasi {formatDuration(order.etaSeconds)}
             </span>
           )}
         </span>
         {stuck && (
           <span className="font-semibold text-destructive">
-            Stuck {">"}10m
+            Tertahan {">"}10m
           </span>
         )}
       </div>
@@ -130,7 +131,7 @@ export default function OrderCard({
       {/* Payment gate hint */}
       {brewingBlocked && (
         <p className="mt-2 rounded bg-primary/10 p-2 text-xs text-primary">
-          🔒 Mark payment PAID before brewing
+          🔒 Tandai pembayaran LUNAS sebelum meracik
         </p>
       )}
 
@@ -142,7 +143,7 @@ export default function OrderCard({
       )}
       {order.paidAt && (
         <p className="mt-1 text-xs text-emerald-400">
-          ✓ Paid {new Date(order.paidAt).toLocaleString("id-ID")}
+          ✓ Lunas {new Date(order.paidAt).toLocaleString("id-ID")}
           {order.paymentMethod ? ` via ${order.paymentMethod.replaceAll("_", " ")}` : ""}
         </p>
       )}
@@ -156,7 +157,7 @@ export default function OrderCard({
               size="sm"
               onClick={() => onMarkPaid(order.id)}
             >
-              Mark paid
+              Tandai Lunas
             </Button>
           )}
           {next && (
@@ -165,9 +166,9 @@ export default function OrderCard({
               size="sm"
               onClick={() => onStatusChange(order.id, next)}
               disabled={brewingBlocked}
-              title={brewingBlocked ? "Payment must be PAID first" : `Advance to ${next}`}
+              title={brewingBlocked ? "Pembayaran harus LUNAS dulu" : `Majukan ke ${STATUS_LABELS[next]}`}
             >
-              → {next.replaceAll("_", " ").toLowerCase()}
+              → {STATUS_LABELS[next].toLowerCase()}
             </Button>
           )}
           {order.status === "PENDING" && (
@@ -176,7 +177,7 @@ export default function OrderCard({
               size="sm"
               onClick={() => onCancel(order.id)}
             >
-              Cancel
+              Batal
             </Button>
           )}
         </div>

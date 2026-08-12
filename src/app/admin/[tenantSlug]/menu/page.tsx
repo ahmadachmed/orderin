@@ -55,7 +55,7 @@ export default function AdminMenuPage() {
     } catch (err) {
       const status = (err as Error & { status?: number }).status;
       if (status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Failed to load menu");
+      else setError(err instanceof Error ? err.message : "Gagal memuat menu");
     }
   }, []);
 
@@ -118,20 +118,20 @@ export default function AdminMenuPage() {
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Save failed");
+      else setError(err instanceof Error ? err.message : "Gagal menyimpan");
     } finally {
       setBusy(false);
     }
   }
 
   async function onDelete(id: string) {
-    if (!window.confirm("Delete this menu item?")) return;
+    if (!window.confirm("Hapus item menu ini?")) return;
     try {
       await deleteMenuItem(id);
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Delete failed");
+      else setError(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
@@ -141,14 +141,14 @@ export default function AdminMenuPage() {
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Update failed");
+      else setError(err instanceof Error ? err.message : "Gagal memperbarui");
     }
   }
 
   if (authError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
-        Session expired — redirecting to login…
+        Sesi berakhir — mengalihkan ke login…
       </div>
     );
   }
@@ -158,7 +158,7 @@ export default function AdminMenuPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Menu management</h1>
+            <h1 className="text-lg font-bold text-slate-900">Manajemen Menu</h1>
             <p className="text-xs text-slate-500">/{tenantSlug}</p>
           </div>
           <nav className="flex items-center gap-2 text-sm">
@@ -166,20 +166,20 @@ export default function AdminMenuPage() {
               href={`/admin/${tenantSlug}`}
               className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
             >
-              ← Dashboard
+              ← Dasbor
             </a>
             <button
               onClick={openCreate}
               className="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-800"
             >
-              + Add item
+              + Tambah
             </button>
             <button
               type="button"
               onClick={() => void handleLogout()}
               className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
             >
-              Logout
+              Keluar
             </button>
           </nav>
         </div>
@@ -199,11 +199,11 @@ export default function AdminMenuPage() {
             className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
           >
             <h2 className="mb-3 font-semibold text-slate-900">
-              {editing ? "Edit item" : "New item"}
+              {editing ? "Ubah Item" : "Item Baru"}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium text-slate-700">
-                Name *
+                Nama *
                 <input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -212,7 +212,7 @@ export default function AdminMenuPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Price (IDR) *
+                Harga (IDR) *
                 <input
                   type="number"
                   min={0}
@@ -224,7 +224,7 @@ export default function AdminMenuPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
-                Description
+                Deskripsi
                 <input
                   value={form.description}
                   onChange={(e) =>
@@ -234,7 +234,7 @@ export default function AdminMenuPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Prep time (seconds)
+                Waktu racik (detik)
                 <input
                   type="number"
                   min={0}
@@ -246,7 +246,7 @@ export default function AdminMenuPage() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Sort order
+                Urutan
                 <input
                   type="number"
                   value={form.sortOrder}
@@ -263,7 +263,7 @@ export default function AdminMenuPage() {
                   }
                   className="h-4 w-4"
                 />
-                Available
+                Tersedia
               </label>
             </div>
             <div className="mt-3 flex gap-2">
@@ -272,7 +272,7 @@ export default function AdminMenuPage() {
                 disabled={busy}
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
               >
-                {busy ? "Saving…" : editing ? "Save changes" : "Add item"}
+                {busy ? "Menyimpan…" : editing ? "Simpan" : "Tambah Item"}
               </button>
               <button
                 type="button"
@@ -283,7 +283,7 @@ export default function AdminMenuPage() {
                 }}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >
-                Cancel
+                Batal
               </button>
             </div>
           </form>
@@ -295,17 +295,17 @@ export default function AdminMenuPage() {
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-2">Item</th>
-                <th className="px-4 py-2">Price</th>
-                <th className="px-4 py-2">Prep</th>
+                <th className="px-4 py-2">Harga</th>
+                <th className="px-4 py-2">Waktu</th>
                 <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2 text-right">Actions</th>
+                <th className="px-4 py-2 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
-                    No menu items yet
+                    Belum ada item menu
                   </td>
                 </tr>
               )}
@@ -332,7 +332,7 @@ export default function AdminMenuPage() {
                           : "bg-slate-200 text-slate-500"
                       }`}
                     >
-                      {item.isAvailable ? "Available" : "Hidden"}
+                      {item.isAvailable ? "Tersedia" : "Tersembunyi"}
                     </button>
                   </td>
                   <td className="px-4 py-2.5 text-right">
@@ -340,13 +340,13 @@ export default function AdminMenuPage() {
                       onClick={() => openEdit(item)}
                       className="mr-2 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                     >
-                      Edit
+                      Ubah
                     </button>
                     <button
                       onClick={() => onDelete(item.id)}
                       className="rounded-md border border-rose-300 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
                     >
-                      Delete
+                      Hapus
                     </button>
                   </td>
                 </tr>

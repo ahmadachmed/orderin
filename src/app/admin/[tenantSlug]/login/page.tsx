@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
       router.push(adminDashboardPath(tenantSlug));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Gagal masuk");
       setBusy(false);
     }
   }
@@ -69,9 +69,9 @@ export default function AdminLoginPage() {
         onSubmit={onSubmit}
         className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
-        <h1 className="text-xl font-bold text-slate-900">Admin login</h1>
+        <h1 className="text-xl font-bold text-slate-900">Login Admin</h1>
         <p className="mt-1 text-sm text-slate-500">
-          {tenantSlug ? `Sign in to /${tenantSlug}` : "Sign in"}
+          {tenantSlug ? `Masuk ke /${tenantSlug}` : "Masuk"}
         </p>
 
         <label className="mt-4 block text-sm font-medium text-slate-700">
@@ -108,7 +108,7 @@ export default function AdminLoginPage() {
           disabled={busy}
           className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
         >
-          {busy ? "Signing in…" : "Sign in"}
+          {busy ? "Sedang masuk…" : "Masuk"}
         </button>
       </form>
     </div>

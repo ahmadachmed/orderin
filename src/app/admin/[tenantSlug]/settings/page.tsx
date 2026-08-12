@@ -111,7 +111,7 @@ export default function AdminSettingsPage() {
     } catch (err) {
       const status = (err as Error & { status?: number }).status;
       if (status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Failed to load settings");
+      else setError(err instanceof Error ? err.message : "Gagal memuat pengaturan");
     }
   }, []);
 
@@ -162,7 +162,7 @@ export default function AdminSettingsPage() {
       setSaved(true);
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Failed to save settings");
+      else setError(err instanceof Error ? err.message : "Gagal menyimpan pengaturan");
     } finally {
       setBusy(false);
     }
@@ -171,7 +171,7 @@ export default function AdminSettingsPage() {
   if (authError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
-        Session expired — redirecting to login…
+        Sesi berakhir — mengalihkan ke login…
       </div>
     );
   }
@@ -188,15 +188,15 @@ export default function AdminSettingsPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Payment Config</h1>
-            <p className="text-xs text-slate-500">/{tenantSlug} · QRIS + bank transfer</p>
+            <h1 className="text-lg font-bold text-slate-900">Pengaturan Pembayaran</h1>
+            <p className="text-xs text-slate-500">/{tenantSlug} · QRIS + transfer bank</p>
           </div>
           <nav className="flex items-center gap-2 text-sm">
             <a
               href={`/admin/${tenantSlug}`}
               className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
             >
-              Dashboard
+              Dasbor
             </a>
             <a
               href={`/admin/${tenantSlug}/menu`}
@@ -209,7 +209,7 @@ export default function AdminSettingsPage() {
               onClick={() => void handleLogout()}
               className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
             >
-              Logout
+              Keluar
             </button>
           </nav>
         </div>

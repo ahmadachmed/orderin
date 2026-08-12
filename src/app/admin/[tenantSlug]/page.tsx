@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminLogout, fetchOrders, updateOrder } from "@/lib/admin-api";
 import type { Order, OrderStatus } from "@/types/admin";
-import { STATUS_FLOW, canAdvanceToBrewing } from "@/types/admin";
+import { STATUS_FLOW, STATUS_LABELS, canAdvanceToBrewing } from "@/types/admin";
 import StatusColumn from "@/components/admin/StatusColumn";
 
 export default function AdminDashboardPage() {
@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
       if (status === 401) {
         setAuthError(true);
       } else {
-        setError(err instanceof Error ? err.message : "Failed to load orders");
+        setError(err instanceof Error ? err.message : "Gagal memuat pesanan");
       }
     }
   }, []);
@@ -97,10 +97,10 @@ export default function AdminDashboardPage() {
     try {
       const updated = await updateOrder(orderId, { status });
       applyOrder(updated);
-      showNotice(`Order moved to ${status.replaceAll("_", " ").toLowerCase()}`);
+      showNotice(`Pesanan dipindah ke ${STATUS_LABELS[status].toLowerCase()}`);
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else showNotice(err instanceof Error ? err.message : "Update failed");
+      else showNotice(err instanceof Error ? err.message : "Gagal memperbarui");
     }
   }
 
@@ -122,7 +122,7 @@ export default function AdminDashboardPage() {
       });
       applyOrder(updated);
       setPickupPrompt(null);
-      showNotice("Order marked picked up");
+      showNotice("Pesanan ditandai selesai");
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
       else setPinError(err instanceof Error ? err.message : "Verifikasi PIN gagal");
@@ -135,10 +135,10 @@ export default function AdminDashboardPage() {
     try {
       const updated = await updateOrder(orderId, { paymentStatus: "PAID" });
       applyOrder(updated);
-      showNotice("Payment marked PAID — brewing unlocked");
+      showNotice("Pembayaran ditandai LUNAS — peracikan terbuka");
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else showNotice(err instanceof Error ? err.message : "Failed to mark paid");
+      else showNotice(err instanceof Error ? err.message : "Gagal menandai lunas");
     }
   }
 
@@ -146,10 +146,10 @@ export default function AdminDashboardPage() {
     try {
       const updated = await updateOrder(orderId, { status: "CANCELLED" });
       applyOrder(updated);
-      showNotice("Order cancelled");
+      showNotice("Pesanan dibatalkan");
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else showNotice(err instanceof Error ? err.message : "Cancel failed");
+      else showNotice(err instanceof Error ? err.message : "Gagal membatalkan");
     }
   }
 
@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
       targetStatus === "BREWING" &&
       !canAdvanceToBrewing(order.paymentStatus)
     ) {
-      showNotice("🔒 Payment gate: mark order PAID before brewing");
+      showNotice("🔒 Gerbang pembayaran: tandai LUNAS sebelum meracik");
       return;
     }
     // Allow moving forward along the flow, plus regress to PENDING/CONFIRMED
@@ -170,7 +170,7 @@ export default function AdminDashboardPage() {
     const fromIdx = STATUS_FLOW.indexOf(order.status);
     const toIdx = STATUS_FLOW.indexOf(targetStatus);
     if (toIdx <= fromIdx) {
-      showNotice("Only forward moves allowed via drag (use Cancel for pending)");
+      showNotice("Hanya maju yang diizinkan via drag (gunakan Batal untuk pending)");
       return;
     }
     void handleStatusChange(order.id, targetStatus);
@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
   if (authError) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
-        Session expired — redirecting to login…
+        Sesi berakhir — mengalihkan ke login…
       </div>
     );
   }
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Barista Dashboard</h1>
+            <h1 className="text-lg font-bold text-slate-900">Dasbor Barista</h1>
             <p className="text-xs text-slate-500">
               /{tenantSlug} · auto-refresh 5s
             </p>
@@ -227,7 +227,7 @@ export default function AdminDashboardPage() {
               href={`/admin/${tenantSlug}/settings`}
               className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
             >
-              Payment
+              Pembayaran
             </a>
             <a
               href={`/${tenantSlug}`}
@@ -235,14 +235,14 @@ export default function AdminDashboardPage() {
               rel="noreferrer"
               className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
             >
-              Shop view ↗
+              Lihat Toko ↗
             </a>
             <button
               type="button"
               onClick={() => void handleLogout()}
               className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
             >
-              Logout
+              Keluar
             </button>
           </nav>
         </div>
@@ -258,7 +258,7 @@ export default function AdminDashboardPage() {
       <main className="mx-auto max-w-7xl p-4">
         {error && (
           <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {error} — retrying…
+            {error} — mencoba lagi…
           </p>
         )}
         <div className="flex gap-3 overflow-x-auto pb-4">
@@ -279,7 +279,7 @@ export default function AdminDashboardPage() {
           ))}
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Tip: drag a card to advance it. 🔒 Brewing requires payment PAID.
+          Tip: seret kartu untuk majukan statusnya. 🔒 Meracik butuh pembayaran LUNAS.
         </p>
       </main>
 
