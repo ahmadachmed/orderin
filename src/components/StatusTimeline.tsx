@@ -32,6 +32,9 @@ export default function StatusTimeline({ logs }: { logs: StatusLogEntry[] }) {
               {l.actorName ? `${l.actorName} • ` : ""}
               {new Date(l.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
             </p>
+            {l.note && (
+              <p className="text-xs text-muted-foreground mt-0.5">{l.note}</p>
+            )}
           </div>
         </div>
       ))}

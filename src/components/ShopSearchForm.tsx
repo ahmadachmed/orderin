@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatTimeInTimezone } from "@/lib/time";
 
 /** Same pattern as src/app/api/slug-check/route.ts (T8). */
 export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -41,6 +42,8 @@ export interface ShopTenant {
   phone?: string | null;
   openTime?: string;
   closeTime?: string;
+  /** SETTINGS-05/LAND-01 — IANA zone for displaying opening hours (e.g. "Asia/Makassar"). */
+  timezone?: string | null;
 }
 
 /** Live filter: name (case-insensitive substring) OR normalized-slug substring. */
@@ -158,7 +161,9 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
                       ) : null}
                       {t.openTime && t.closeTime ? (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Buka {t.openTime}–{t.closeTime} UTC · {t.phone ?? "—"}
+                          {t.timezone
+                            ? `Buka ${formatTimeInTimezone(t.openTime, t.timezone)}–${formatTimeInTimezone(t.closeTime, t.timezone)} · ${t.phone ?? "—"}`
+                            : `Buka ${t.openTime}–${t.closeTime} UTC · ${t.phone ?? "—"}`}
                         </p>
                       ) : null}
                     </div>

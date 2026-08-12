@@ -217,3 +217,39 @@ describe("ShopSearchForm", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+describe("ShopSearchForm — LAND-01 timezone display", () => {
+  it("shows converted local times (not raw UTC) when the tenant has a timezone", () => {
+    const makassar = [
+      {
+        slug: "kopi-senja",
+        name: "Kopi Senja",
+        address: "Jl. Senja No. 1",
+        isOpen: true,
+        phone: "0812",
+        openTime: "07:00",
+        closeTime: "21:00",
+        timezone: "Asia/Makassar",
+      },
+    ];
+    render(<ShopSearchForm tenants={makassar} />);
+    expect(screen.getByText(/Buka 15:00–05:00/)).toBeInTheDocument();
+    expect(screen.queryByText(/UTC/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to raw UTC times when the tenant has no timezone", () => {
+    const noTz = [
+      {
+        slug: "kopi-hitam",
+        name: "Kopi Hitam",
+        address: null,
+        isOpen: true,
+        phone: null,
+        openTime: "08:00",
+        closeTime: "17:00",
+      },
+    ];
+    render(<ShopSearchForm tenants={noTz} />);
+    expect(screen.getByText(/Buka 08:00–17:00 UTC/)).toBeInTheDocument();
+  });
+});
