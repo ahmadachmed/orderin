@@ -16,7 +16,7 @@ T25-14,overnight,isOpen=false shows Tutup without hours,Tenant isOpen=false,View
 T25-15,settings,Jam Operasional section renders,Admin logged in,Open /admin/[slug]/settings,"Section with jam buka/tutup time inputs, timezone, isOpen switch, buffer, maxQueue",IMPLEMENTED,,,Verified live — 6 fields
 T25-16,settings,Save hours persists,"Admin, settings page","Change jam buka, save",GET /api/admin/settings returns new value; shop page label updates,IMPLEMENTED,,,PATCH supports openTime/closeTime
 T25-17,settings,HH:mm validation,"Admin, settings page","Set jam buka '25:00', save","Error, rejected 400",IMPLEMENTED,,,route.ts:107-113 regex
-T25-18,settings,isOpen toggle affects shop,Admin toggles isOpen off,"Save, open shop page","Shop shows 'Kedai sedang tutup', no ordering",VERIFY,UX,High,Depends on T27 fix — ordering still possible via active +/-
+T25-18,settings,isOpen toggle affects shop,Admin toggles isOpen off,"Save, open shop page","Shop shows 'Kedai sedang tutup', no ordering",IMPLEMENTED,,,Verified: Tambah buttons disabled (T27)
 T25-19,settings,Timezone change affects display,Admin changes timezone,"Save, view landing",Hours converted in new timezone,IMPLEMENTED,,,
-BUG-01,status,Landing badge matches shop page when closed,"Tenant isOpen=true, outside hours",Compare landing card badge vs shop page,Both show Tutup,GAP,UX,High,"T26 in progress — landing shows Buka, shop shows TUTUP (verified 03:30 UTC)"
-BUG-02,ordering,Cannot build cart when shop closed,Shop closed (isOpen=false),Try adding item,Quantity controls disabled/hidden; no dead-end cart,GAP,UX,High,T27 created — +/- active but no submit path (verified live)
+BUG-01,status,Landing badge matches shop page when closed,"Tenant isOpen=true, outside hours",Compare landing card badge vs shop page,Both show Tutup,IMPLEMENTED,,,"Fixed by T26 (isShopOpen helper, PR #191) — verified live: landing badge Tutup when closed"
+BUG-02,ordering,Cannot build cart when shop closed,Shop closed (isOpen=false),Try adding item,Quantity controls disabled/hidden; no dead-end cart,IMPLEMENTED,,,Fixed by T27 (PR #190) — verified live: Tambah buttons disabled when closed
