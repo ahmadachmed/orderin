@@ -10,6 +10,7 @@
 import { useMemo } from "react";
 import type { Order, OrderStatus } from "@/types/admin";
 import {
+  ACTION_LABELS,
   canAdvanceToBrewing,
   formatDuration,
   formatPrice,
@@ -131,19 +132,19 @@ export default function OrderCard({
       {/* Payment gate hint */}
       {brewingBlocked && (
         <p className="mt-2 rounded bg-primary/10 p-2 text-xs text-primary">
-          🔒 Tandai pembayaran LUNAS sebelum meracik
+          Tandai pembayaran LUNAS sebelum meracik
         </p>
       )}
 
       {/* Customer transfer info (issue #7: surfaced on the admin card) */}
       {order.customerTransferNote && (
         <p className="mt-2 rounded bg-sky-500/10 px-2 py-1 text-xs text-sky-400">
-          💬 {order.customerTransferNote}
+          {order.customerTransferNote}
         </p>
       )}
       {order.paidAt && (
         <p className="mt-1 text-xs text-emerald-400">
-          ✓ Lunas {new Date(order.paidAt).toLocaleString("id-ID")}
+          Lunas {new Date(order.paidAt).toLocaleString("id-ID")}
           {order.paymentMethod ? ` via ${order.paymentMethod.replaceAll("_", " ")}` : ""}
         </p>
       )}
@@ -168,7 +169,7 @@ export default function OrderCard({
               disabled={brewingBlocked}
               title={brewingBlocked ? "Pembayaran harus LUNAS dulu" : `Majukan ke ${STATUS_LABELS[next]}`}
             >
-              → {STATUS_LABELS[next].toLowerCase()}
+              → {ACTION_LABELS[next]}
             </Button>
           )}
           {order.status === "PENDING" && (
