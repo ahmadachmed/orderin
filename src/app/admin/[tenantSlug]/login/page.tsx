@@ -54,9 +54,9 @@ export default function AdminLoginPage() {
 
   if (probing) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
           Memeriksa sesi…
         </div>
       </div>
@@ -64,28 +64,28 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-muted p-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm"
       >
-        <h1 className="text-xl font-bold text-slate-900">Login Admin</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-bold text-foreground">Login Admin</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           {tenantSlug ? `Masuk ke /${tenantSlug}` : "Masuk"}
         </p>
 
-        <label className="mt-4 block text-sm font-medium text-slate-700">
+        <label className="mt-4 block text-sm font-medium text-foreground">
           Username
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
             autoComplete="username"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-ring focus:outline-none"
           />
         </label>
 
-        <label className="mt-3 block text-sm font-medium text-slate-700">
+        <label className="mt-3 block text-sm font-medium text-foreground">
           Password
           <input
             type="password"
@@ -93,12 +93,12 @@ export default function AdminLoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-ring focus:outline-none"
           />
         </label>
 
         {error && (
-          <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="mt-3 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
             {error}
           </p>
         )}
@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
         <button
           type="submit"
           disabled={busy}
-          className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          className="mt-4 w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {busy ? "Sedang masuk…" : "Masuk"}
         </button>

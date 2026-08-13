@@ -63,13 +63,13 @@ function fmtDuration(ms: number): string {
 // "seperti di dashboard, tapi readonly (no drag)").
 function ReadonlyOrderCard({ order }: { order: SprintDetailOrder }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-slate-900">
+          <p className="truncate font-semibold text-foreground">
             {order.customerName}
           </p>
-          <p className="text-xs text-slate-500">{order.customerPhone}</p>
+          <p className="text-xs text-muted-foreground">{order.customerPhone}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <AdminStatusBadge status={order.status} />
@@ -77,7 +77,7 @@ function ReadonlyOrderCard({ order }: { order: SprintDetailOrder }) {
         </div>
       </div>
 
-      <ul className="mt-2 space-y-0.5 text-sm text-slate-700">
+      <ul className="mt-2 space-y-0.5 text-sm text-foreground">
         {(order.items ?? []).map((it) => (
           <li key={it.id} className="flex justify-between gap-2">
             <span className="truncate">
@@ -92,14 +92,14 @@ function ReadonlyOrderCard({ order }: { order: SprintDetailOrder }) {
           </li>
         ))}
         {!order.items?.length && (
-          <li className="italic text-slate-400">No items</li>
+          <li className="italic text-muted-foreground">No items</li>
         )}
       </ul>
 
-      <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-xs text-slate-500">
+      <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
         <span className="tabular-nums">Total {formatPrice(order.total)}</span>
         {order.etaSeconds != null && (
-          <span className="text-slate-400">ETA {formatDuration(order.etaSeconds)}</span>
+          <span className="text-muted-foreground">ETA {formatDuration(order.etaSeconds)}</span>
         )}
       </div>
     </div>
@@ -108,9 +108,9 @@ function ReadonlyOrderCard({ order }: { order: SprintDetailOrder }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1 text-lg font-bold tabular-nums text-slate-900">{value}</p>
+    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-bold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
@@ -186,7 +186,7 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
 
   if (authError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-muted text-sm text-muted-foreground">
         Session expired — redirecting to login…
       </div>
     );
@@ -194,21 +194,21 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
 
   if (!loaded) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="py-6 text-center text-sm text-slate-400">Memuat sprint…</p>
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <p className="py-6 text-center text-sm text-muted-foreground">Memuat sprint…</p>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
           {error ?? "Sprint tidak ditemukan"}
         </p>
         <a
           href={`/admin/${tenantSlug}/sprints`}
-          className="mt-3 inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="mt-3 inline-block rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
         >
           ← Kembali ke riwayat
         </a>
@@ -227,26 +227,26 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
   return (
     <div className="space-y-4">
       {error && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
           {error} — retrying…
         </p>
       )}
       {notice && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
           ✓ {notice}
         </p>
       )}
 
       {/* Header: tanggal, status, durasi, carry-over (PLAN §4.6) */}
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
             Sprint · {fmtDate(sprint.startAt)}
           </p>
-          <h2 className="mt-1 text-lg font-bold text-slate-900">
+          <h2 className="mt-1 text-lg font-bold text-foreground">
             {isOpen ? "Sprint berjalan" : "Sprint ditutup"}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Durasi {fmtDuration(durationMs)}
             {sprint.endAt ? ` · tutup ${fmtDate(sprint.endAt)}` : " · masih berjalan"}
           </p>
@@ -255,8 +255,8 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
           <span
             className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
               isOpen
-                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                : "bg-slate-200 text-slate-600 border-slate-300"
+                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/50"
+                : "bg-secondary text-muted-foreground border-border"
             }`}
           >
             {isOpen ? "OPEN" : "CLOSED"}
@@ -266,7 +266,7 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
               type="button"
               onClick={() => void handleClose()}
               disabled={busy}
-              className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {busy ? "Menutup…" : "Tutup Sprint"}
             </button>
@@ -288,11 +288,11 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
           orders.length > 0 && (
             <div
               key={status}
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-border bg-card p-4 shadow-sm"
             >
               <div className="mb-3 flex items-center justify-between">
                 <AdminStatusBadge status={status} />
-                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   {orders.length}
                 </span>
               </div>
@@ -306,7 +306,7 @@ export default function SprintDetail({ sprintId }: { sprintId: string }) {
       )}
 
       {data.orders.length === 0 && (
-        <p className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400 shadow-sm">
+        <p className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
           Belum ada order di sprint ini.
         </p>
       )}

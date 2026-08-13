@@ -43,10 +43,10 @@ export default function Sidebar({ tenantSlug }: SidebarProps) {
     (href !== dashboardHref && pathname.startsWith(`${href}/`));
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200 bg-white">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-card">
       <div className="px-6 py-5">
-        <p className="text-xl font-bold tracking-tight text-slate-900">Orderin</p>
-        <p className="mt-0.5 text-xs font-medium tracking-wide text-slate-500">
+        <p className="text-xl font-bold tracking-tight text-foreground">Orderin</p>
+        <p className="mt-0.5 text-xs font-medium tracking-wide text-muted-foreground">
           Admin Console
         </p>
       </div>
@@ -61,8 +61,8 @@ export default function Sidebar({ tenantSlug }: SidebarProps) {
               aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <Icon className="h-5 w-5" />
@@ -71,11 +71,11 @@ export default function Sidebar({ tenantSlug }: SidebarProps) {
           );
         })}
       </nav>
-      <div className="border-t border-slate-200 p-3">
+      <div className="border-t border-border p-3">
         <button
           type="button"
           onClick={() => void handleLogout()}
-          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50"
+          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-rose-400 transition-colors hover:bg-rose-500/10"
         >
           <LogOut className="h-5 w-5" />
           Keluar

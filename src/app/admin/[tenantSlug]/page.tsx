@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
 
   if (authError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-muted text-sm text-muted-foreground">
         Sesi berakhir — mengalihkan ke login…
       </div>
     );
@@ -192,22 +192,22 @@ export default function AdminDashboardPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-muted">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">
+            <h1 className="text-lg font-bold text-foreground">
               Antrean Pesanan
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Kelola pesanan masuk dan status operasional barista.
             </p>
-            <p className="text-[10px] text-slate-400">Auto-refresh 5 detik</p>
+            <p className="text-[10px] text-muted-foreground">Auto-refresh 5 detik</p>
           </div>
         </div>
         {notice && (
           <div className="mx-auto max-w-7xl px-4 pb-2">
-            <p className="rounded-lg bg-sky-50 px-3 py-1.5 text-sm text-sky-800">
+            <p className="rounded-lg bg-sky-500/10 px-3 py-1.5 text-sm text-sky-400">
               {notice}
             </p>
           </div>
@@ -216,7 +216,7 @@ export default function AdminDashboardPage() {
 
       <main className="mx-auto max-w-7xl p-4">
         {error && (
-          <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="mb-3 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
             {error} — mencoba lagi…
           </p>
         )}
@@ -237,19 +237,19 @@ export default function AdminDashboardPage() {
             />
           ))}
         </div>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-muted-foreground">
           Seret kartu untuk majukan status. Meracik (Brewing) membutuhkan
           pembayaran LUNAS.
         </p>
       </main>
 
       {pickupPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
-            <h2 className="text-base font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-card p-5 shadow-xl">
+            <h2 className="text-base font-bold text-foreground">
               Verifikasi PIN pengambilan
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               Masukkan PIN 4 digit pelanggan untuk menandai pesanan selesai.
             </p>
             <input
@@ -264,17 +264,17 @@ export default function AdminDashboardPage() {
               }}
               inputMode="numeric"
               placeholder="••••"
-              className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-center font-mono text-2xl tracking-[0.5em] text-slate-900 focus:border-slate-500 focus:outline-none"
+              className="mt-4 w-full rounded-lg border border-border px-3 py-2 text-center font-mono text-2xl tracking-[0.5em] text-foreground focus:border-ring focus:outline-none"
             />
             {pinError && (
-              <p className="mt-2 text-sm text-rose-600">{pinError}</p>
+              <p className="mt-2 text-sm text-rose-400">{pinError}</p>
             )}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setPickupPrompt(null)}
                 disabled={submittingPin}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted"
               >
                 Batal
               </button>
@@ -282,7 +282,7 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={() => void confirmPickup()}
                 disabled={submittingPin}
-                className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60"
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
               >
                 {submittingPin ? "Memverifikasi…" : "Konfirmasi"}
               </button>

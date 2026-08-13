@@ -22,15 +22,15 @@ export default function AdminLayout({
 
   // Login is pre-auth: render standalone (no sidebar, no ml-64 offset).
   if (pathname.endsWith("/login")) {
-    return <div className="min-h-screen bg-slate-100">{children}</div>;
+    return <div className="min-h-screen bg-muted">{children}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-muted">
       <Sidebar tenantSlug={tenantSlug} />
       <main className="ml-64 min-h-screen">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-          <h1 className="text-lg font-semibold text-slate-900">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/95 px-6 py-3">
+          <h1 className="text-lg font-semibold text-foreground">
             {shopName || "Orderin"}
           </h1>
           <OpenToggle onLoaded={(settings) => setShopName(settings.name)} />
