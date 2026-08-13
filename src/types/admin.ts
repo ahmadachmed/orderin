@@ -100,6 +100,16 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   CANCELLED: "Dibatalkan",
 };
 
+// Imperative verb for the advance button, keyed by the TARGET status (T28 ITEM 4).
+// Distinct from STATUS_LABELS (past-participle state labels): the action reads
+// "→ Konfirmasi" / "→ Mulai Meracik" / "→ Tandai Siap" / "→ Selesai".
+export const ACTION_LABELS: Partial<Record<OrderStatus, string>> = {
+  CONFIRMED: "Konfirmasi",
+  BREWING: "Mulai Meracik",
+  READY_FOR_PICKUP: "Tandai Siap",
+  PICKED_UP: "Selesai",
+};
+
 // Payment gate: brewing may only start once payment is confirmed (PLAN §3.1.1).
 export function canAdvanceToBrewing(paymentStatus: PaymentStatus): boolean {
   return paymentStatus === "PAID";
