@@ -161,10 +161,10 @@ function orderCard(page: Page, customerName: string) {
 /** Advance an order card PENDING → CONFIRMED → PAID → BREWING → READY_FOR_PICKUP. */
 async function advanceToReady(page: Page, customerName: string, opts: { expectPin?: boolean } = {}) {
   const card = orderCard(page, customerName);
-  await card.getByRole("button", { name: /→ dikonfirmasi/ }).click();
+  await card.getByRole("button", { name: "→ Konfirmasi" }).click();
   await card.getByRole("button", { name: "Tandai Lunas" }).click();
-  await card.getByRole("button", { name: /→ diracik/ }).click();
-  await card.getByRole("button", { name: /→ siap diambil/ }).click();
+  await card.getByRole("button", { name: "→ Mulai Meracik" }).click();
+  await card.getByRole("button", { name: "→ Tandai Siap" }).click();
   if (opts.expectPin !== false) {
     await expect(card.getByText(/^PIN: \d{4}$/)).toBeVisible();
   }
@@ -203,7 +203,7 @@ test("full customer journey: order → READY → enter PIN → PICKED_UP", async
 
   // Wrong PIN handling is covered by its own test — here we verify the gate
   // end-to-end with the correct PIN.
-  await orderCard(page, customer).getByRole("button", { name: /→ selesai/ }).click();
+  await orderCard(page, customer).getByRole("button", { name: "→ Selesai" }).click();
   await submitPin(page, pin);
 
   // Card terminal: Picked up badge, PIN hidden, no advance button left.
@@ -230,7 +230,7 @@ test("wrong PIN → 403 → order stays READY_FOR_PICKUP", async ({ page }) => {
   expect(pin).toMatch(/^[1-9]\d{3}$/);
 
   // 0000 is never a generated PIN (generator is 1000–9999) → gate must reject.
-  await orderCard(page, customer).getByRole("button", { name: /→ selesai/ }).click();
+  await orderCard(page, customer).getByRole("button", { name: "→ Selesai" }).click();
   await submitPin(page, "0000");
 
   // Server 403 surfaces in the modal; the order must not move.
@@ -240,7 +240,7 @@ test("wrong PIN → 403 → order stays READY_FOR_PICKUP", async ({ page }) => {
   const card = orderCard(page, customer);
   await expect(card.getByText("Siap Diambil")).toBeVisible();
   await expect(card.getByText(/^PIN: \d{4}$/)).toBeVisible();
-  await expect(card.getByRole("button", { name: /→ selesai/ })).toBeVisible();
+  await expect(card.getByRole("button", { name: "→ Selesai" })).toBeVisible();
 });
 
 test("legacy order (empty PIN) → transitions without a PIN", async ({ page }) => {
@@ -287,7 +287,7 @@ test("legacy order (empty PIN) → transitions without a PIN", async ({ page }) 
 
   // The modal still opens, but the gate is skipped server-side — Konfirmasi
   // with an empty PIN succeeds.
-  await orderCard(page, customer).getByRole("button", { name: /→ selesai/ }).click();
+  await orderCard(page, customer).getByRole("button", { name: "→ Selesai" }).click();
   await expect(page.getByRole("heading", { name: "Verifikasi PIN pengambilan" })).toBeVisible();
   await page.getByRole("button", { name: "Konfirmasi" }).click();
 

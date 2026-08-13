@@ -148,6 +148,9 @@ async function fetchJamSettings(request: APIRequestContext) {
 test("Jam Operasional section renders with 6 fields pre-populated from GET", async ({ page }) => {
   await page.goto(`/admin/${shop!.slug}/settings`);
 
+  // D4: settings page title renamed to "Pengaturan" (T28 ITEM 1 / PM sign-off).
+  await expect(page.getByRole("heading", { name: "Pengaturan" })).toBeVisible();
+
   const section = jamOperasionalSection(page);
   await expect(section.getByRole("heading", { name: "Jam Operasional" })).toBeVisible();
   // Labels for all 6 fields (exact — getByText is case-insensitive by

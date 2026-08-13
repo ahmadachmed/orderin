@@ -5,7 +5,7 @@
  * are Indonesian per plan ITEM 2 translation table.
  */
 import { describe, it, expect } from "vitest";
-import { STATUS_LABELS, SPRINT_STATUS_LABELS } from "../src/types/admin";
+import { ACTION_LABELS, STATUS_LABELS, SPRINT_STATUS_LABELS } from "../src/types/admin";
 import type { OrderStatus, SprintStatus } from "../src/types/admin";
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -55,5 +55,35 @@ describe("T25-1 — SPRINT_STATUS_LABELS", () => {
     }
     expect(SPRINT_STATUS_LABELS.OPEN).toBe("Buka");
     expect(SPRINT_STATUS_LABELS.CLOSED).toBe("Tutup");
+  });
+});
+
+describe("T28 ITEM 4 — ACTION_LABELS", () => {
+  it("covers every forward transition in STATUS_FLOW with an imperative verb", () => {
+    // STATUS_FLOW: PENDING → CONFIRMED → BREWING → READY_FOR_PICKUP → PICKED_UP.
+    // Every transition target except the terminal PICKED_UP must have an action label.
+    const transitions: OrderStatus[] = ["CONFIRMED", "BREWING", "READY_FOR_PICKUP", "PICKED_UP"];
+    for (const target of transitions) {
+      expect(ACTION_LABELS, `missing action label for ${target}`).toHaveProperty(target);
+    }
+  });
+
+  it("uses imperative verbs per plan ITEM 4 (distinct from STATUS_LABELS)", () => {
+    expect(ACTION_LABELS.CONFIRMED).toBe("Konfirmasi");
+    expect(ACTION_LABELS.BREWING).toBe("Mulai Meracik");
+    expect(ACTION_LABELS.READY_FOR_PICKUP).toBe("Tandai Siap");
+    expect(ACTION_LABELS.PICKED_UP).toBe("Selesai");
+    // The action verb must differ from the past-participle state label —
+    // e.g. "Mulai Meracik" (action) vs "Diracik" (state), "Tandai Siap" vs
+    // "Siap Diambil" (D5: both wording families coexist by design).
+    for (const status of ["CONFIRMED", "BREWING", "READY_FOR_PICKUP"] as const) {
+      expect(ACTION_LABELS[status]).not.toBe(STATUS_LABELS[status]);
+    }
+  });
+
+  it("has no keys outside the forward transitions", () => {
+    expect(Object.keys(ACTION_LABELS).sort()).toEqual(
+      ["CONFIRMED", "BREWING", "READY_FOR_PICKUP", "PICKED_UP"].sort()
+    );
   });
 });

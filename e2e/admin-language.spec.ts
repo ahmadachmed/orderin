@@ -182,20 +182,27 @@ test("admin login page renders Indonesian labels", async ({ page }) => {
 
 test("dashboard + full order flow uses Indonesian labels throughout", async ({ page }) => {
   await loginAsLang(page);
-  // Empty dashboard: title, nav, all 5 status badges + 5 empty columns.
+  // Empty dashboard: title (T28-3: "Antrean Pesanan"), nav, all 5 status badges
+  // + 5 empty columns.
   await page.goto(`/admin/${lang!.slug}`);
-  await expect(page.getByRole("heading", { name: "Dasbor Barista" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Antrean Pesanan" })).toBeVisible();
   for (const label of ["Dasbor", "Menu", "Riwayat", "Pengaturan"]) {
     await expect(page.getByRole("link", { name: label })).toBeVisible();
   }
   // "Keluar" is a <button>, not a link — assert by role accordingly.
   await expect(page.getByRole("button", { name: "Keluar" })).toBeVisible();
+  // D2: "Lihat Toko" was dropped from the rail.
+  await expect(page.getByText("Lihat Toko")).toHaveCount(0);
   // CANCELLED is a card action, not a drop column — only the 5 STATUS_FLOW
   // badges render as column headers on the dashboard.
   for (const badge of ["Menunggu Konfirmasi", "Dikonfirmasi", "Diracik", "Siap Diambil", "Selesai"]) {
     await expect(page.getByText(badge)).toBeVisible();
   }
   await expect(page.getByText("Kosong")).toHaveCount(5);
+  // ITEM 5: tip bar (T28-3) — no emoji.
+  await expect(
+    page.getByText("Seret kartu untuk majukan status. Meracik (Brewing) membutuhkan pembayaran LUNAS.")
+  ).toBeVisible();
 
   // Place an order, then drive the card PENDING → CONFIRMED → PAID → BREWING → READY.
   const customer = `Lang Cust ${Date.now()}`;
@@ -207,33 +214,33 @@ test("dashboard + full order flow uses Indonesian labels throughout", async ({ p
   // PENDING + UNPAID: mark-paid and advance buttons.
   await expect(card.getByText("Menunggu Konfirmasi")).toBeVisible();
   await expect(card.getByRole("button", { name: "Tandai Lunas" })).toBeVisible();
-  await expect(card.getByRole("button", { name: "→ dikonfirmasi" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "→ Konfirmasi" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Batal" })).toBeVisible();
 
   // PENDING → CONFIRMED: notice + badge translate; brewing stays gated.
-  await card.getByRole("button", { name: "→ dikonfirmasi" }).click();
+  await card.getByRole("button", { name: "→ Konfirmasi" }).click();
   await expect(page.getByText("Pesanan dipindah ke dikonfirmasi")).toBeVisible();
   await expect(card.getByText("Dikonfirmasi")).toBeVisible();
-  await expect(card.getByRole("button", { name: "→ diracik" })).toBeDisabled();
-  await expect(card.getByText("🔒 Tandai pembayaran LUNAS sebelum meracik")).toBeVisible();
+  await expect(card.getByRole("button", { name: "→ Mulai Meracik" })).toBeDisabled();
+  await expect(card.getByText("Tandai pembayaran LUNAS sebelum meracik")).toBeVisible();
 
   // Mark paid → gate lifts.
   await card.getByRole("button", { name: "Tandai Lunas" }).click();
   await expect(page.getByText("Pembayaran ditandai LUNAS — peracikan terbuka")).toBeVisible();
-  await expect(card.getByText(/✓ Lunas/)).toBeVisible();
-  await expect(card.getByRole("button", { name: "→ diracik" })).toBeEnabled();
+  await expect(card.getByText(/Lunas/)).toBeVisible();
+  await expect(card.getByRole("button", { name: "→ Mulai Meracik" })).toBeEnabled();
 
   // CONFIRMED → BREWING → READY_FOR_PICKUP.
-  await card.getByRole("button", { name: "→ diracik" }).click();
+  await card.getByRole("button", { name: "→ Mulai Meracik" }).click();
   await expect(page.getByText("Pesanan dipindah ke diracik")).toBeVisible();
   await expect(card.getByText("Diracik")).toBeVisible();
-  await card.getByRole("button", { name: "→ siap diambil" }).click();
+  await card.getByRole("button", { name: "→ Tandai Siap" }).click();
   await expect(page.getByText("Pesanan dipindah ke siap diambil")).toBeVisible();
   await expect(card.getByText("Siap Diambil")).toBeVisible();
   await expect(card.getByText(/^PIN: \d{4}$/)).toBeVisible();
 
   // READY → PICKED_UP opens the PIN modal with Indonesian labels (cancel it).
-  await card.getByRole("button", { name: "→ selesai" }).click();
+  await card.getByRole("button", { name: "→ Selesai" }).click();
   await expect(page.getByRole("heading", { name: "Verifikasi PIN pengambilan" })).toBeVisible();
   await page.getByRole("button", { name: "Batal" }).click();
 });
