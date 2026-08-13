@@ -188,4 +188,23 @@ describe("OrderForm", () => {
     expect(screen.getByText("Kedai tutup — buka kembali pukul 08:00.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Buat Pesanan" })).not.toBeInTheDocument();
   });
+
+  it("disables quantity controls when the shop is closed", () => {
+    render(
+      <OrderForm tenantSlug="kopi-senja" items={items} isOpen={false} closedMessage="Kedai tutup." />
+    );
+    expect(screen.getByRole("button", { name: "Tambah Espresso" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Tambah Kopi Susu Gula Aren" })).toBeDisabled();
+  });
+
+  it("cannot build a cart while the shop is closed (no dead-end cart)", () => {
+    render(
+      <OrderForm tenantSlug="kopi-senja" items={items} isOpen={false} closedMessage="Kedai tutup." />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tambah Espresso" }));
+    // Closed message stays, no stepper (Kurangi) appears, no submit path.
+    expect(screen.getByText("Kedai tutup.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Kurangi Espresso" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Buat Pesanan" })).not.toBeInTheDocument();
+  });
 });

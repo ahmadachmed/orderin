@@ -69,6 +69,9 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
       : items.filter((it) => it.category === selectedCategory);
 
   const handleQuantityChange = (menuItemId: string, quantity: number) => {
+    // T27 (issue #188): while the shop is closed, ignore quantity changes so
+    // no cart can be built — the closed message replaces the submit path.
+    if (!isOpen) return;
     setQuantities((prev) => {
       const next = { ...prev };
       if (quantity <= 0) delete next[menuItemId];
@@ -182,7 +185,12 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
         </nav>
       ) : null}
 
-      <MenuList items={visibleItems} quantities={quantities} onQuantityChange={handleQuantityChange} />
+      <MenuList
+        items={visibleItems}
+        quantities={quantities}
+        onQuantityChange={handleQuantityChange}
+        disabled={!isOpen}
+      />
 
       {!isOpen ? (
         <div className="mt-4 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
