@@ -5,9 +5,13 @@
  * with the SLUG_RE contract, and (issue #142) filters the tenant grid live,
  * redirecting only on an exact single name/slug match.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ShopSearchForm, { normalizeSlug, filterTenants } from "@/components/ShopSearchForm";
+import ShopSearchForm, {
+  normalizeSlug,
+  filterTenants,
+  isShopOpen,
+} from "@/components/ShopSearchForm";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -404,5 +408,97 @@ describe("ShopSearchForm — T24 suggestion dropdown (issue #153)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
     expect(push).not.toHaveBeenCalled();
     expect(screen.getByRole("link", { name: /Kopi Senja/ })).toBeInTheDocument();
+  });
+});
+
+describe("isShopOpen — T26 (issue #187)", () => {
+  const NOW = new Date("2026-08-13T10:00:00Z"); // within 07:00–21:00 UTC
+
+  it("returns true when isOpen and now is within hours", () => {
+    expect(
+      isShopOpen({ slug: "a", name: "A", address: null, isOpen: true, openTime: "07:00", closeTime: "21:00" }, NOW)
+    ).toBe(true);
+  });
+
+  it("returns false when isOpen but now is outside hours", () => {
+    expect(
+      isShopOpen({ slug: "a", name: "A", address: null, isOpen: true, openTime: "07:00", closeTime: "21:00" }, new Date("2026-08-13T22:00:00Z"))
+    ).toBe(false);
+  });
+
+  it("returns false when isOpen is false even inside hours", () => {
+    expect(
+      isShopOpen({ slug: "a", name: "A", address: null, isOpen: false, openTime: "07:00", closeTime: "21:00" }, NOW)
+    ).toBe(false);
+  });
+
+  it("falls back to isOpen when hours are missing", () => {
+    expect(isShopOpen({ slug: "a", name: "A", address: null, isOpen: true }, NOW)).toBe(true);
+    expect(isShopOpen({ slug: "a", name: "A", address: null, isOpen: false }, NOW)).toBe(false);
+  });
+
+  it("handles overnight ranges (close < open)", () => {
+    const overnight = { slug: "a", name: "A", address: null, isOpen: true, openTime: "22:00", closeTime: "04:00" };
+    expect(isShopOpen(overnight, new Date("2026-08-13T23:00:00Z"))).toBe(true);
+    expect(isShopOpen(overnight, new Date("2026-08-13T03:00:00Z"))).toBe(true);
+    expect(isShopOpen(overnight, new Date("2026-08-13T12:00:00Z"))).toBe(false);
+  });
+});
+
+describe("ShopSearchForm — T26 open/closed badge (issue #187)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const withHours = [
+    {
+      slug: "kopi-senja",
+      name: "Kopi Senja",
+      address: null,
+      isOpen: true,
+      openTime: "07:00",
+      closeTime: "21:00",
+    },
+  ];
+
+  it("shows 'Buka' on the grid card when now is within hours", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T10:00:00Z"));
+    render(<ShopSearchForm tenants={withHours} />);
+    expect(screen.getByRole("link", { name: /Kopi Senja/ })).toHaveTextContent("Buka");
+  });
+
+  it("shows 'Tutup' on the grid card when now is outside hours (isOpen=true)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T22:00:00Z"));
+    render(<ShopSearchForm tenants={withHours} />);
+    expect(screen.getByRole("link", { name: /Kopi Senja/ })).toHaveTextContent("Tutup");
+  });
+
+  it("shows 'Tutup' on the grid card when isOpen=false regardless of hours", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T10:00:00Z"));
+    const closed = [{ ...withHours[0], isOpen: false }];
+    render(<ShopSearchForm tenants={closed} />);
+    expect(screen.getByRole("link", { name: /Kopi Senja/ })).toHaveTextContent("Tutup");
+  });
+
+  it("shows 'Buka' on the grid card when hours are missing (fallback isOpen)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T22:00:00Z")); // outside hours — fallback ignores them
+    const noHours = [{ slug: "warung-teh", name: "Warung Teh", address: null, isOpen: true }];
+    render(<ShopSearchForm tenants={noHours} />);
+    expect(screen.getByRole("link", { name: /Warung Teh/ })).toHaveTextContent("Buka");
+  });
+
+  it("applies the same logic to the suggestion dropdown badge", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T22:00:00Z")); // outside hours
+    render(<ShopSearchForm tenants={withHours} />);
+    fireEvent.change(screen.getByPlaceholderText("kopi-senja"), {
+      target: { value: "kopi" },
+    });
+    const option = screen.getByRole("option", { name: /Kopi Senja/ });
+    expect(option).toHaveTextContent("Tutup");
   });
 });
