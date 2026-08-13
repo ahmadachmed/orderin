@@ -64,8 +64,8 @@ export default function OpenToggle({ onLoaded }: OpenToggleProps) {
   const segmentClass = (active: boolean) =>
     `px-4 py-1.5 text-sm font-medium transition-colors ${
       active
-        ? "bg-slate-900 text-white"
-        : "bg-transparent text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+        ? "bg-primary text-primary-foreground"
+        : "bg-transparent text-muted-foreground hover:bg-secondary hover:text-foreground"
     } disabled:cursor-not-allowed disabled:opacity-60`;
 
   return (
@@ -73,7 +73,7 @@ export default function OpenToggle({ onLoaded }: OpenToggleProps) {
       <div
         role="group"
         aria-label="Status kedai"
-        className="inline-flex overflow-hidden rounded-lg border border-slate-300 bg-slate-100"
+        className="inline-flex overflow-hidden rounded-lg border border-border bg-secondary"
       >
         <button
           type="button"

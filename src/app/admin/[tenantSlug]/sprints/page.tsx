@@ -35,17 +35,17 @@ export default function AdminSprintsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-muted">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Riwayat Sprint</h1>
-            <p className="text-xs text-slate-500">/{tenantSlug} · daftar sprint & omzet</p>
+            <h1 className="text-lg font-bold text-foreground">Riwayat Sprint</h1>
+            <p className="text-xs text-muted-foreground">/{tenantSlug} · daftar sprint & omzet</p>
           </div>
         </div>
         {error && (
           <div className="mx-auto max-w-7xl px-4 pb-2">
-            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
               {error}
             </p>
           </div>

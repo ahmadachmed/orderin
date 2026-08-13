@@ -11,12 +11,12 @@ export default function AdminSprintDetailPage() {
   const tenantSlug = params.tenantSlug;
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-muted">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Detail Sprint</h1>
-            <p className="text-xs text-slate-500">/{tenantSlug} · riwayat sprint</p>
+            <h1 className="text-lg font-bold text-foreground">Detail Sprint</h1>
+            <p className="text-xs text-muted-foreground">/{tenantSlug} · riwayat sprint</p>
           </div>
         </div>
       </header>

@@ -11,8 +11,8 @@ import type { SprintStatus, SprintSummary } from "@/types/admin";
 import { formatPrice } from "@/types/admin";
 
 const BADGE: Record<SprintStatus, string> = {
-  OPEN: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  CLOSED: "bg-slate-200 text-slate-600 border-slate-300",
+  OPEN: "bg-emerald-500/15 text-emerald-400 border-emerald-500/50",
+  CLOSED: "bg-secondary text-muted-foreground border-border",
 };
 
 function formatStart(iso: string): string {
@@ -60,29 +60,29 @@ export default function SprintList() {
 
   if (authError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-muted text-sm text-muted-foreground">
         Session expired — redirecting to login…
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
       {error && (
-        <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p className="mb-3 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
           {error} — retrying…
         </p>
       )}
       {!loaded ? (
-        <p className="py-6 text-center text-sm text-slate-400">Memuat riwayat…</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">Memuat riwayat…</p>
       ) : sprints.length === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-400">
+        <p className="py-6 text-center text-sm text-muted-foreground">
           Belum ada sprint. Buka sprint baru dari tombol di atas.
         </p>
       ) : (
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+            <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
               <th className="pb-2 pr-4 font-medium">Tanggal Mulai</th>
               <th className="pb-2 pr-4 font-medium">Status</th>
               <th className="pb-2 pr-4 text-right font-medium">#Order</th>
@@ -97,9 +97,9 @@ export default function SprintList() {
                 onClick={() =>
                   router.push(`/admin/${tenantSlug}/sprints/${s.id}`)
                 }
-                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-border last:border-0 hover:bg-muted"
               >
-                <td className="py-2.5 pr-4 text-slate-900">
+                <td className="py-2.5 pr-4 text-foreground">
                   {formatStart(s.startAt)}
                 </td>
                 <td className="py-2.5 pr-4">
@@ -109,13 +109,13 @@ export default function SprintList() {
                     {s.status === "OPEN" ? "Open" : "Closed"}
                   </span>
                 </td>
-                <td className="py-2.5 pr-4 text-right tabular-nums text-slate-700">
+                <td className="py-2.5 pr-4 text-right tabular-nums text-foreground">
                   {s.orderCount}
                 </td>
-                <td className="py-2.5 pr-4 text-right tabular-nums text-slate-900">
+                <td className="py-2.5 pr-4 text-right tabular-nums text-foreground">
                   {formatPrice(s.revenue)}
                 </td>
-                <td className="py-2.5 font-medium text-slate-500">
+                <td className="py-2.5 font-medium text-muted-foreground">
                   Detail →
                 </td>
               </tr>

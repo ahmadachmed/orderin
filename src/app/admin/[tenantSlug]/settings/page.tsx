@@ -163,7 +163,7 @@ export default function AdminSettingsPage() {
 
   if (authError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm text-slate-600">
+      <div className="flex min-h-screen items-center justify-center bg-muted text-sm text-muted-foreground">
         Sesi berakhir — mengalihkan ke login…
       </div>
     );
@@ -177,41 +177,41 @@ export default function AdminSettingsPage() {
   const previewClose = formatTimeInTimezone(form.closeTime.trim(), form.timezone.trim());
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-muted">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Pengaturan</h1>
-            <p className="text-xs text-slate-500">/{tenantSlug} · QRIS + transfer bank</p>
+            <h1 className="text-lg font-bold text-foreground">Pengaturan</h1>
+            <p className="text-xs text-muted-foreground">/{tenantSlug} · QRIS + transfer bank</p>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl p-4">
         {!loaded ? (
-          <p className="rounded-lg bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+          <p className="rounded-lg bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
             Memuat pengaturan…
           </p>
         ) : (
           <form onSubmit={save} className="space-y-4">
             {error && (
-              <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+              <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">{error}</p>
             )}
             {saved && (
-              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
                 ✓ Tersimpan — pembeli akan melihat detail pembayaran ini di halaman status pesanan.
               </p>
             )}
 
             {/* QRIS */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">QRIS</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+            <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-foreground">QRIS</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Pelanggan scan QRIS untuk membayar. Isi salah satu: gambar atau kode statis.
               </p>
               <div className="mt-3 space-y-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     URL gambar QRIS
                   </label>
                   <input
@@ -219,19 +219,19 @@ export default function AdminSettingsPage() {
                     value={form.qrisImageUrl}
                     onChange={(e) => set("qrisImageUrl", e.target.value)}
                     placeholder="https://…/qris.png (upload gambar dulu, lalu tempel URL)"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                   />
                   {form.qrisImageUrl.trim() && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={form.qrisImageUrl.trim()}
                       alt="QRIS preview"
-                      className="mt-2 h-28 w-28 rounded-lg border border-slate-200 object-contain"
+                      className="mt-2 h-28 w-28 rounded-lg border border-border object-contain"
                     />
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Kode QRIS (teks, jika tidak pakai gambar)
                   </label>
                   <input
@@ -239,21 +239,21 @@ export default function AdminSettingsPage() {
                     value={form.qrisCode}
                     onChange={(e) => set("qrisCode", e.target.value)}
                     placeholder="0002010102112665…"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                   />
                 </div>
               </div>
             </section>
 
             {/* Bank transfer */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Transfer Bank</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+            <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-foreground">Transfer Bank</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Pelanggan transfer ke rekening ini, lalu menekan tombol &quot;Saya sudah bayar&quot;.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Nama bank
                   </label>
                   <input
@@ -261,11 +261,11 @@ export default function AdminSettingsPage() {
                     value={form.bankName}
                     onChange={(e) => set("bankName", e.target.value)}
                     placeholder="BCA / BRI / Mandiri…"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     No. rekening
                   </label>
                   <input
@@ -274,21 +274,21 @@ export default function AdminSettingsPage() {
                     value={form.bankAccountNumber}
                     onChange={(e) => set("bankAccountNumber", e.target.value)}
                     placeholder="1234567890"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                   />
                 </div>
               </div>
             </section>
 
             {/* Jam Operasional (T25-10) */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Jam Operasional</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+            <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-foreground">Jam Operasional</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Disimpan dalam UTC (HH:mm), ditampilkan dalam timezone kedai. Berlaku untuk jam buka/tutup kedai.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Jam buka
                   </label>
                   <input
@@ -296,11 +296,11 @@ export default function AdminSettingsPage() {
                     value={form.openTime}
                     onChange={(e) => set("openTime", e.target.value)}
                     placeholder="07:00"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Jam tutup
                   </label>
                   <input
@@ -308,35 +308,35 @@ export default function AdminSettingsPage() {
                     value={form.closeTime}
                     onChange={(e) => set("closeTime", e.target.value)}
                     placeholder="21:00"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                   />
                 </div>
               </div>
               <div className="mt-3">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Timezone</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Timezone</label>
                 <input
                   type="text"
                   list="timezone-options"
                   value={form.timezone}
                   onChange={(e) => set("timezone", e.target.value)}
                   placeholder="Asia/Jakarta"
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                 />
                 <datalist id="timezone-options">
                   {COMMON_TIMEZONES.map((tz) => (
                     <option key={tz} value={tz} />
                   ))}
                 </datalist>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   contoh: {form.openTime || "07:00"} UTC → {previewOpen}{" "}
                   {previewOpen !== form.openTime.trim() ? `(${form.timezone.trim() || "Asia/Makassar"})` : ""}
                   {previewClose !== previewOpen ? `, ${form.closeTime || "21:00"} UTC → ${previewClose}` : ""}
                 </p>
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted px-3 py-2.5">
                 <div>
-                  <p className="text-sm font-medium text-slate-700">Status kedai</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-sm font-medium text-foreground">Status kedai</p>
+                  <p className="text-xs text-muted-foreground">
                     {form.isOpen ? "Buka — menerima order baru" : "Tutup — tidak menerima order"}
                   </p>
                 </div>
@@ -346,11 +346,11 @@ export default function AdminSettingsPage() {
                   aria-checked={form.isOpen}
                   onClick={() => set("isOpen", !form.isOpen)}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
-                    form.isOpen ? "bg-emerald-500" : "bg-slate-300"
+                    form.isOpen ? "bg-emerald-500" : "bg-muted"
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-transform ${
                       form.isOpen ? "translate-x-5" : "translate-x-0.5"
                     }`}
                   />
@@ -358,7 +358,7 @@ export default function AdminSettingsPage() {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Buffer waktu racik (menit)
                   </label>
                   <input
@@ -367,12 +367,12 @@ export default function AdminSettingsPage() {
                     max={600}
                     value={form.prepTimeBuffer}
                     onChange={(e) => set("prepTimeBuffer", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-slate-400">0-600 menit.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">0-600 menit.</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
                     Maks antrean
                   </label>
                   <input
@@ -381,21 +381,21 @@ export default function AdminSettingsPage() {
                     max={1000}
                     value={form.maxQueueSize}
                     onChange={(e) => set("maxQueueSize", e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-slate-400">1-1000 order.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">1-1000 order.</p>
                 </div>
               </div>
             </section>
 
             {/* Durasi Sprint */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Durasi Sprint</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
+            <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-foreground">Durasi Sprint</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Satu sprint = satu periode retensi order. Board hanya menampilkan order sprint aktif.
               </p>
               <div className="mt-3">
-                <label className="mb-1 block text-xs font-medium text-slate-600">
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Durasi sprint (hari)
                 </label>
                 <input
@@ -404,18 +404,18 @@ export default function AdminSettingsPage() {
                   max={90}
                   value={form.sprintDurationDays}
                   onChange={(e) => set("sprintDurationDays", e.target.value)}
-                  className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none"
+                  className="w-32 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Default 1 hari. Berlaku untuk sprint berikutnya.
                 </p>
               </div>
             </section>
 
             {/* Summary + save */}
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Tampilan untuk pelanggan</h2>
-              <p className="mt-1 text-xs text-slate-500">
+            <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-foreground">Tampilan untuk pelanggan</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {hasQris && hasBank
                   ? "Pelanggan bisa pilih QRIS atau Transfer Bank di halaman status pesanan."
                   : hasQris
@@ -427,7 +427,7 @@ export default function AdminSettingsPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-3 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                className="mt-3 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {busy ? "Menyimpan…" : "Simpan pengaturan"}
               </button>
