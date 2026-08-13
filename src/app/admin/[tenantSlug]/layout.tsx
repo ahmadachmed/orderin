@@ -5,7 +5,7 @@
 // plus a <main> wrapper for page content. T28-2 adds the shared top header
 // (shop name + Buka/Tutup toggle) here.
 
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import Sidebar from "@/components/admin/Sidebar";
 
 export default function AdminLayout({
@@ -15,6 +15,12 @@ export default function AdminLayout({
 }) {
   const params = useParams<{ tenantSlug: string }>();
   const tenantSlug = params.tenantSlug;
+  const pathname = usePathname();
+
+  // Login is pre-auth: render standalone (no sidebar, no ml-64 offset).
+  if (pathname.endsWith("/login")) {
+    return <div className="min-h-screen bg-slate-100">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">
