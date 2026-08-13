@@ -1,0 +1,22 @@
+id,area,scenario,preconditions,steps,expected,status,gap_type,severity,notes
+T25-01,lookup,Shop header Lacak Pesanan opens dialog,"Shop open, tenant kopi-senja, seed data",Click Lacak Pesanan button in shop header,Dialog opens with phone input,IMPLEMENTED,,,Verified live 2026-08-12
+T25-02,lookup,Valid phone with active order redirects to status page,Active order exists for phone 08xx,"Type phone, submit",Redirect to /[slug]/order/[orderId] status page,IMPLEMENTED,,,Lookup API returns latest active order
+T25-03,lookup,Valid phone without active order shows not-found,No active order for phone,"Type phone, submit","Inline error 'Pesanan tidak ditemukan untuk nomor ini', no redirect",IMPLEMENTED,,,Verified live
+T25-04,lookup,Empty/invalid phone shows error,Dialog open,Submit empty,"Inline validation error, no redirect",VERIFY,UX,Medium,Check required handling
+T25-05,lookup,Landing Lacak Pesanan CTA scrolls to search,Landing page,Click Lacak Pesanan link,Scrolls to #shop-search section,IMPLEMENTED,,,Verified live — CTA link only (slug constraint)
+T25-06,lookup,Lookup rate limited,IP used 5 lookups in 1 min,6th lookup,HTTP 429 Too many requests,IMPLEMENTED,,,"5/min per IP, src/lib/rate-limit.ts"
+T25-07,admin-lang,Admin login page Indonesian,Admin session expired,Open /admin/[slug]/login,"'Login Admin' heading, 'Masuk' button",IMPLEMENTED,,,Verified live
+T25-08,admin-lang,Admin nav Indonesian,Logged in as admin,View dashboard nav,Dasbor/Menu/Riwayat/Pembayaran links,IMPLEMENTED,,,'Pembayaran' per PM decision
+T25-09,admin-lang,Order status labels Indonesian,Order in PENDING,View order card,"Label 'Menunggu konfirmasi' etc, not 'Pending'",IMPLEMENTED,,,STATUS_LABELS types/admin.ts:93 translated
+T25-10,admin-lang,Action buttons Indonesian,Order pending unpaid,View card actions,"'Tandai dibayar', '→ konfirmasi', 'Batal'",VERIFY,UX,Low,Buttons verified partially live
+T25-11,admin-lang,Brand terms kept,Any admin page,Inspect copy,"PIN, QRIS, Sprint, PAID/UNPAID remain",IMPLEMENTED,,,Per plan decisions
+T25-12,overnight,Overnight hours show besok marker,Tenant openTime 07:00 closeTime 21:00 UTC Asia/Makassar,View landing card / shop header,'Buka 15:00–05:00 besok',IMPLEMENTED,,,Verified live
+T25-13,overnight,Normal hours no marker,Tenant 08:00-17:00 UTC,View landing card,'Buka 16:00–01:00' without besok,IMPLEMENTED,,,formatOperatingHours lib/time.ts
+T25-14,overnight,isOpen=false shows Tutup without hours,Tenant isOpen=false,View landing card,"'Tutup' badge, no hours text",IMPLEMENTED,,,
+T25-15,settings,Jam Operasional section renders,Admin logged in,Open /admin/[slug]/settings,"Section with jam buka/tutup time inputs, timezone, isOpen switch, buffer, maxQueue",IMPLEMENTED,,,Verified live — 6 fields
+T25-16,settings,Save hours persists,"Admin, settings page","Change jam buka, save",GET /api/admin/settings returns new value; shop page label updates,IMPLEMENTED,,,PATCH supports openTime/closeTime
+T25-17,settings,HH:mm validation,"Admin, settings page","Set jam buka '25:00', save","Error, rejected 400",IMPLEMENTED,,,route.ts:107-113 regex
+T25-18,settings,isOpen toggle affects shop,Admin toggles isOpen off,"Save, open shop page","Shop shows 'Kedai sedang tutup', no ordering",VERIFY,UX,High,Depends on T27 fix — ordering still possible via active +/-
+T25-19,settings,Timezone change affects display,Admin changes timezone,"Save, view landing",Hours converted in new timezone,IMPLEMENTED,,,
+BUG-01,status,Landing badge matches shop page when closed,"Tenant isOpen=true, outside hours",Compare landing card badge vs shop page,Both show Tutup,GAP,UX,High,"T26 in progress — landing shows Buka, shop shows TUTUP (verified 03:30 UTC)"
+BUG-02,ordering,Cannot build cart when shop closed,Shop closed (isOpen=false),Try adding item,Quantity controls disabled/hidden; no dead-end cart,GAP,UX,High,T27 created — +/- active but no submit path (verified live)
