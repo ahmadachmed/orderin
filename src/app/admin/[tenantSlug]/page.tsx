@@ -196,10 +196,13 @@ export default function AdminDashboardPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Dasbor Barista</h1>
+            <h1 className="text-lg font-bold text-slate-900">
+              Antrean Pesanan
+            </h1>
             <p className="text-xs text-slate-500">
-              /{tenantSlug} · auto-refresh 5s
+              Kelola pesanan masuk dan status operasional barista.
             </p>
+            <p className="text-[10px] text-slate-400">Auto-refresh 5 detik</p>
           </div>
         </div>
         {notice && (
@@ -235,7 +238,8 @@ export default function AdminDashboardPage() {
           ))}
         </div>
         <p className="mt-2 text-xs text-slate-400">
-          Tip: seret kartu untuk majukan statusnya. 🔒 Meracik butuh pembayaran LUNAS.
+          Seret kartu untuk majukan status. Meracik (Brewing) membutuhkan
+          pembayaran LUNAS.
         </p>
       </main>
 
@@ -246,8 +250,7 @@ export default function AdminDashboardPage() {
               Verifikasi PIN pengambilan
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Masukkan PIN 4 digit pelanggan untuk menandai pesanan sebagai
-              PICKED_UP.
+              Masukkan PIN 4 digit pelanggan untuk menandai pesanan selesai.
             </p>
             <input
               autoFocus
