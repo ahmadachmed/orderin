@@ -226,3 +226,46 @@ test("out-of-bounds buffer/queue and empty timezone never persist; timezone show
   const after = await fetchJamSettings(page.request);
   expect(after).toEqual(before);
 });
+
+test("header Buka/Tutup toggle flips isOpen, persists on reload, reflects on settings switch (T28-2)", async ({ page }) => {
+  await page.goto(`/admin/${shop!.slug}`);
+
+  // Fresh tenant is open by default — header shows Buka Toko active.
+  await expect(page.getByRole("button", { name: "Buka Toko" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Buka Toko" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  // Flip to Tutup via the header toggle.
+  await page.getByRole("button", { name: "Tutup Toko" }).click();
+  await expect(page.getByRole("button", { name: "Tutup Toko" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  // PATCH persisted — GET returns isOpen=false.
+  const saved = await fetchJamSettings(page.request);
+  expect(saved.isOpen).toBe(false);
+
+  // Reload → header reflects persisted state (no full-page flash to Buka).
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Tutup Toko" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  // Settings page switch shows the same state.
+  await page.goto(`/admin/${shop!.slug}/settings`);
+  await expect(jamFields(page).isOpen).toHaveAttribute("aria-checked", "false");
+
+  // Flip back to Buka so the tenant is left in its original open state.
+  await page.goto(`/admin/${shop!.slug}`);
+  await page.getByRole("button", { name: "Buka Toko" }).click();
+  await expect(page.getByRole("button", { name: "Buka Toko" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const restored = await fetchJamSettings(page.request);
+  expect(restored.isOpen).toBe(true);
+});
