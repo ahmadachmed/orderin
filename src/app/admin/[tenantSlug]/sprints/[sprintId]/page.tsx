@@ -1,22 +1,14 @@
 "use client";
 
 // Sprint detail page (T15, PLAN §4.1/§4.6): /admin/[tenantSlug]/sprints/[sprintId].
-// Header nav + SprintDetail component (readonly order list, close action).
+// Back-link lives in SprintDetail; nav now comes from the shared admin sidebar.
 
-import { useParams, useRouter } from "next/navigation";
-import { adminLogout } from "@/lib/admin-api";
+import { useParams } from "next/navigation";
 import SprintDetail from "@/components/admin/SprintDetail";
 
 export default function AdminSprintDetailPage() {
-  const router = useRouter();
   const params = useParams<{ tenantSlug: string; sprintId: string }>();
   const tenantSlug = params.tenantSlug;
-
-  async function handleLogout() {
-    await adminLogout();
-    router.push("/");
-    router.refresh();
-  }
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -26,39 +18,6 @@ export default function AdminSprintDetailPage() {
             <h1 className="text-lg font-bold text-slate-900">Detail Sprint</h1>
             <p className="text-xs text-slate-500">/{tenantSlug} · riwayat sprint</p>
           </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <a
-              href={`/admin/${tenantSlug}`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Dashboard
-            </a>
-            <a
-              href={`/admin/${tenantSlug}/menu`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Menu
-            </a>
-            <a
-              href={`/admin/${tenantSlug}/settings`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Payment
-            </a>
-            <a
-              href={`/admin/${tenantSlug}/sprints`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Riwayat
-            </a>
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
-            >
-              Logout
-            </button>
-          </nav>
         </div>
       </header>
 
