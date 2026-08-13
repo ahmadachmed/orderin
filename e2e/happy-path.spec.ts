@@ -95,15 +95,15 @@ test("happy path: landing search → shop → admin → menu → order → statu
   await page.getByPlaceholder("0002010102112665").fill("0002010102112665E2E");
   await page.getByPlaceholder("BCA").fill("BCA");
   await page.getByPlaceholder("1234567890").fill("1234567890");
-  await page.getByRole("button", { name: "Simpan pengaturan pembayaran" }).click();
+  await page.getByRole("button", { name: "Simpan pengaturan" }).click();
   await expect(page.getByText("✓ Tersimpan")).toBeVisible();
 
   // 3. Create a menu item via the admin UI.
   await page.goto(`/admin/${slug}/menu`);
-  await page.getByRole("button", { name: "+ Add item" }).click();
-  await page.getByLabel("Name *").fill(itemName);
-  await page.getByLabel("Price (IDR) *").fill("15000");
-  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.getByRole("button", { name: "+ Tambah" }).click();
+  await page.getByLabel("Nama *").fill(itemName);
+  await page.getByLabel("Harga (IDR) *").fill("15000");
+  await page.getByRole("button", { name: "Tambah Item", exact: true }).click();
   await expect(page.getByText(itemName)).toBeVisible();
 
   // 4. Public shop via the landing search again — same entry point a real
