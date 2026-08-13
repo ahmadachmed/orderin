@@ -44,6 +44,21 @@ describe("Sidebar", () => {
     }
   });
 
+  it("D2: does not render the dropped 'Lihat Toko' link", () => {
+    render(<Sidebar tenantSlug="kopi-senja" />);
+    expect(screen.queryByRole("link", { name: /Lihat Toko/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Lihat Toko/)).not.toBeInTheDocument();
+  });
+
+  it("D1: Riwayat (sprints) is reachable as the 5th rail item (4 nav + Keluar)", () => {
+    render(<Sidebar tenantSlug="kopi-senja" />);
+    const riwayat = screen.getByRole("link", { name: "Riwayat" }) as HTMLAnchorElement;
+    expect(riwayat.getAttribute("href")).toBe("/admin/kopi-senja/sprints");
+    // Rail = 4 nav links + 1 Keluar button (D1: Riwayat completes the 5-item rail).
+    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getByRole("button", { name: "Keluar" })).toBeInTheDocument();
+  });
+
   it("marks the current page as active", () => {
     render(<Sidebar tenantSlug="kopi-senja" />);
     expect(screen.getByRole("link", { name: "Dasbor" })).toHaveAttribute(
