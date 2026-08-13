@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatOperatingHours } from "@/lib/time";
+import { formatOperatingHours, isWithinHours } from "@/lib/time";
 
 /** Same pattern as src/app/api/slug-check/route.ts (T8). */
 export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -86,6 +86,18 @@ export function formatHoursLabel(
     timezone,
   );
   return `Buka ${openDisplay}–${closeDisplay}${isOvernight ? " besok" : ""}${suffix}`;
+}
+
+/**
+ * T26 — badge open/closed, konsisten dgn shop page (SOURCE OF TRUTH
+ * [tenantSlug]/page.tsx: `isOpen && isWithinHours(...)`). Tenant tanpa jam
+ * buka → fallback ke flag isOpen saja (behavior lama, jangan break).
+ */
+export function isShopOpen(t: ShopTenant, now: Date = new Date()): boolean {
+  return (
+    t.isOpen &&
+    (t.openTime && t.closeTime ? isWithinHours(t.openTime, t.closeTime, now) : true)
+  );
 }
 
 interface ShopSearchFormProps {
@@ -191,12 +203,12 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
                         </span>
                         <Badge
                           className={`shrink-0 ${
-                            t.isOpen
+                            isShopOpen(t)
                               ? "border-success/20 bg-success/10 text-success"
                               : "border-border bg-muted text-muted-foreground"
                           }`}
                         >
-                          {t.isOpen ? "Buka" : "Tutup"}
+                          {isShopOpen(t) ? "Buka" : "Tutup"}
                         </Badge>
                       </button>
                     </li>
@@ -240,12 +252,12 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
                     </div>
                     <Badge
                       className={`shrink-0 ${
-                        t.isOpen
+                        isShopOpen(t)
                           ? "border-success/20 bg-success/10 text-success"
                           : "border-border bg-muted text-muted-foreground"
                       }`}
                     >
-                      {t.isOpen ? "Buka" : "Tutup"}
+                      {isShopOpen(t) ? "Buka" : "Tutup"}
                     </Badge>
                   </div>
                 </Card>
