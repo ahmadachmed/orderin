@@ -9,6 +9,9 @@ interface MenuListProps {
   items: MenuItemView[];
   quantities: Record<string, number>;
   onQuantityChange: (menuItemId: string, quantity: number) => void;
+  // T27 (issue #188): when the shop is closed, quantity controls are
+  // disabled so a cart cannot be built with no submit path (dead-end cart).
+  disabled?: boolean;
 }
 
 /**
@@ -16,7 +19,12 @@ interface MenuListProps {
  * Card item rows with a quantity stepper. Cart state lives in
  * OrderForm, which owns `quantities` + `onQuantityChange`.
  */
-export default function MenuList({ items, quantities, onQuantityChange }: MenuListProps) {
+export default function MenuList({
+  items,
+  quantities,
+  onQuantityChange,
+  disabled = false,
+}: MenuListProps) {
   if (items.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
@@ -64,8 +72,9 @@ export default function MenuList({ items, quantities, onQuantityChange }: MenuLi
                 <Button
                   type="button"
                   aria-label={`Tambah ${item.name}`}
+                  disabled={disabled}
                   onClick={() => onQuantityChange(item.id, qty + 1)}
-                  className="h-8 w-8 shrink-0 rounded-full bg-primary p-0 text-primary-foreground"
+                  className="h-8 w-8 shrink-0 rounded-full bg-primary p-0 text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   +
                 </Button>
@@ -74,7 +83,7 @@ export default function MenuList({ items, quantities, onQuantityChange }: MenuLi
                   <Button
                     type="button"
                     aria-label={`Kurangi ${item.name}`}
-                    disabled={qty === 0}
+                    disabled={disabled || qty === 0}
                     onClick={() => onQuantityChange(item.id, qty - 1)}
                     variant="ghost"
                     className="h-7 w-7 rounded-full p-0 text-lg font-semibold text-muted-foreground hover:text-foreground"
@@ -85,8 +94,9 @@ export default function MenuList({ items, quantities, onQuantityChange }: MenuLi
                   <Button
                     type="button"
                     aria-label={`Tambah ${item.name}`}
+                    disabled={disabled}
                     onClick={() => onQuantityChange(item.id, qty + 1)}
-                    className="h-7 w-7 rounded-full bg-primary p-0 text-lg font-semibold text-primary-foreground"
+                    className="h-7 w-7 rounded-full bg-primary p-0 text-lg font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     +
                   </Button>
