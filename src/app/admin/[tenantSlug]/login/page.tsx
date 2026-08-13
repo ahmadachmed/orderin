@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted">
         <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-slate-900" />
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
           Memeriksa sesi…
         </div>
       </div>

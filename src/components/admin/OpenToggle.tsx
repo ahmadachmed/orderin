@@ -95,7 +95,7 @@ export default function OpenToggle({ onLoaded }: OpenToggleProps) {
         </button>
       </div>
       {error ? (
-        <p role="alert" className="text-xs font-medium text-rose-600">
+        <p role="alert" className="text-xs font-medium text-rose-400">
           {error}
         </p>
       ) : null}

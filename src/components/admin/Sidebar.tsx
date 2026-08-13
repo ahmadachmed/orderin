@@ -61,7 +61,7 @@ export default function Sidebar({ tenantSlug }: SidebarProps) {
               aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
