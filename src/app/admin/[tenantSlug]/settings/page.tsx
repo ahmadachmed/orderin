@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { adminLogout, fetchSettings, updateSettings } from "@/lib/admin-api";
+import { fetchSettings, updateSettings } from "@/lib/admin-api";
 import { formatTimeInTimezone } from "@/lib/time";
 import type { TenantSettings } from "@/types/admin";
 
@@ -123,13 +123,6 @@ export default function AdminSettingsPage() {
     if (authError && tenantSlug) router.push(`/admin/${tenantSlug}/login`);
   }, [authError, tenantSlug, router]);
 
-  // LOGIN-05: same logout affordance as the dashboard nav.
-  async function handleLogout() {
-    await adminLogout();
-    router.push("/");
-    router.refresh();
-  }
-
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
@@ -188,30 +181,9 @@ export default function AdminSettingsPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Pengaturan Pembayaran</h1>
+            <h1 className="text-lg font-bold text-slate-900">Pengaturan</h1>
             <p className="text-xs text-slate-500">/{tenantSlug} · QRIS + transfer bank</p>
           </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <a
-              href={`/admin/${tenantSlug}`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Dasbor
-            </a>
-            <a
-              href={`/admin/${tenantSlug}/menu`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Menu
-            </a>
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
-            >
-              Keluar
-            </button>
-          </nav>
         </div>
       </header>
 

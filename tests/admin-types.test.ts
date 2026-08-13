@@ -29,7 +29,7 @@ describe("T25-1 — STATUS_LABELS", () => {
   });
 
   it("uses Indonesian values per plan translation table", () => {
-    expect(STATUS_LABELS.PENDING).toBe("Pending"); // unchanged per plan table
+    expect(STATUS_LABELS.PENDING).toBe("Menunggu Konfirmasi");
     expect(STATUS_LABELS.CONFIRMED).toBe("Dikonfirmasi");
     expect(STATUS_LABELS.BREWING).toBe("Diracik");
     expect(STATUS_LABELS.READY_FOR_PICKUP).toBe("Siap Diambil");

@@ -92,7 +92,7 @@ export const STATUS_FLOW: OrderStatus[] = [
 ];
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: "Pending",
+  PENDING: "Menunggu Konfirmasi",
   CONFIRMED: "Dikonfirmasi",
   BREWING: "Diracik",
   READY_FOR_PICKUP: "Siap Diambil",

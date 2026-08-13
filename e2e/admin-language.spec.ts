@@ -185,15 +185,14 @@ test("dashboard + full order flow uses Indonesian labels throughout", async ({ p
   // Empty dashboard: title, nav, all 5 status badges + 5 empty columns.
   await page.goto(`/admin/${lang!.slug}`);
   await expect(page.getByRole("heading", { name: "Dasbor Barista" })).toBeVisible();
-  for (const label of ["Menu", "Riwayat", "Pembayaran"]) {
+  for (const label of ["Dasbor", "Menu", "Riwayat", "Pengaturan"]) {
     await expect(page.getByRole("link", { name: label })).toBeVisible();
   }
   // "Keluar" is a <button>, not a link — assert by role accordingly.
   await expect(page.getByRole("button", { name: "Keluar" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Lihat Toko" })).toBeVisible();
   // CANCELLED is a card action, not a drop column — only the 5 STATUS_FLOW
   // badges render as column headers on the dashboard.
-  for (const badge of ["Pending", "Dikonfirmasi", "Diracik", "Siap Diambil", "Selesai"]) {
+  for (const badge of ["Menunggu Konfirmasi", "Dikonfirmasi", "Diracik", "Siap Diambil", "Selesai"]) {
     await expect(page.getByText(badge)).toBeVisible();
   }
   await expect(page.getByText("Kosong")).toHaveCount(5);
@@ -206,7 +205,7 @@ test("dashboard + full order flow uses Indonesian labels throughout", async ({ p
   await expect(card).toBeVisible();
 
   // PENDING + UNPAID: mark-paid and advance buttons.
-  await expect(card.getByText("Pending")).toBeVisible();
+  await expect(card.getByText("Menunggu Konfirmasi")).toBeVisible();
   await expect(card.getByRole("button", { name: "Tandai Lunas" })).toBeVisible();
   await expect(card.getByRole("button", { name: "→ dikonfirmasi" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Batal" })).toBeVisible();

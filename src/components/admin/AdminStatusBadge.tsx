@@ -12,7 +12,7 @@ const STYLES: Record<OrderStatus, string> = {
 };
 
 const LABELS: Record<OrderStatus, string> = {
-  PENDING: "Pending",
+  PENDING: "Menunggu Konfirmasi",
   CONFIRMED: "Dikonfirmasi",
   BREWING: "Diracik",
   READY_FOR_PICKUP: "Siap Diambil",

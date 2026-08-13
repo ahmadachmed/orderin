@@ -6,7 +6,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  adminLogout,
   createMenuItem,
   deleteMenuItem,
   fetchMenu,
@@ -66,13 +65,6 @@ export default function AdminMenuPage() {
   useEffect(() => {
     if (authError && tenantSlug) router.push(`/admin/${tenantSlug}/login`);
   }, [authError, tenantSlug, router]);
-
-  // LOGIN-05: same logout affordance as the dashboard nav.
-  async function handleLogout() {
-    await adminLogout();
-    router.push("/");
-    router.refresh();
-  }
 
   function openCreate() {
     setForm(EMPTY);
@@ -161,27 +153,6 @@ export default function AdminMenuPage() {
             <h1 className="text-lg font-bold text-slate-900">Manajemen Menu</h1>
             <p className="text-xs text-slate-500">/{tenantSlug}</p>
           </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <a
-              href={`/admin/${tenantSlug}`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              ← Dasbor
-            </a>
-            <button
-              onClick={openCreate}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-800"
-            >
-              + Tambah
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
-            >
-              Keluar
-            </button>
-          </nav>
         </div>
       </header>
 
@@ -191,6 +162,15 @@ export default function AdminMenuPage() {
             {error}
           </p>
         )}
+
+        <div className="mb-3 flex justify-end">
+          <button
+            onClick={openCreate}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            + Tambah
+          </button>
+        </div>
 
         {/* Form (create/edit) */}
         {formOpen && (

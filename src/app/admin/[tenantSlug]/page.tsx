@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { adminLogout, fetchOrders, updateOrder } from "@/lib/admin-api";
+import { fetchOrders, updateOrder } from "@/lib/admin-api";
 import type { Order, OrderStatus } from "@/types/admin";
 import { STATUS_FLOW, STATUS_LABELS, canAdvanceToBrewing } from "@/types/admin";
 import StatusColumn from "@/components/admin/StatusColumn";
@@ -71,15 +71,6 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (authError && tenantSlug) router.push(`/admin/${tenantSlug}/login`);
   }, [authError, tenantSlug, router]);
-
-  // LOGIN-05: clear the session cookie server-side, then land on the landing
-  // page. Admin pages are protected — the next visit to /admin/<slug> will
-  // 401 and bounce to login.
-  async function handleLogout() {
-    await adminLogout();
-    router.push("/");
-    router.refresh();
-  }
 
   function applyOrder(updated: Order) {
     setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
@@ -210,41 +201,6 @@ export default function AdminDashboardPage() {
               /{tenantSlug} · auto-refresh 5s
             </p>
           </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <a
-              href={`/admin/${tenantSlug}/menu`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Menu
-            </a>
-            <a
-              href={`/admin/${tenantSlug}/sprints`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Riwayat
-            </a>
-            <a
-              href={`/admin/${tenantSlug}/settings`}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Pembayaran
-            </a>
-            <a
-              href={`/${tenantSlug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Lihat Toko ↗
-            </a>
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="rounded-lg border border-rose-200 px-3 py-1.5 font-medium text-rose-600 hover:bg-rose-50"
-            >
-              Keluar
-            </button>
-          </nav>
         </div>
         {notice && (
           <div className="mx-auto max-w-7xl px-4 pb-2">
