@@ -18,6 +18,7 @@ model Tenant {
   phone           String?
   logoUrl         String?
   isOpen          Boolean  @default(true)
+  isOpenOverrideUntil DateTime? // time-boxed toggle override — expires at next schedule boundary (#207)
   openTime        String   @default("07:00") // HH:mm UTC
   closeTime       String   @default("21:00") // HH:mm UTC
   timezone        String   @default("Asia/Makassar")
