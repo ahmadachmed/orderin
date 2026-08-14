@@ -45,7 +45,7 @@ export default function Sidebar({ tenantSlug }: SidebarProps) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-card">
       <div className="px-6 py-5">
-        <p className="text-xl font-bold tracking-tight text-foreground">Orderin</p>
+        <p className="text-xl font-bold tracking-tight text-foreground">HeadwayBrew</p>
         <p className="mt-0.5 text-xs font-medium tracking-wide text-muted-foreground">
           Admin Console
         </p>

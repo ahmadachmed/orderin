@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { adminDashboardPath, probeAdminSession } from "@/lib/admin-api";
 
-const LAST_SLUG_KEY = "orderin:last-tenant-slug";
+const LAST_SLUG_KEY = "headwaybrew:last-tenant-slug";
 
 function readLastSlug(): string | null {
   try {
@@ -108,7 +108,7 @@ export default function OwnerLoginPage() {
             Login Pemilik Kedai
           </CardTitle>
           <CardDescription>
-            Masuk untuk mengelola kedai Anda di Orderin.
+            Masuk untuk mengelola kedai Anda di HeadwayBrew.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,4 +1,4 @@
-# CLAUDE.md — Orderin
+# CLAUDE.md — HeadwayBrew
 
 ## Project Overview
 

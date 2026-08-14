@@ -18,7 +18,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Orderin — Pesan Kopi, Skip Antre",
+  title: "HeadwayBrew — Pesan Kopi, Skip Antre",
   description: "Pesan kopi takeaway lebih dulu dan ambil saat sudah siap.",
 };
 

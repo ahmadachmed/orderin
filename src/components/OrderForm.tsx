@@ -129,7 +129,7 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
       // see it, even if the navigation below is slow or fails.
       if (typeof window !== "undefined") {
         try {
-          const active = JSON.parse(localStorage.getItem("orderin_orders") ?? "{}");
+          const active = JSON.parse(localStorage.getItem("headwaybrew_orders") ?? "{}");
           active[orderId] = {
             orderId,
             slug: tenantSlug,
@@ -137,7 +137,7 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
             customerPhone: customerPhone.trim(),
             createdAt: Date.now(),
           };
-          localStorage.setItem("orderin_orders", JSON.stringify(active));
+          localStorage.setItem("headwaybrew_orders", JSON.stringify(active));
         } catch {
           /* localStorage disabled — no-op */
         }

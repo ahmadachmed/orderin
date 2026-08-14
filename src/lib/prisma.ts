@@ -91,7 +91,7 @@ export const prisma = base.$extends({
         if (!tenantId) {
           if (FAIL_CLOSED_OPS.has(operation)) {
             throw new Error(
-              `[orderin] ${model}.${operation} on tenant-scoped model without tenantId — refused (PLAN §2.2). Use scoped(tenantId) or pass tenantId explicitly.`
+              `[headwaybrew] ${model}.${operation} on tenant-scoped model without tenantId — refused (PLAN §2.2). Use scoped(tenantId) or pass tenantId explicitly.`
             );
           }
           // findUnique / findUniqueOrThrow by unguessable UUID (public status page).

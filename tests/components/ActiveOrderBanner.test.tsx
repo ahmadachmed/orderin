@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
-const STORAGE_KEY = "orderin_orders";
+const STORAGE_KEY = "headwaybrew_orders";
 
 interface OrderEntry {
   orderId: string;

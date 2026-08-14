@@ -121,7 +121,7 @@ export default function RegisterPage() {
       >
         <h1 className="text-xl font-bold text-foreground">Daftar Kedai</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Daftarkan kedai kopi Anda di Orderin — gratis.
+          Daftarkan kedai kopi Anda di HeadwayBrew — gratis.
         </p>
 
         <label className="mt-4 block text-sm font-medium text-foreground">

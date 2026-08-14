@@ -9,7 +9,7 @@ interface ActiveOrder {
   createdAt?: number;
 }
 
-const STORAGE_KEY = "orderin_orders";
+const STORAGE_KEY = "headwaybrew_orders";
 const TERMINAL_STATUSES = new Set(["PICKED_UP", "CANCELLED"]);
 
 /**

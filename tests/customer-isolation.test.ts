@@ -39,7 +39,7 @@ const { tokenStore } = vi.hoisted(() => ({ tokenStore: { current: null as string
 vi.mock("next/headers", () => ({
   cookies: () => ({
     get: (name: string) =>
-      name === "orderin_customer_session" && tokenStore.current
+      name === "headwaybrew_customer_session" && tokenStore.current
         ? { value: tokenStore.current }
         : undefined,
   }),
@@ -109,8 +109,8 @@ async function loginReq(slug: string, phone: string, password: string, ip: strin
 /** Extract the signed customer-session token from a route response's Set-Cookie. */
 function extractCustomerToken(res: Response): string {
   const setCookie = res.headers.get("set-cookie") ?? "";
-  const m = setCookie.match(/orderin_customer_session=([^;]+)/);
-  if (!m) throw new Error("response did not set an orderin_customer_session cookie");
+  const m = setCookie.match(/headwaybrew_customer_session=([^;]+)/);
+  if (!m) throw new Error("response did not set an headwaybrew_customer_session cookie");
   return m[1];
 }
 
