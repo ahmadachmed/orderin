@@ -93,6 +93,14 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
     }
     setSubmitting(true);
     setError(null);
+    // #217: once a successful order returns an id, the ONLY acceptable
+    // outcome is landing on the status page. `redirecting` keeps the button
+    // in "Memproses..." until the navigation actually happens (or fails) —
+    // the old code reset it right after firing router.push, so on a slow
+    // serverless cold start the customer saw the button flip back and stayed
+    // on the menu page with no feedback (order WAS created — 201 — but the
+    // redirect appeared to never happen).
+    let redirecting = false;
     try {
       const res = await fetch("/api/order", {
         method: "POST",
@@ -115,9 +123,10 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
         setError("Respon server tidak valid.");
         return;
       }
-      router.push(`/${tenantSlug}/order/${orderId}`);
-      // CUST-02 (T16-7): persist active order so the menu page can show a
-      // "Lanjutkan pesanan" banner after tab close / revisit (issue #52).
+      const orderUrl = `/${tenantSlug}/order/${orderId}`;
+      // CUST-02 (T16-7): persist the active order BEFORE navigating so the
+      // menu page's "Lanjutkan pesanan" banner and the status page always
+      // see it, even if the navigation below is slow or fails.
       if (typeof window !== "undefined") {
         try {
           const active = JSON.parse(localStorage.getItem("orderin_orders") ?? "{}");
@@ -133,10 +142,21 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
           /* localStorage disabled — no-op */
         }
       }
+      // #217: router.push performs a client-side (RSC) navigation that can
+      // take seconds on a cold serverless function — or reject entirely.
+      // Await it so the button stays "Memproses..." until the status page
+      // lands, and hard-navigate (window.location) on failure so the
+      // customer ALWAYS reaches /[tenantSlug]/order/[orderId].
+      redirecting = true;
+      try {
+        await router.push(orderUrl);
+      } catch {
+        window.location.assign(orderUrl);
+      }
     } catch {
       setError("Gagal terhubung ke server. Coba lagi.");
     } finally {
-      setSubmitting(false);
+      if (!redirecting) setSubmitting(false);
     }
   };
 
