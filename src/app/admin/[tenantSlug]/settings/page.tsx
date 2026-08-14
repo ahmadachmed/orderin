@@ -16,6 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchSettings, updateSettings } from "@/lib/admin-api";
 import { formatTimeInTimezone } from "@/lib/time";
+import { nextBoundary } from "@/lib/open";
 import type { TenantSettings } from "@/types/admin";
 
 const HH_MM = /^\d{2}:\d{2}$/;
@@ -88,6 +89,11 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
   const [busy, setBusy] = useState(false);
+  // #207 v2: the Status kedai switch is a time-boxed override — only when the
+  // admin actually toggles it does the save attach isOpenOverrideUntil
+  // (next schedule boundary). Editing other fields alone must NOT create an
+  // override, or an unrelated save would silently change open state.
+  const [isOpenTouched, setIsOpenTouched] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -108,6 +114,7 @@ export default function AdminSettingsPage() {
       setAuthError(false);
       setError(null);
       setLoaded(true);
+      setIsOpenTouched(false);
     } catch (err) {
       const status = (err as Error & { status?: number }).status;
       if (status === 401) setAuthError(true);
@@ -149,6 +156,15 @@ export default function AdminSettingsPage() {
         closeTime: form.closeTime.trim(),
         timezone: form.timezone.trim(),
         isOpen: form.isOpen,
+        // #207 v2: toggle = time-boxed override expiring at the next boundary.
+        ...(isOpenTouched
+          ? {
+              isOpenOverrideUntil: nextBoundary(
+                form.openTime.trim(),
+                form.closeTime.trim(),
+              ).toISOString(),
+            }
+          : {}),
         prepTimeBuffer: Math.floor(Number(form.prepTimeBuffer)),
         maxQueueSize: Math.floor(Number(form.maxQueueSize)),
       });
@@ -337,14 +353,19 @@ export default function AdminSettingsPage() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Status kedai</p>
                   <p className="text-xs text-muted-foreground">
-                    {form.isOpen ? "Buka — menerima order baru" : "Tutup — tidak menerima order"}
+                    {form.isOpen
+                      ? "Buka (sementara) — otomatis kembali ke jadwal di jam berikutnya"
+                      : "Tutup (sementara) — otomatis kembali ke jadwal di jam berikutnya"}
                   </p>
                 </div>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={form.isOpen}
-                  onClick={() => set("isOpen", !form.isOpen)}
+                  onClick={() => {
+                    set("isOpen", !form.isOpen);
+                    setIsOpenTouched(true);
+                  }}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
                     form.isOpen ? "bg-emerald-500" : "bg-muted"
                   }`}

@@ -20,6 +20,7 @@ const SETTINGS_SELECT = {
   phone: true,
   logoUrl: true,
   isOpen: true,
+  isOpenOverrideUntil: true,
   openTime: true,
   closeTime: true,
   timezone: true,
@@ -80,6 +81,21 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.isOpen !== "boolean") return fail("isOpen must be a boolean", 400);
     data.isOpen = body.isOpen;
   }
+  // #207 v2 — time-boxed toggle override. Null clears the override (back to
+  // pure schedule); an ISO string must parse, otherwise reject.
+  if (body.isOpenOverrideUntil !== undefined) {
+    if (body.isOpenOverrideUntil === null) {
+      data.isOpenOverrideUntil = null;
+    } else if (typeof body.isOpenOverrideUntil === "string") {
+      const d = new Date(body.isOpenOverrideUntil);
+      if (Number.isNaN(d.getTime())) {
+        return fail("isOpenOverrideUntil must be an ISO date string or null", 400);
+      }
+      data.isOpenOverrideUntil = d;
+    } else {
+      return fail("isOpenOverrideUntil must be an ISO date string or null", 400);
+    }
+  }
   if (body.maxQueueSize !== undefined) {
     const n = Math.floor(Number(body.maxQueueSize));
     if (!Number.isFinite(n) || n < 1 || n > 1000) {
@@ -123,6 +139,7 @@ export async function PATCH(req: NextRequest) {
         slug: true,
         name: true,
         isOpen: true,
+        isOpenOverrideUntil: true,
         openTime: true,
         closeTime: true,
         timezone: true,

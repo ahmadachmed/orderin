@@ -64,7 +64,7 @@ describe("OpenToggle", () => {
     );
   });
 
-  it("clicking the inactive segment calls updateSettings({ isOpen: !isOpen })", async () => {
+  it("clicking the inactive segment calls updateSettings with the time-boxed override", async () => {
     fetchSettingsMock.mockResolvedValue(OPEN_SETTINGS);
     updateSettingsMock.mockResolvedValue(CLOSED_SETTINGS);
 
@@ -73,8 +73,15 @@ describe("OpenToggle", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Tutup Toko" }));
 
+    // #207 v2: toggle = time-boxed override → isOpenOverrideUntil must be an
+    // ISO instant (the next schedule boundary), not just isOpen.
     await waitFor(() =>
-      expect(updateSettingsMock).toHaveBeenCalledWith({ isOpen: false }),
+      expect(updateSettingsMock).toHaveBeenCalledWith({
+        isOpen: false,
+        isOpenOverrideUntil: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+        ),
+      }),
     );
   });
 
