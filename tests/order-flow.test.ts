@@ -189,8 +189,10 @@ describe("POST /api/order — validation & guards", () => {
     expect(res.status).toBe(422);
   });
 
-  it("rejects orders outside operating hours", async () => {
-    // openTime == closeTime → never within hours (12:00–12:00)
+  it("accepts orders outside operating hours when shop is open (toggle authoritative)", async () => {
+    // openTime == closeTime → never within hours (12:00–12:00), but the
+    // Buka/Tutup toggle is the source of truth (#207): hours are
+    // display-only, so an open shop accepts the order anyway.
     const night = await setupTenant({ openTime: "12:00", closeTime: "12:00" });
     fixtures.push(night);
     const res = await postOrder(night.slug, {
@@ -199,7 +201,7 @@ describe("POST /api/order — validation & guards", () => {
       customerPhone: "0811",
       items: [{ menuItemId: night.itemAvailable, quantity: 1 }],
     });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(201);
   });
 
   it("rejects unavailable menu items", async () => {

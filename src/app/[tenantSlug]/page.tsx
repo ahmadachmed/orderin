@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
-import { isWithinHours, formatOperatingHours } from "@/lib/time";
+import { formatOperatingHours } from "@/lib/time";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
@@ -57,7 +57,9 @@ export default async function ShopMenuPage({
   const queue = await fetchQueue(prisma, tenant.id);
   const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
-  const open = tenant.isOpen && isWithinHours(tenant.openTime, tenant.closeTime);
+  // T28-3: the Buka/Tutup toggle is the source of truth — hours are
+  // display-only (hoursLabel below). isOpen=true → open at any time (#207).
+  const open = tenant.isOpen;
   // T25-5: operating hours in the tenant's timezone (default Asia/Jakarta
   // when unset), with the "besok" marker when the range wraps past midnight.
   const timezone = tenant.timezone || "Asia/Jakarta";
@@ -67,9 +69,9 @@ export default async function ShopMenuPage({
     timezone,
   );
   const hoursLabel = `Buka ${openDisplay}–${closeDisplay}${isOvernight ? " besok" : ""}`;
-  const closedMessage = tenant.isOpen
-    ? `Kedai tutup — buka kembali pukul ${openDisplay} (${timezone}).`
-    : "Kedai sedang tutup — pesanan belum bisa diterima.";
+  // T28-3: hours are display-only, so the closed message no longer names a
+  // reopen time — it only reflects the toggle state (#207).
+  const closedMessage = "Kedai sedang tutup — pesanan belum bisa diterima.";
 
   return (
     // -mx-4/-mt-4 cancel the shared layout's px-4 pt-4 so the dark page bg +

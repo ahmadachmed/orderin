@@ -1,13 +1,12 @@
 /**
  * POST /api/order — create an order (status PENDING, payment UNPAID).
- * PLAN §9.1 / §3.2. Guards: shop open flag, operating hours (PLAN §4.3),
- * order cap (PLAN §4.3 / issue #6). ETA = FIFO queue ahead + own prep
- * (PLAN §4.2, lib/queue.ts).
+ * PLAN §9.1 / §3.2. Guards: shop open flag (toggle authoritative — hours
+ * are display-only, issue #207), order cap (PLAN §4.3 / issue #6). ETA =
+ * FIFO queue ahead + own prep (PLAN §4.2, lib/queue.ts).
  */
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
-import { isWithinHours } from "@/lib/time";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
 import { PaymentMethod } from "@/generated/prisma/enums";
 
@@ -53,10 +52,9 @@ export async function POST(req: NextRequest) {
 
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Tenant not found", 404);
+  // T28-3 (#207): the toggle is the source of truth — no hours gate here;
+  // isOpen=true accepts orders at any time.
   if (!tenant.isOpen) return fail("Shop is closed", 422);
-  if (!isWithinHours(tenant.openTime, tenant.closeTime)) {
-    return fail(`Shop is closed — opens at ${tenant.openTime} UTC`, 422);
-  }
 
   try {
     // ORDER-10 (plan §8, Option A): serialize queue-cap check + order creation
