@@ -6,6 +6,7 @@
 import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
+import { effectiveOpen } from "@/lib/open";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export async function GET(
       name: tenant.name,
       address: tenant.address,
       phone: tenant.phone,
-      isOpen: tenant.isOpen,
+      isOpen: effectiveOpen(tenant),
       openTime: tenant.openTime,
       closeTime: tenant.closeTime,
       timezone: tenant.timezone,
