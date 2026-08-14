@@ -21,7 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatOperatingHours, isWithinHours } from "@/lib/time";
+import { formatOperatingHours } from "@/lib/time";
+import { effectiveOpen } from "@/lib/open";
 
 /** Same pattern as src/app/api/slug-check/route.ts (T8). */
 export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -46,6 +47,8 @@ export interface ShopTenant {
   closeTime?: string;
   /** SETTINGS-05/LAND-01 — IANA zone for displaying opening hours (e.g. "Asia/Makassar"). */
   timezone?: string | null;
+  /** #207/#213 — admin Buka/Tutup toggle override window (UTC), from lib/open.ts. */
+  isOpenOverrideUntil?: string | Date | null;
 }
 
 /** Live filter: name (case-insensitive substring) OR normalized-slug substring. */
@@ -89,14 +92,27 @@ export function formatHoursLabel(
 }
 
 /**
- * T26 — badge open/closed, konsisten dgn shop page (SOURCE OF TRUTH
- * [tenantSlug]/page.tsx: `isOpen && isWithinHours(...)`). Tenant tanpa jam
+ * T26/#213 — badge open/closed, konsisten dgn shop page (SOURCE OF TRUTH
+ * lib/open.ts `effectiveOpen`): while an admin override is active the toggle
+ * flag wins; otherwise the schedule governs. `isOpen` stays a hard gate so a
+ * force-closed shop never shows "Buka" even after its override window lapses
+ * (legacy T26 semantics preserved when no override is set). Tenant tanpa jam
  * buka → fallback ke flag isOpen saja (behavior lama, jangan break).
  */
 export function isShopOpen(t: ShopTenant, now: Date = new Date()): boolean {
+  const { openTime, closeTime } = t;
+  if (!openTime || !closeTime) return t.isOpen;
   return (
     t.isOpen &&
-    (t.openTime && t.closeTime ? isWithinHours(t.openTime, t.closeTime, now) : true)
+    effectiveOpen(
+      {
+        isOpen: t.isOpen,
+        openTime,
+        closeTime,
+        isOpenOverrideUntil: t.isOpenOverrideUntil ?? null,
+      },
+      now,
+    )
   );
 }
 

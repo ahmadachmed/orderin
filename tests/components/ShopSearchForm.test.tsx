@@ -443,6 +443,46 @@ describe("isShopOpen — T26 (issue #187)", () => {
     expect(isShopOpen(overnight, new Date("2026-08-13T03:00:00Z"))).toBe(true);
     expect(isShopOpen(overnight, new Date("2026-08-13T12:00:00Z"))).toBe(false);
   });
+
+  it("#213 — returns true while an active force-open override is in effect, even outside hours", () => {
+    const forcedOpen = {
+      slug: "a",
+      name: "A",
+      address: null,
+      isOpen: true,
+      openTime: "07:00",
+      closeTime: "21:00",
+      isOpenOverrideUntil: "2026-08-14T00:00:00Z", // active at 22:00 UTC
+    };
+    expect(isShopOpen(forcedOpen, new Date("2026-08-13T22:00:00Z"))).toBe(true);
+  });
+
+  it("#213 — returns false while an active force-close override is in effect, even inside hours", () => {
+    const forcedClosed = {
+      slug: "a",
+      name: "A",
+      address: null,
+      isOpen: false,
+      openTime: "07:00",
+      closeTime: "21:00",
+      isOpenOverrideUntil: "2026-08-14T00:00:00Z", // active at 10:00 UTC
+    };
+    expect(isShopOpen(forcedClosed, NOW)).toBe(false);
+  });
+
+  it("#213 — an expired override falls back to the schedule", () => {
+    const expired = {
+      slug: "a",
+      name: "A",
+      address: null,
+      isOpen: true,
+      openTime: "07:00",
+      closeTime: "21:00",
+      isOpenOverrideUntil: "2026-08-13T09:00:00Z", // expired by 10:00 UTC
+    };
+    expect(isShopOpen(expired, NOW)).toBe(true); // within hours -> Buka
+    expect(isShopOpen(expired, new Date("2026-08-13T22:00:00Z"))).toBe(false); // outside hours -> Tutup
+  });
 });
 
 describe("ShopSearchForm — T26 open/closed badge (issue #187)", () => {
