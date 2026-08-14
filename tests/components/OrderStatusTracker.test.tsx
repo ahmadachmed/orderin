@@ -185,6 +185,88 @@ describe("OrderStatusTracker", () => {
     expect(screen.getByText("✓ Pembayaran diterima — terima kasih!")).toBeInTheDocument();
   });
 
+  it("shows the 'Konfirmasi terkirim' message after marking paid with an empty note (issue #210)", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+    render(
+      <OrderStatusTracker
+        initial={{ ...baseOrder, paymentMethod: "bank_transfer" }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Saya sudah bayar" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/order/11111111-2222-3333-4444-555555555555/payment",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ paymentMethod: "bank_transfer", customerTransferNote: "" }),
+        })
+      );
+    });
+
+    // Confirmation renders regardless of customerTransferNote being empty,
+    // and the button is replaced (no re-submit).
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
+  });
+
+  it("still shows the claim confirmation when a transfer note is present (issue #210)", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
+    render(
+      <OrderStatusTracker
+        initial={{ ...baseOrder, paymentMethod: "bank_transfer" }}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText(/Catatan transfer/), {
+      target: { value: "Budi BCA" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Saya sudah bayar" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/order/11111111-2222-3333-4444-555555555555/payment",
+        expect.objectContaining({
+          body: JSON.stringify({
+            paymentMethod: "bank_transfer",
+            customerTransferNote: "Budi BCA",
+          }),
+        })
+      );
+    });
+
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+  });
+
+  it("seeds 'claimed' from an existing transfer note so a reload keeps the confirmation (issue #210 re-review)", () => {
+    // Reload after claiming with a note: customerTransferNote is persisted, so
+    // the confirmation must render and the claim button must stay hidden
+    // (no double claim) without needing another PATCH.
+    render(
+      <OrderStatusTracker
+        initial={{
+          ...baseOrder,
+          paymentMethod: "bank_transfer",
+          customerTransferNote: "Budi BCA",
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/order/11111111-2222-3333-4444-555555555555/payment",
+      expect.objectContaining({ method: "PATCH" })
+    );
+  });
+
   it("renders PAID timeline entries with the note as subtitle (STATUS-05)", () => {
     render(
       <OrderStatusTracker

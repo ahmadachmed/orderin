@@ -27,6 +27,11 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
+  // Issue #210: local claim state — set once PATCH succeeds, independent of
+  // customerTransferNote content (empty notes still get the confirmation).
+  // Seeded from an existing transfer note so a reload after claiming with a
+  // note keeps the confirmation visible and the button hidden (no double claim).
+  const [claimed, setClaimed] = useState(() => Boolean(initial.customerTransferNote));
 
   useEffect(() => {
     let cancelled = false;
@@ -80,12 +85,16 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paymentMethod: "bank_transfer",
-          customerTransferNote: note.trim() || undefined,
+          // Issue #210: always send the key (empty string allowed) so the
+          // server can distinguish an "I have paid" claim from a plain
+          // method selection and audit every claim.
+          customerTransferNote: note.trim(),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "Gagal menandai sudah bayar");
       setOrder((prev) => ({ ...prev, ...data, paymentMethod: "bank_transfer" }));
+      setClaimed(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Terjadi kesalahan");
     } finally {
@@ -278,28 +287,30 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
                       </p>
                     </div>
 
-                    {order.customerTransferNote || order.paymentStatus === "UNPAID" ? (
+                    {claimed || order.customerTransferNote || order.paymentStatus === "UNPAID" ? (
                       <div className="rounded-xl border border-border p-3">
                         <textarea
                           value={note}
                           onChange={(e) => setNote(e.target.value)}
                           placeholder="Catatan transfer (opsional) — mis. nama pengirim"
                           rows={2}
-                          className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
+                          disabled={claimed}
+                          className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none disabled:opacity-50"
                         />
-                        <button
-                          type="button"
-                          onClick={markPaid}
-                          disabled={markingPaid}
-                          className="mt-2 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
-                        >
-                          {markingPaid ? "Mengirim..." : "Saya sudah bayar"}
-                        </button>
-                        {order.customerTransferNote ? (
+                        {claimed ? (
                           <p className="mt-2 text-xs text-success">
                             ✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.
                           </p>
-                        ) : null}
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={markPaid}
+                            disabled={markingPaid}
+                            className="mt-2 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                          >
+                            {markingPaid ? "Mengirim..." : "Saya sudah bayar"}
+                          </button>
+                        )}
                       </div>
                     ) : null}
                   </div>

@@ -75,10 +75,15 @@ export async function PATCH(
     },
   });
 
-  // Audit trail (issue #7): log the customer's "I have paid" claim (advisory —
-  // barista verification is authoritative and logged separately via the admin
-  // dashboard when marking PAID).
-  if (note) {
+  // Audit trail (issue #7 / #210): log EVERY bank_transfer "I have paid"
+  // claim — with or without a transfer note — so empty-note claims are not
+  // lost. Advisory: barista verification is authoritative and logged
+  // separately via the admin dashboard when marking PAID. A claim is
+  // identified by the customerTransferNote key being present (the client
+  // sends it even when empty; plain method selection omits it).
+  const isClaim =
+    paymentMethod === "bank_transfer" && typeof body.customerTransferNote === "string";
+  if (isClaim) {
     await prisma.orderStatusLog.create({
       data: {
         orderId: order.id,

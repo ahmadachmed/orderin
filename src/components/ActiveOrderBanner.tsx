@@ -10,14 +10,21 @@ interface ActiveOrder {
 }
 
 const STORAGE_KEY = "orderin_orders";
+const TERMINAL_STATUSES = new Set(["PICKED_UP", "CANCELLED"]);
 
 /**
  * ActiveOrderBanner — CUST-02 (T16-7, issue #52).
  * Reads the customer's localStorage order registry and, if an order exists
  * for this tenant, shows a "Lanjutkan pesanan" link back to its status page.
+ *
+ * Issue #210: the registry keeps terminal orders (PICKED_UP / CANCELLED), so
+ * the banner rendered for completed orders. On mount we fetch the live order
+ * status (GET /api/order/[orderId]) and render nothing for terminal statuses.
+ * The registry read stays for fast first paint; the fetched status gates it.
  */
 export default function ActiveOrderBanner({ tenantSlug }: { tenantSlug: string }) {
   const [active, setActive] = useState<ActiveOrder | null>(null);
+  const [terminal, setTerminal] = useState(false);
 
   useEffect(() => {
     try {
@@ -31,7 +38,25 @@ export default function ActiveOrderBanner({ tenantSlug }: { tenantSlug: string }
     }
   }, [tenantSlug]);
 
-  if (!active) return null;
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    fetch(`/api/order/${active.orderId}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.status && TERMINAL_STATUSES.has(data.status)) {
+          setTerminal(true);
+        }
+      })
+      .catch(() => {
+        /* network hiccup — keep the fast-paint banner */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
+
+  if (!active || terminal) return null;
 
   return (
     <Link
