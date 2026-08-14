@@ -158,6 +158,71 @@ describe("OrderForm", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/kopi-senja/order/order-123"));
   });
 
+  it("keeps the submit button processing until the redirect navigation lands (issue #217)", async () => {
+    // Real router.push is async: the RSC navigation can take seconds on a
+    // cold serverless function. The button must NOT flip back to "Buat
+    // Pesanan" while the redirect is still in flight — that reset made the
+    // customer think the order failed and they stayed on the menu page.
+    let resolvePush!: () => void;
+    push.mockImplementationOnce(
+      () => new Promise<void>((res) => { resolvePush = res; })
+    );
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ orderId: "order-123" }),
+    });
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tambah Espresso" }));
+    fireEvent.change(screen.getByPlaceholderText("Nama"), { target: { value: "Budi" } });
+    fireEvent.change(screen.getByPlaceholderText("Nomor HP (mis. 0812xxxx)"), {
+      target: { value: "081234567890" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Buat Pesanan" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/kopi-senja/order/order-123"));
+    // Navigation still in flight — button stays "Memproses..." (disabled).
+    expect(screen.getByRole("button", { name: "Memproses..." })).toBeDisabled();
+    resolvePush();
+  });
+
+  it("hard-navigates to the status page when router.push fails (issue #217)", async () => {
+    // When the client-side (RSC) navigation rejects — e.g. the status page's
+    // serverless function times out on a cold start — the customer must still
+    // reach /order/[orderId] via a full browser navigation instead of being
+    // silently stranded on the menu page with the order already created.
+    // jsdom's location.assign is non-configurable, so swap the whole
+    // location object for one with a spyable assign.
+    const originalLocation = window.location;
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: { assign } as unknown as Location,
+    });
+    push.mockRejectedValueOnce(new Error("RSC navigation failed"));
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ orderId: "order-123" }),
+    });
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tambah Espresso" }));
+    fireEvent.change(screen.getByPlaceholderText("Nama"), { target: { value: "Budi" } });
+    fireEvent.change(screen.getByPlaceholderText("Nomor HP (mis. 0812xxxx)"), {
+      target: { value: "081234567890" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Buat Pesanan" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/kopi-senja/order/order-123"));
+    expect(push).toHaveBeenCalledWith("/kopi-senja/order/order-123");
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      writable: true,
+      value: originalLocation,
+    });
+  });
+
   it("shows the API error message when the order request fails", async () => {
     fetchMock.mockResolvedValue({
       ok: false,
