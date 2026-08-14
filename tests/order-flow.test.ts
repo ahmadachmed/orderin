@@ -177,8 +177,15 @@ describe("POST /api/order — validation & guards", () => {
     expect(res.status).toBe(404);
   });
 
-  it("rejects orders for a closed shop (isOpen=false)", async () => {
-    const closed = await setupTenant({ isOpen: false });
+  it("rejects orders when closed: isOpen=false with EXPIRED override outside hours (schedule governs)", async () => {
+    // openTime == closeTime → never within hours; override expired → the
+    // schedule says closed, so the (forced-closed) toggle no longer matters.
+    const closed = await setupTenant({
+      isOpen: false,
+      openTime: "12:00",
+      closeTime: "12:00",
+      isOpenOverrideUntil: new Date(Date.now() - 86_400_000).toISOString(),
+    });
     fixtures.push(closed);
     const res = await postOrder(closed.slug, {
       slug: closed.slug,
@@ -189,15 +196,55 @@ describe("POST /api/order — validation & guards", () => {
     expect(res.status).toBe(422);
   });
 
-  it("rejects orders outside operating hours", async () => {
-    // openTime == closeTime → never within hours (12:00–12:00)
-    const night = await setupTenant({ openTime: "12:00", closeTime: "12:00" });
+  it("rejects orders outside hours when isOpen=true but override EXPIRED (schedule governs)", async () => {
+    // #207 v2: a force-open only lasts until the next boundary. With the
+    // override expired and hours never in range, the order is refused.
+    const night = await setupTenant({
+      isOpen: true,
+      openTime: "12:00",
+      closeTime: "12:00",
+      isOpenOverrideUntil: new Date(Date.now() - 86_400_000).toISOString(),
+    });
     fixtures.push(night);
     const res = await postOrder(night.slug, {
       slug: night.slug,
       customerName: "X",
       customerPhone: "0811",
       items: [{ menuItemId: night.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it("accepts orders outside hours while an OPEN override is active", async () => {
+    const night = await setupTenant({
+      isOpen: true,
+      openTime: "12:00",
+      closeTime: "12:00", // never within hours
+      isOpenOverrideUntil: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    fixtures.push(night);
+    const res = await postOrder(night.slug, {
+      slug: night.slug,
+      customerName: "X",
+      customerPhone: "0811",
+      items: [{ menuItemId: night.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("rejects orders inside hours while a CLOSED override is active", async () => {
+    const closed = await setupTenant({
+      isOpen: false,
+      openTime: "00:00",
+      closeTime: "23:59", // always within hours
+      isOpenOverrideUntil: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    fixtures.push(closed);
+    const res = await postOrder(closed.slug, {
+      slug: closed.slug,
+      customerName: "X",
+      customerPhone: "0811",
+      items: [{ menuItemId: closed.itemAvailable, quantity: 1 }],
     });
     expect(res.status).toBe(422);
   });

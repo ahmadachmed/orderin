@@ -69,6 +69,7 @@ export interface TenantSettings {
   slug: string;
   name: string;
   isOpen: boolean;
+  isOpenOverrideUntil?: string | null;
   openTime: string;
   closeTime: string;
   timezone: string;

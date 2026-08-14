@@ -17,6 +17,7 @@ export interface TenantFixture {
 
 export interface TenantOptions {
   isOpen?: boolean;
+  isOpenOverrideUntil?: Date | string | null; // #207 v2 — time-boxed toggle override
   openTime?: string;
   closeTime?: string;
   maxQueueSize?: number;
@@ -32,6 +33,7 @@ export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixtu
       slug,
       name: "T7 Test Shop",
       isOpen: opts.isOpen ?? true,
+      isOpenOverrideUntil: opts.isOpenOverrideUntil ?? null,
       openTime: opts.openTime ?? "00:00",
       closeTime: opts.closeTime ?? "23:59",
       maxQueueSize: opts.maxQueueSize ?? 20,

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ArrowLeft, History } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
-import { isWithinHours, formatOperatingHours } from "@/lib/time";
+import { formatOperatingHours } from "@/lib/time";
+import { effectiveOpen } from "@/lib/open";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
@@ -57,7 +58,11 @@ export default async function ShopMenuPage({
   const queue = await fetchQueue(prisma, tenant.id);
   const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
-  const open = tenant.isOpen && isWithinHours(tenant.openTime, tenant.closeTime);
+  // #207 v2: schedule is authoritative; the Buka/Tutup toggle is a time-boxed
+  // override (isOpenOverrideUntil). effectiveOpen() = override while active,
+  // else operating-hours check. (PR #208's toggle-authoritative model was
+  // superseded — see issue #207.)
+  const open = effectiveOpen(tenant);
   // T25-5: operating hours in the tenant's timezone (default Asia/Jakarta
   // when unset), with the "besok" marker when the range wraps past midnight.
   const timezone = tenant.timezone || "Asia/Jakarta";
@@ -67,9 +72,9 @@ export default async function ShopMenuPage({
     timezone,
   );
   const hoursLabel = `Buka ${openDisplay}–${closeDisplay}${isOvernight ? " besok" : ""}`;
-  const closedMessage = tenant.isOpen
-    ? `Kedai tutup — buka kembali pukul ${openDisplay} (${timezone}).`
-    : "Kedai sedang tutup — pesanan belum bisa diterima.";
+  // #207 v2: hours are display-only; the closed message reflects the effective
+  // state (schedule or active override), not a specific reopen time.
+  const closedMessage = "Kedai sedang tutup — pesanan belum bisa diterima.";
 
   return (
     // -mx-4/-mt-4 cancel the shared layout's px-4 pt-4 so the dark page bg +

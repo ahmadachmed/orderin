@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fetchSettings, updateSettings } from "@/lib/admin-api";
+import { nextBoundary } from "@/lib/open";
 import type { TenantSettings } from "@/types/admin";
 
 interface OpenToggleProps {
@@ -21,6 +22,10 @@ export default function OpenToggle({ onLoaded }: OpenToggleProps) {
   const [error, setError] = useState<string | null>(null);
   const onLoadedRef = useRef(onLoaded);
   onLoadedRef.current = onLoaded;
+  // #207 v2: schedule stays authoritative — the toggle is a time-boxed
+  // override. openTime/closeTime (HH:mm UTC) drive nextBoundary() so the
+  // override expires at the next open/close boundary.
+  const scheduleRef = useRef({ openTime: "07:00", closeTime: "21:00" });
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +33,10 @@ export default function OpenToggle({ onLoaded }: OpenToggleProps) {
       .then((settings) => {
         if (cancelled) return;
         setIsOpen(settings.isOpen);
+        scheduleRef.current = {
+          openTime: settings.openTime,
+          closeTime: settings.closeTime,
+        };
         onLoadedRef.current?.(settings);
       })
       .catch((err: unknown) => {
@@ -48,8 +57,20 @@ export default function OpenToggle({ onLoaded }: OpenToggleProps) {
     setError(null);
     setIsOpen(next); // optimistic
     try {
-      const settings = await updateSettings({ isOpen: next });
+      // Override lasts until the next schedule boundary; the schedule then
+      // takes over again (auto open at openTime, auto close at closeTime).
+      const settings = await updateSettings({
+        isOpen: next,
+        isOpenOverrideUntil: nextBoundary(
+          scheduleRef.current.openTime,
+          scheduleRef.current.closeTime,
+        ).toISOString(),
+      });
       setIsOpen(settings.isOpen);
+      scheduleRef.current = {
+        openTime: settings.openTime,
+        closeTime: settings.closeTime,
+      };
       onLoadedRef.current?.(settings);
     } catch (err) {
       setIsOpen(prev); // rollback on failure
