@@ -29,7 +29,9 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
   const [markingPaid, setMarkingPaid] = useState(false);
   // Issue #210: local claim state — set once PATCH succeeds, independent of
   // customerTransferNote content (empty notes still get the confirmation).
-  const [claimed, setClaimed] = useState(false);
+  // Seeded from an existing transfer note so a reload after claiming with a
+  // note keeps the confirmation visible and the button hidden (no double claim).
+  const [claimed, setClaimed] = useState(() => Boolean(initial.customerTransferNote));
 
   useEffect(() => {
     let cancelled = false;

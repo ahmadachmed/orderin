@@ -243,6 +243,30 @@ describe("OrderStatusTracker", () => {
     ).toBeInTheDocument();
   });
 
+  it("seeds 'claimed' from an existing transfer note so a reload keeps the confirmation (issue #210 re-review)", () => {
+    // Reload after claiming with a note: customerTransferNote is persisted, so
+    // the confirmation must render and the claim button must stay hidden
+    // (no double claim) without needing another PATCH.
+    render(
+      <OrderStatusTracker
+        initial={{
+          ...baseOrder,
+          paymentMethod: "bank_transfer",
+          customerTransferNote: "Budi BCA",
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/order/11111111-2222-3333-4444-555555555555/payment",
+      expect.objectContaining({ method: "PATCH" })
+    );
+  });
+
   it("renders PAID timeline entries with the note as subtitle (STATUS-05)", () => {
     render(
       <OrderStatusTracker
