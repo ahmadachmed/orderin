@@ -24,6 +24,7 @@ export default async function Home() {
       openTime: true,
       closeTime: true,
       timezone: true,
+      isOpenOverrideUntil: true,
     },
   });
 
