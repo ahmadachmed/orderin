@@ -73,6 +73,29 @@ describe("PATCH /api/order/[orderId]/payment", () => {
     expect((await res.json()).customerTransferNote).toBeNull();
   });
 
+  it("audits an empty-note 'I have paid' claim too (issue #210)", async () => {
+    const order = await createOrderDirect(fx.tenantId, fx.itemAvailable);
+    const res = await patchPayment(order.id, {
+      paymentMethod: "bank_transfer",
+      customerTransferNote: "",
+    });
+    expect(res.status).toBe(200);
+
+    const logs = await prisma.orderStatusLog.findMany({ where: { orderId: order.id } });
+    expect(logs).toHaveLength(1);
+    expect(logs[0].actorType).toBe("CUSTOMER");
+    expect(logs[0].note).toBe('Customer marked "I have paid"');
+  });
+
+  it("does not audit a plain bank_transfer method selection (issue #210)", async () => {
+    const order = await createOrderDirect(fx.tenantId, fx.itemAvailable);
+    const res = await patchPayment(order.id, { paymentMethod: "bank_transfer" });
+    expect(res.status).toBe(200);
+
+    const logs = await prisma.orderStatusLog.findMany({ where: { orderId: order.id } });
+    expect(logs).toHaveLength(0);
+  });
+
   it("refuses to change payment on an already-PAID order (409)", async () => {
     const order = await createOrderDirect(fx.tenantId, fx.itemAvailable, { paymentStatus: "PAID" });
     const res = await patchPayment(order.id, { paymentMethod: "cash" });
