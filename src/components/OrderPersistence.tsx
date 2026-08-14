@@ -10,10 +10,10 @@ import { useEffect } from "react";
 export default function OrderPersistence({ orderId, slug }: { orderId: string; slug: string }) {
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("orderin_orders") ?? "{}";
+      const raw = localStorage.getItem("headwaybrew_orders") ?? "{}";
       const orders = JSON.parse(raw);
       orders[orderId] = { ...orders[orderId], orderId, slug, lastSeen: Date.now() };
-      localStorage.setItem("orderin_orders", JSON.stringify(orders));
+      localStorage.setItem("headwaybrew_orders", JSON.stringify(orders));
     } catch {
       /* ignore */
     }

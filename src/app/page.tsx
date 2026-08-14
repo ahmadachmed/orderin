@@ -33,7 +33,7 @@ export default async function Home() {
       {/* Hero Section (kanon beranda.html) */}
       <section className="flex flex-col gap-4">
         <h1 className="text-[32px] leading-[1.15] font-extrabold tracking-tight text-foreground">
-          Orderin
+          HeadwayBrew
         </h1>
         <p className="text-base leading-relaxed text-muted-foreground">
           Pesan kopi lebih dulu, ambil saat sudah siap — tanpa antre.

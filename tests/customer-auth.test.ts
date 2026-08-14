@@ -60,7 +60,7 @@ async function loginReq(slug: string, phone: string, password: string, ip: strin
 
 function expectSessionCookie(res: Response) {
   const setCookie = res.headers.get("set-cookie") ?? "";
-  expect(setCookie).toContain("orderin_customer_session=");
+  expect(setCookie).toContain("headwaybrew_customer_session=");
   expect(setCookie).toContain("HttpOnly");
   expect(setCookie).toContain("SameSite=Lax");
 }
@@ -172,7 +172,7 @@ describe("customer auth — logout", () => {
     const res = await postLogout();
     expect(res.status).toBe(200);
     const setCookie = res.headers.get("set-cookie") ?? "";
-    expect(setCookie).toContain("orderin_customer_session=");
+    expect(setCookie).toContain("headwaybrew_customer_session=");
     expect(setCookie).toContain("Max-Age=0");
   });
 });

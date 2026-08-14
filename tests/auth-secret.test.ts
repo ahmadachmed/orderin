@@ -32,7 +32,7 @@ describe("SEC-05 — fail-fast SESSION_SECRET in production", () => {
 
   it("throws on import when SESSION_SECRET is still the dev default", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("SESSION_SECRET", "orderin-dev-insecure-secret-change-me");
+    vi.stubEnv("SESSION_SECRET", "headwaybrew-dev-insecure-secret-change-me");
     await expect(freshAuth()).rejects.toThrow(/SESSION_SECRET/);
   });
 
@@ -62,7 +62,7 @@ describe("SEC-05 — verifySession still works with a valid secret", () => {
 
   it("signs and verifies a session with the dev default in development", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SESSION_SECRET", "orderin-dev-insecure-secret-change-me");
+    vi.stubEnv("SESSION_SECRET", "headwaybrew-dev-insecure-secret-change-me");
     const { createSession, verifySession } = await freshAuth();
     const token = createSession("tenant-2", "admin-2");
     expect(verifySession(token)).toEqual({ tenantId: "tenant-2", adminId: "admin-2" });
@@ -70,7 +70,7 @@ describe("SEC-05 — verifySession still works with a valid secret", () => {
 
   it("rejects tampered tokens", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    vi.stubEnv("SESSION_SECRET", "orderin-dev-insecure-secret-change-me");
+    vi.stubEnv("SESSION_SECRET", "headwaybrew-dev-insecure-secret-change-me");
     const { createSession, verifySession } = await freshAuth();
     const token = createSession("tenant-3", "admin-3");
     const [payload] = token.split(".");

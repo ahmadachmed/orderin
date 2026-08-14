@@ -20,7 +20,7 @@ const { tokenStore } = vi.hoisted(() => ({ tokenStore: { current: null as string
 vi.mock("next/headers", () => ({
   cookies: () => ({
     get: (name: string) =>
-      name === "orderin_admin_session" && tokenStore.current
+      name === "headwaybrew_admin_session" && tokenStore.current
         ? { value: tokenStore.current }
         : undefined,
   }),

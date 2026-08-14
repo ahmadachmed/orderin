@@ -18,7 +18,7 @@ const { tokenStore } = vi.hoisted(() => ({ tokenStore: { current: null as string
 vi.mock("next/headers", () => ({
   cookies: () => ({
     get: (name: string) =>
-      name === "orderin_admin_session" && tokenStore.current
+      name === "headwaybrew_admin_session" && tokenStore.current
         ? { value: tokenStore.current }
         : undefined,
   }),
@@ -62,7 +62,7 @@ describe("LOGIN-05 — DELETE /api/admin/auth logout", () => {
   it("clears the session cookie (Max-Age=0)", async () => {
     const res = await DELETE();
     const setCookie = res.headers.get("set-cookie") ?? "";
-    expect(setCookie).toContain("orderin_admin_session=;");
+    expect(setCookie).toContain("headwaybrew_admin_session=;");
     expect(setCookie).toContain("Max-Age=0");
     expect(setCookie).toContain("Path=/");
   });

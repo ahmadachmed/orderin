@@ -12,7 +12,7 @@ export default async function AccountOrdersPage({
   params: Promise<{ tenantSlug: string }>;
 }) {
   const { tenantSlug } = await params;
-  const session = verifyCustomerSession((await cookies()).get("orderin_customer_session")?.value);
+  const session = verifyCustomerSession((await cookies()).get("headwaybrew_customer_session")?.value);
   // T20 ACCT-03 (docs/T18-plan.md GAP 2): no silent redirect — send guests to
   // login with ?next so they land back here after authenticating.
   if (!session) redirect(`/${tenantSlug}/login?next=account/orders`);

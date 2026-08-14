@@ -31,7 +31,7 @@ export default function AdminLayout({
       <main className="ml-64 min-h-screen">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card/95 px-6 py-3">
           <h1 className="text-lg font-semibold text-foreground">
-            {shopName || "Orderin"}
+            {shopName || "HeadwayBrew"}
           </h1>
           <OpenToggle onLoaded={(settings) => setShopName(settings.name)} />
         </header>

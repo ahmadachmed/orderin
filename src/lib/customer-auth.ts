@@ -8,15 +8,15 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
-const COOKIE_NAME = "orderin_customer_session";
+const COOKIE_NAME = "headwaybrew_customer_session";
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const SECRET = process.env.SESSION_SECRET ?? "orderin-dev-insecure-secret-change-me";
+const SECRET = process.env.SESSION_SECRET ?? "headwaybrew-dev-insecure-secret-change-me";
 
 // Same production guard as auth.ts: a missing or dev-default SESSION_SECRET
 // means every customer session is forgeable. Refuse to boot instead.
 if (process.env.NODE_ENV === "production") {
-  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === "orderin-dev-insecure-secret-change-me") {
-    throw new Error("[orderin] SESSION_SECRET is missing or still the dev default");
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === "headwaybrew-dev-insecure-secret-change-me") {
+    throw new Error("[headwaybrew] SESSION_SECRET is missing or still the dev default");
   }
 }
 
