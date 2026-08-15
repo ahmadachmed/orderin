@@ -39,6 +39,9 @@ export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixtu
       maxQueueSize: opts.maxQueueSize ?? 20,
       prepTimeBuffer: opts.prepTimeBuffer ?? 5,
       sprintDurationDays: opts.sprintDurationDays ?? 1, // T15 §5.4
+      // T2: explicitly set plan fields (defaults exist, but be explicit)
+      plan: "FREE",
+      isActive: true,
     },
   });
   const admin = await prisma.tenantAdmin.create({
