@@ -75,6 +75,7 @@ export default async function OrderStatusPage({
     paymentStatus: order.paymentStatus,
     paymentMethod: order.paymentMethod,
     customerTransferNote: order.customerTransferNote,
+    paymentClaimedAt: order.paymentClaimedAt ? order.paymentClaimedAt.toISOString() : null,
     pickupCode: order.pickupCode || null,
     createdAt: order.createdAt.toISOString(),
     customerName: order.customerName,
