@@ -86,6 +86,7 @@ model Order {
   paidAt             DateTime? // when barista marked paid
   paymentMethod      PaymentMethod? // 'qris' | 'bank_transfer' | 'cash'
   customerTransferNote String? // customer marks "I have paid" + optional note (bank transfer)
+  paymentClaimedAt   DateTime? // authoritative "I have paid" claim flag (issue #224)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   sprintId           String?       @db.Uuid
