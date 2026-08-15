@@ -27,11 +27,12 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [markingPaid, setMarkingPaid] = useState(false);
-  // Issue #210: local claim state — set once PATCH succeeds, independent of
-  // customerTransferNote content (empty notes still get the confirmation).
-  // Seeded from an existing transfer note so a reload after claiming with a
-  // note keeps the confirmation visible and the button hidden (no double claim).
-  const [claimed, setClaimed] = useState(() => Boolean(initial.customerTransferNote));
+  // Issue #224: authoritative claim flag comes from the server
+  // (paymentClaimedAt), NOT from customerTransferNote — an empty-note claim
+  // persists the note as null, which used to resurrect the button after a
+  // refresh. Poll merges keep it in sync so a claim made anywhere (this tab,
+  // another device, a reload) hides the button.
+  const [claimed, setClaimed] = useState(() => Boolean(initial.paymentClaimedAt));
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +44,9 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
         const data = await res.json();
         if (!cancelled && data?.orderId) {
           setOrder((prev) => ({ ...prev, ...data }));
+          // Issue #224: server is ground truth for the claim flag — a claim
+          // made elsewhere (or a reload) must hide the button on this tab too.
+          if (data.paymentClaimedAt) setClaimed(true);
           if (TERMINAL_STATUSES.has(data.status)) {
             clearInterval(timer);
           }
@@ -287,32 +291,41 @@ export default function OrderStatusTracker({ initial }: OrderStatusTrackerProps)
                       </p>
                     </div>
 
-                    {claimed || order.customerTransferNote || order.paymentStatus === "UNPAID" ? (
+                    {claimed ? (
+                      <div className="rounded-xl border border-border p-3">
+                        {/* Issue #224: note content is display-only after the
+                            claim — the textarea is gone, server truth shown. */}
+                        {order.customerTransferNote ? (
+                          <p className="text-sm text-muted-foreground">
+                            Catatan transfer:{" "}
+                            <span className="font-medium text-foreground">
+                              {order.customerTransferNote}
+                            </span>
+                          </p>
+                        ) : null}
+                        <p className="mt-2 text-xs text-success">
+                          ✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.
+                        </p>
+                      </div>
+                    ) : (
                       <div className="rounded-xl border border-border p-3">
                         <textarea
                           value={note}
                           onChange={(e) => setNote(e.target.value)}
                           placeholder="Catatan transfer (opsional) — mis. nama pengirim"
                           rows={2}
-                          disabled={claimed}
                           className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none disabled:opacity-50"
                         />
-                        {claimed ? (
-                          <p className="mt-2 text-xs text-success">
-                            ✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.
-                          </p>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={markPaid}
-                            disabled={markingPaid}
-                            className="mt-2 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
-                          >
-                            {markingPaid ? "Mengirim..." : "Saya sudah bayar"}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={markPaid}
+                          disabled={markingPaid}
+                          className="mt-2 w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                        >
+                          {markingPaid ? "Mengirim..." : "Saya sudah bayar"}
+                        </button>
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 )}
               </>
