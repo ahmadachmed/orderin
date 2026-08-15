@@ -1,8 +1,4 @@
 {
   "buildCommand": "if [ -n \"$MIGRATE_DATABASE_URL\" ]; then DATABASE_URL=\"$MIGRATE_DATABASE_URL\" prisma migrate deploy; fi && next build",
-  "functions": {
-    "**/*.js": {
-      "regions": ["sin1"]
-    }
-  }
+  "regions": ["sin1"]
 }
