@@ -38,11 +38,18 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
   const [sessionChecked, setSessionChecked] = useState(false);
 
   // On mount, check for a customer session cookie via a lightweight API call.
+  // Issue #231: when logged in, pre-fill name + phone from the customer's
+  // account so they don't have to retype. Fields stay editable — the customer
+  // can still correct them before submitting.
   useEffect(() => {
     fetch("/api/customer/me")
       .then((r) => r.json())
       .then((d) => {
-        if (d.loggedIn) setCustomerId(d.customerId);
+        if (d.loggedIn) {
+          setCustomerId(d.customerId);
+          setCustomerName(d.name ?? "");
+          setCustomerPhone(d.phone ?? "");
+        }
       })
       .catch(() => {})
       .finally(() => setSessionChecked(true));
