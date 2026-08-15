@@ -272,4 +272,52 @@ describe("OrderForm", () => {
     expect(screen.queryByRole("button", { name: "Kurangi Espresso" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Buat Pesanan" })).not.toBeInTheDocument();
   });
+
+  it("pre-fills name and phone from the customer session when logged in (issue #231)", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        loggedIn: true,
+        customerId: "cust-1",
+        name: "Budi Santoso",
+        phone: "081234567890",
+      }),
+    });
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama")).toHaveValue("Budi Santoso");
+      expect(screen.getByPlaceholderText("Nomor HP (mis. 0812xxxx)")).toHaveValue("081234567890");
+    });
+  });
+
+  it("leaves name and phone empty when not logged in (issue #231 regression guard)", async () => {
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama")).toHaveValue("");
+      expect(screen.getByPlaceholderText("Nomor HP (mis. 0812xxxx)")).toHaveValue("");
+    });
+  });
+
+  it("pre-filled fields remain editable by the customer (issue #231)", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        loggedIn: true,
+        customerId: "cust-1",
+        name: "Budi Santoso",
+        phone: "081234567890",
+      }),
+    });
+    render(<OrderForm tenantSlug="kopi-senja" items={items} isOpen={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Nama")).toHaveValue("Budi Santoso");
+    });
+
+    // Customer can still type over the pre-filled values before submitting.
+    fireEvent.change(screen.getByPlaceholderText("Nama"), { target: { value: "Andi" } });
+    expect(screen.getByPlaceholderText("Nama")).toHaveValue("Andi");
+  });
 });
