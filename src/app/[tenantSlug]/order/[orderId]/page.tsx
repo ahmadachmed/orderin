@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * every 5s for live status/ETA/payment updates.
  *
  * Page chrome matches Stitch mobile/status.html: sticky top bar with back
- * arrow + centered "Status Pesanan", content column max-w-[390px].
+ * arrow + centered "Status Pesanan", content column max-w-md.
  */
 export default async function OrderStatusPage({
   params,
@@ -113,8 +113,8 @@ export default async function OrderStatusPage({
         </h1>
       </header>
 
-      {/* Content column — max-w-[390px] mobile canvas, centered */}
-      <div className="mx-auto flex w-full max-w-[390px] flex-1 flex-col gap-6 px-4 py-6 pb-8">
+      {/* Content column — max-w-md mobile canvas, centered */}
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 py-6 pb-8">
         <OrderPersistence orderId={order.id} slug={order.tenant.slug} />
         <OrderStatusTracker initial={view} />
       </div>
