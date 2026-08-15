@@ -15,18 +15,26 @@ const SLUG = `test-reg-${stamp}`;
 const SLUG2 = `test-reg2-${stamp}`;
 
 // Helper: simulate the register API logic inline for integration tests
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 async function registerTenant(opts: {
   name: string;
   slug: string;
   username: string;
   password: string;
+  contactEmail: string;
 }) {
+  if (!opts.contactEmail || !EMAIL_RE.test(opts.contactEmail)) {
+    throw Object.assign(new Error("Format email tidak valid"), { status: 400 });
+  }
   // Check slug uniqueness
   const existing = await db.tenant.findUnique({ where: { slug: opts.slug } });
   if (existing) throw Object.assign(new Error("Slug sudah dipakai"), { status: 409 });
 
   return prisma.$transaction(async (tx) => {
-    const tenant = await tx.tenant.create({ data: { name: opts.name, slug: opts.slug } });
+    const tenant = await tx.tenant.create({
+      data: { name: opts.name, slug: opts.slug, contactEmail: opts.contactEmail },
+    });
     const admin = await tx.tenantAdmin.create({
       data: {
         tenantId: tenant.id,
@@ -78,10 +86,12 @@ describe("POST /api/register", () => {
       slug: SLUG,
       username: "admin",
       password: "secret123",
+      contactEmail: "test@kedai.com",
     });
 
     expect(result.tenant.slug).toBe(SLUG);
     expect(result.tenant.name).toBe("Test Kedai");
+    expect(result.tenant.contactEmail).toBe("test@kedai.com");
     expect(result.admin.username).toBe("admin");
     expect(result.admin.tenantId).toBe(result.tenant.id);
 
@@ -98,6 +108,7 @@ describe("POST /api/register", () => {
         slug: SLUG,
         username: "admin2",
         password: "secret123",
+        contactEmail: "test2@kedai.com",
       })
     ).rejects.toThrow("Slug sudah dipakai");
   });
@@ -108,12 +119,74 @@ describe("POST /api/register", () => {
       slug: SLUG2,
       username: "barista",
       password: "kopiEnak123",
+      contactEmail: "kedai2@senja.com",
     });
 
     expect(result.tenant.slug).toBe(SLUG2);
+    expect(result.tenant.contactEmail).toBe("kedai2@senja.com");
 
     // Verify password hash
     expect(verifyPassword("kopiEnak123", result.admin.passwordHash)).toBe(true);
+  });
+});
+
+describe("contactEmail validation (T3)", () => {
+  it("rejects registration without contactEmail", async () => {
+    await expect(
+      registerTenant({
+        name: "No Email Kedai",
+        slug: `test-noemail-${stamp}`,
+        username: "noemail-admin",
+        password: "secret123",
+        contactEmail: "",
+      })
+    ).rejects.toThrow("Format email tidak valid");
+  });
+
+  it("rejects registration with invalid email format", async () => {
+    const invalidEmails = [
+      "not-an-email",
+      "missing@domain",
+      "@nodomain.com",
+      "spaces in@email.com",
+    ];
+    for (const email of invalidEmails) {
+      await expect(
+        registerTenant({
+          name: "Invalid Email Kedai",
+          slug: `test-invalid-${stamp}-${email.length}`,
+          username: `invalid-admin-${email.length}`,
+          password: "secret123",
+          contactEmail: email,
+        })
+      ).rejects.toThrow("Format email tidak valid");
+    }
+  });
+
+  it("accepts valid email format", async () => {
+    const validEmails = [
+      "owner@kedai.com",
+      "test.user@example.co.id",
+      "a@b.co",
+    ];
+    for (let i = 0; i < validEmails.length; i++) {
+      const email = validEmails[i];
+      const slug = `test-valid-${stamp}-${i}`;
+      const result = await registerTenant({
+        name: `Valid Email Kedai ${i}`,
+        slug,
+        username: `valid-admin-${i}`,
+        password: "secret123",
+        contactEmail: email,
+      });
+      expect(result.tenant.contactEmail).toBe(email);
+
+      // Cleanup
+      await prisma.tenantAdmin.deleteMany({
+        where: { tenantId: result.tenant.id },
+      });
+      await db.tenant.deleteMany({ where: { id: result.tenant.id } });
+    }
   });
 });
 
