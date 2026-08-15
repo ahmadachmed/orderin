@@ -52,13 +52,28 @@ export async function PATCH(
     return NextResponse.json({ error: "Order already paid" }, { status: 409 });
   }
 
+  // Issue #224: a claim is identified by the customerTransferNote key being
+  // present (the client sends it even when empty; plain method selection
+  // omits it). The first claim sets the authoritative paymentClaimedAt flag;
+  // any later claim on the same order is a duplicate → 409, no new audit log.
+  const isClaim =
+    paymentMethod === "bank_transfer" && typeof body.customerTransferNote === "string";
+  if (isClaim && order.paymentClaimedAt) {
+    return NextResponse.json({ error: "Pembayaran sudah dikonfirmasi" }, { status: 409 });
+  }
+
   // Only the "I have paid" action (bank transfer) may attach a note.
-  const update: { paymentMethod?: PaymentMethod; customerTransferNote?: string | null } = {};
+  const update: {
+    paymentMethod?: PaymentMethod;
+    customerTransferNote?: string | null;
+    paymentClaimedAt?: Date;
+  } = {};
   if (paymentMethod) update.paymentMethod = paymentMethod as PaymentMethod;
   if (note) update.customerTransferNote = note;
   else if (paymentMethod === "bank_transfer" && body.customerTransferNote === "") {
     update.customerTransferNote = null;
   }
+  if (isClaim) update.paymentClaimedAt = new Date();
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
@@ -72,17 +87,14 @@ export async function PATCH(
       paymentMethod: true,
       customerTransferNote: true,
       paymentStatus: true,
+      paymentClaimedAt: true,
     },
   });
 
   // Audit trail (issue #7 / #210): log EVERY bank_transfer "I have paid"
   // claim — with or without a transfer note — so empty-note claims are not
   // lost. Advisory: barista verification is authoritative and logged
-  // separately via the admin dashboard when marking PAID. A claim is
-  // identified by the customerTransferNote key being present (the client
-  // sends it even when empty; plain method selection omits it).
-  const isClaim =
-    paymentMethod === "bank_transfer" && typeof body.customerTransferNote === "string";
+  // separately via the admin dashboard when marking PAID.
   if (isClaim) {
     await prisma.orderStatusLog.create({
       data: {

@@ -17,6 +17,7 @@ const baseOrder: OrderStatusView = {
   paymentStatus: "UNPAID",
   paymentMethod: null,
   customerTransferNote: null,
+  paymentClaimedAt: null,
   createdAt: "2026-08-04T08:00:00.000Z",
   customerName: "Budi",
   customerPhone: "081234567890",
@@ -243,16 +244,45 @@ describe("OrderStatusTracker", () => {
     ).toBeInTheDocument();
   });
 
-  it("seeds 'claimed' from an existing transfer note so a reload keeps the confirmation (issue #210 re-review)", () => {
-    // Reload after claiming with a note: customerTransferNote is persisted, so
-    // the confirmation must render and the claim button must stay hidden
-    // (no double claim) without needing another PATCH.
+  it("seeds 'claimed' from paymentClaimedAt so a reload keeps the confirmation (issue #224)", () => {
+    // Reload after claiming with a note: paymentClaimedAt is the authoritative
+    // server flag, so the confirmation must render and the claim button must
+    // stay hidden (no double claim) without needing another PATCH. The note
+    // content is display-only.
     render(
       <OrderStatusTracker
         initial={{
           ...baseOrder,
           paymentMethod: "bank_transfer",
           customerTransferNote: "Budi BCA",
+          paymentClaimedAt: "2026-08-04T08:05:00.000Z",
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+    // Display-only note content
+    expect(screen.getByText("Budi BCA")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/order/11111111-2222-3333-4444-555555555555/payment",
+      expect.objectContaining({ method: "PATCH" })
+    );
+  });
+
+  it("hides the claim button when paymentClaimedAt is set and the note is empty (issue #224)", () => {
+    // The bug: empty-note claim persists customerTransferNote as null, so
+    // seeding from the note made the button reappear after refresh. Seeding
+    // from paymentClaimedAt fixes it.
+    render(
+      <OrderStatusTracker
+        initial={{
+          ...baseOrder,
+          paymentMethod: "bank_transfer",
+          customerTransferNote: null,
+          paymentClaimedAt: "2026-08-04T08:05:00.000Z",
         }}
       />
     );
@@ -261,10 +291,52 @@ describe("OrderStatusTracker", () => {
       screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      "/api/order/11111111-2222-3333-4444-555555555555/payment",
-      expect.objectContaining({ method: "PATCH" })
-    );
+    expect(screen.queryByPlaceholderText(/Catatan transfer/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the button hidden across a simulated refresh (fresh initial render, issue #224)", () => {
+    // Simulates the user pressing F5: a brand-new render with a fresh server
+    // payload (paymentClaimedAt still set) must not resurrect the button.
+    const initial = {
+      ...baseOrder,
+      paymentMethod: "bank_transfer" as const,
+      customerTransferNote: "Budi BCA" as string | null,
+      paymentClaimedAt: "2026-08-04T08:05:00.000Z" as string | null,
+    };
+    const first = render(<OrderStatusTracker initial={initial} />);
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
+    first.unmount();
+
+    render(<OrderStatusTracker initial={initial} />);
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
+  });
+
+  it("syncs 'claimed' from poll data — paymentClaimedAt arriving via poll hides the button (issue #224)", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...baseOrder,
+        paymentMethod: "bank_transfer",
+        paymentClaimedAt: "2026-08-04T08:05:00.000Z",
+      }),
+    });
+    render(<OrderStatusTracker initial={{ ...baseOrder, paymentMethod: "bank_transfer" }} />);
+
+    // Before the poll returns, the claim button is visible (no claim yet).
+    expect(screen.getByRole("button", { name: "Saya sudah bayar" })).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(
+      screen.getByText("✓ Konfirmasi terkirim — kasir akan memverifikasi pembayaranmu.")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saya sudah bayar" })).not.toBeInTheDocument();
   });
 
   it("renders PAID timeline entries with the note as subtitle (STATUS-05)", () => {
