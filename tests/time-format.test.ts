@@ -5,7 +5,12 @@
  * timezone for display, with graceful fallbacks.
  */
 import { describe, it, expect } from "vitest";
-import { formatTimeInTimezone, isOvernightHours, formatOperatingHours } from "../src/lib/time";
+import {
+  formatTimeInTimezone,
+  localToUtcHHmm,
+  isOvernightHours,
+  formatOperatingHours,
+} from "../src/lib/time";
 
 describe("SETTINGS-05 — formatTimeInTimezone", () => {
   it("converts UTC to Asia/Jakarta (UTC+7): 01:00 UTC → 08:00", () => {
@@ -84,5 +89,43 @@ describe("T25-2 — formatOperatingHours", () => {
       closeDisplay: "04:00",
       isOvernight: true, // raw UTC close < open
     });
+  });
+});
+
+describe("localToUtcHHmm — local → UTC inverse of formatTimeInTimezone", () => {
+  it("converts Asia/Makassar (UTC+8) local 15:00 → 07:00 UTC", () => {
+    expect(localToUtcHHmm("15:00", "Asia/Makassar")).toBe("07:00");
+  });
+
+  it("converts Asia/Jakarta (UTC+7) local 08:00 → 01:00 UTC", () => {
+    expect(localToUtcHHmm("08:00", "Asia/Jakarta")).toBe("01:00");
+  });
+
+  it("is identity for UTC timezone", () => {
+    expect(localToUtcHHmm("07:00", "UTC")).toBe("07:00");
+  });
+
+  it("wraps past midnight: Asia/Makassar local 05:00 → 21:00 UTC (prev day)", () => {
+    expect(localToUtcHHmm("05:00", "Asia/Makassar")).toBe("21:00");
+  });
+
+  it("round-trips: formatTimeInTimezone(localToUtcHHmm(x)) === x for each tz", () => {
+    const cases = ["00:00", "01:30", "07:00", "12:00", "15:00", "21:00", "23:59"];
+    for (const tz of ["Asia/Makassar", "Asia/Jakarta", "UTC"]) {
+      for (const local of cases) {
+        expect(formatTimeInTimezone(localToUtcHHmm(local, tz), tz)).toBe(local);
+      }
+    }
+  });
+
+  it("falls back to raw input when the timezone is invalid", () => {
+    expect(localToUtcHHmm("15:00", "Not/AZone")).toBe("15:00");
+    expect(localToUtcHHmm("15:00", "")).toBe("15:00");
+  });
+
+  it("passes through malformed input unchanged", () => {
+    expect(localToUtcHHmm("abc", "Asia/Jakarta")).toBe("abc");
+    expect(localToUtcHHmm("7:00", "Asia/Jakarta")).toBe("7:00");
+    expect(localToUtcHHmm("", "Asia/Jakarta")).toBe("");
   });
 });

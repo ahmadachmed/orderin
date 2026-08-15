@@ -35,6 +35,41 @@ export function formatTimeInTimezone(utcHHmm: string, timezone: string): string 
 }
 
 /**
+ * Inverse of formatTimeInTimezone — convert a LOCAL "HH:mm" string (the
+ * tenant's timezone) back to the stored UTC "HH:mm". DST-naive like its
+ * forward counterpart: computes the zone offset at the fictional date
+ * 2024-01-01, then subtracts it (mod 1440 to handle overnight ranges).
+ * Graceful fallbacks: malformed input → raw string; invalid timezone →
+ * raw local string (identity, no conversion).
+ */
+export function localToUtcHHmm(localHHmm: string, timezone: string): string {
+  const m = HH_MM.exec(localHHmm ?? "");
+  if (!m) return localHHmm;
+  const localMinutes = Number(m[1]) * 60 + Number(m[2]);
+  // Treat the local time as a naive UTC instant, format it in the zone, and
+  // derive the offset from the round-trip difference.
+  const naiveUtc = Date.UTC(2024, 0, 1, Number(m[1]), Number(m[2]));
+  let asIfLocal: string;
+  try {
+    asIfLocal = new Date(naiveUtc).toLocaleTimeString("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return localHHmm; // invalid timezone → raw local
+  }
+  asIfLocal = asIfLocal === "24:00" ? "00:00" : asIfLocal;
+  const asIfMinutes = Number(asIfLocal.slice(0, 2)) * 60 + Number(asIfLocal.slice(3, 5));
+  const offsetMinutes = asIfMinutes - localMinutes;
+  const utcMinutes = (localMinutes - offsetMinutes + 1440) % 1440;
+  const hh = String(Math.floor(utcMinutes / 60)).padStart(2, "0");
+  const mm = String(utcMinutes % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+/**
  * T25-2 — detect whether an operating-hours range crosses midnight in the
  * tenant's timezone. Converts both UTC "HH:mm" strings via
  * formatTimeInTimezone, then checks close < open post-conversion.
