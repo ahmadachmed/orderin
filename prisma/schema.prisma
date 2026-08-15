@@ -29,6 +29,11 @@ model Tenant {
   qrisCode        String? // QRIS code string (for display/copy)
   bankAccountNumber String? // Bank account number for manual transfer
   bankName        String? // Bank name (e.g. BCA, BRI, Mandiri)
+  // Monetisation Phase 0 / T1 — plan billing fields (issue #229)
+  plan            Plan    @default(FREE)
+  planExpiresAt  DateTime? // null = no expiry (FREE) or not set yet
+  isActive        Boolean  @default(true) // soft-disable toggle (T8 enforces 403)
+  contactEmail    String?  // nullable for now — T3 makes it mandatory
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -179,4 +184,9 @@ enum PaymentMethod {
 enum SprintStatus {
   OPEN
   CLOSED
+}
+
+enum Plan {
+  FREE
+  PRO
 }

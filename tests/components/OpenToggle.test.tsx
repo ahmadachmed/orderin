@@ -35,6 +35,10 @@ const OPEN_SETTINGS: TenantSettings = {
   qrisCode: null,
   bankAccountNumber: null,
   bankName: null,
+  plan: "FREE",
+  planExpiresAt: null,
+  isActive: true,
+  contactEmail: null,
 };
 
 const CLOSED_SETTINGS: TenantSettings = {
