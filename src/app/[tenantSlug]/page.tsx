@@ -37,10 +37,20 @@ export default async function ShopMenuPage({
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) notFound();
 
-  const items = await prisma.menuItem.findMany({
+  const itemsPromise = prisma.menuItem.findMany({
     where: { tenantId: tenant.id, isAvailable: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
+
+  // Queue estimate for a new order: everything currently in the FIFO queue
+  // (PENDING/CONFIRMED/BREWING) + tenant buffer (PLAN §4, issue #6).
+  const queuePromise = fetchQueue(prisma, tenant.id);
+
+  // Menu + queue are independent of each other — fetch in parallel (they only
+  // depend on tenant.id above). Cuts one DB roundtrip; matters when the
+  // function region is far from the DB (see perf/sin1-region).
+  const [items, queue] = await Promise.all([itemsPromise, queuePromise]);
+  const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
   const menuItems: MenuItemView[] = items.map((it) => ({
     id: it.id,
@@ -52,11 +62,6 @@ export default async function ShopMenuPage({
     prepTimeSeconds: it.prepTimeSeconds,
     sortOrder: it.sortOrder,
   }));
-
-  // Queue estimate for a new order: everything currently in the FIFO queue
-  // (PENDING/CONFIRMED/BREWING) + tenant buffer (PLAN §4, issue #6).
-  const queue = await fetchQueue(prisma, tenant.id);
-  const queueSeconds = withBuffer(etaForNewOrder(queue, 0), tenant.prepTimeBuffer);
 
   // #207 v2: schedule is authoritative; the Buka/Tutup toggle is a time-boxed
   // override (isOpenOverrideUntil). effectiveOpen() = override while active,
