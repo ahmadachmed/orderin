@@ -11,6 +11,7 @@ import { prisma } from "@/lib/db";
 import { POST } from "../src/app/api/order/route";
 import { PATCH as patchSettings } from "../src/app/api/admin/settings/route";
 import { createSession } from "../src/lib/auth";
+import { formatTimeInTimezone } from "../src/lib/time";
 import { setupTenant, cleanupTenant, type TenantFixture } from "./helpers";
 
 // Mock next/headers so getSession() reads our admin token (for settings PATCH).
@@ -349,6 +350,25 @@ describe("PATCH /api/admin/settings — SETTINGS-03 HH:mm validation", () => {
   it("accepts semantically-odd but format-valid times (24:01 passes regex)", async () => {
     const res = await patchTenantSettings(fx.slug, { openTime: "24:01" });
     expect(res.status).toBe(200);
+  });
+
+  it("stores the UTC value sent by the settings form (local 15:00 Makassar → 07:00 UTC round-trip)", async () => {
+    // The settings page converts local input → UTC before PATCHing; this
+    // verifies the route persists that UTC value and that the display
+    // conversion renders the original local time back.
+    const res = await patchTenantSettings(fx.slug, {
+      openTime: "07:00",
+      closeTime: "21:00",
+      timezone: "Asia/Makassar",
+    });
+    expect(res.status).toBe(200);
+    const tenant = await prisma.tenant.findUnique({ where: { slug: fx.slug } });
+    expect(tenant?.openTime).toBe("07:00");
+    expect(tenant?.closeTime).toBe("21:00");
+    expect(tenant?.timezone).toBe("Asia/Makassar");
+    // Stored UTC renders back as the local time the admin entered.
+    expect(formatTimeInTimezone(tenant?.openTime ?? "", "Asia/Makassar")).toBe("15:00");
+    expect(formatTimeInTimezone(tenant?.closeTime ?? "", "Asia/Makassar")).toBe("05:00");
   });
 });
 

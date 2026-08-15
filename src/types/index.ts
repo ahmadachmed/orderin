@@ -73,6 +73,9 @@ export interface OrderStatusView {
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod | null;
   customerTransferNote: string | null;
+  /** Authoritative "I have paid" claim flag (issue #224) — set once when the
+   *  customer claims a bank transfer; duplicates are rejected with 409. */
+  paymentClaimedAt: string | null;
   createdAt: string;
   customerName: string;
   /** Null when the customer is logged in — the "Buat akun" banner (T17-7)

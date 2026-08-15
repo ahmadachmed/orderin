@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchSettings, updateSettings } from "@/lib/admin-api";
-import { formatTimeInTimezone } from "@/lib/time";
+import { formatTimeInTimezone, localToUtcHHmm, formatOperatingHours } from "@/lib/time";
 import { nextBoundary } from "@/lib/open";
 import type { TenantSettings } from "@/types/admin";
 
@@ -98,15 +98,18 @@ export default function AdminSettingsPage() {
   const load = useCallback(async () => {
     try {
       const s: TenantSettings = await fetchSettings();
+      // Input shows LOCAL time: stored UTC → tenant timezone. Null/invalid
+      // timezone → raw fallback (no conversion, matches formatTimeInTimezone).
+      const tz = s.timezone || "";
       setForm({
         qrisImageUrl: s.qrisImageUrl ?? "",
         qrisCode: s.qrisCode ?? "",
         bankName: s.bankName ?? "",
         bankAccountNumber: s.bankAccountNumber ?? "",
         sprintDurationDays: String(s.sprintDurationDays ?? 1),
-        openTime: s.openTime ?? "07:00",
-        closeTime: s.closeTime ?? "21:00",
-        timezone: s.timezone || "Asia/Makassar",
+        openTime: formatTimeInTimezone(s.openTime ?? "07:00", tz),
+        closeTime: formatTimeInTimezone(s.closeTime ?? "21:00", tz),
+        timezone: tz,
         isOpen: s.isOpen ?? true,
         prepTimeBuffer: String(s.prepTimeBuffer ?? 0),
         maxQueueSize: String(s.maxQueueSize ?? 20),
@@ -135,6 +138,27 @@ export default function AdminSettingsPage() {
     setSaved(false);
   }
 
+  /**
+   * Timezone change — re-interpret the displayed LOCAL times in the new
+   * timezone: current local → UTC (old tz) → local (new tz). Invalid old tz
+   * means the display was raw UTC (identity via localToUtcHHmm fallback);
+   * invalid new tz falls back to raw via formatTimeInTimezone.
+   */
+  function handleTimezoneChange(nextTz: string) {
+    setForm((prev) => {
+      const prevTz = prev.timezone.trim();
+      const openUtc = localToUtcHHmm(prev.openTime.trim(), prevTz);
+      const closeUtc = localToUtcHHmm(prev.closeTime.trim(), prevTz);
+      return {
+        ...prev,
+        timezone: nextTz,
+        openTime: formatTimeInTimezone(openUtc, nextTz.trim()),
+        closeTime: formatTimeInTimezone(closeUtc, nextTz.trim()),
+      };
+    });
+    setSaved(false);
+  }
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const validationError = validateForm(form);
@@ -146,23 +170,27 @@ export default function AdminSettingsPage() {
     setError(null);
     setSaved(false);
     try {
+      // Input is LOCAL time — convert to stored UTC before PATCH.
+      // Invalid timezone already rejected by validateForm; localToUtcHHmm
+      // additionally falls back to raw (identity) if it slips through.
+      const tz = form.timezone.trim();
+      const openUtc = localToUtcHHmm(form.openTime.trim(), tz);
+      const closeUtc = localToUtcHHmm(form.closeTime.trim(), tz);
       await updateSettings({
         qrisImageUrl: form.qrisImageUrl.trim() || null,
         qrisCode: form.qrisCode.trim() || null,
         bankName: form.bankName.trim() || null,
         bankAccountNumber: form.bankAccountNumber.trim() || null,
         sprintDurationDays: Math.floor(Number(form.sprintDurationDays)) || 1,
-        openTime: form.openTime.trim(),
-        closeTime: form.closeTime.trim(),
-        timezone: form.timezone.trim(),
+        openTime: openUtc,
+        closeTime: closeUtc,
+        timezone: tz,
         isOpen: form.isOpen,
-        // #207 v2: toggle = time-boxed override expiring at the next boundary.
+        // #207 v2: toggle = time-boxed override expiring at the next boundary
+        // (nextBoundary expects UTC "HH:mm" — the schedule is stored UTC).
         ...(isOpenTouched
           ? {
-              isOpenOverrideUntil: nextBoundary(
-                form.openTime.trim(),
-                form.closeTime.trim(),
-              ).toISOString(),
+              isOpenOverrideUntil: nextBoundary(openUtc, closeUtc).toISOString(),
             }
           : {}),
         prepTimeBuffer: Math.floor(Number(form.prepTimeBuffer)),
@@ -188,9 +216,13 @@ export default function AdminSettingsPage() {
   const hasQris = Boolean(form.qrisImageUrl.trim() || form.qrisCode.trim());
   const hasBank = Boolean(form.bankName.trim() && form.bankAccountNumber.trim());
 
-  // T25-10 preview: raw UTC values converted to the tenant timezone.
-  const previewOpen = formatTimeInTimezone(form.openTime.trim(), form.timezone.trim());
-  const previewClose = formatTimeInTimezone(form.closeTime.trim(), form.timezone.trim());
+  // Preview: the form holds LOCAL values; convert back to UTC so
+  // formatOperatingHours re-renders them as local (round-trip identity)
+  // and flags overnight ranges — visual confirmation for the admin.
+  const previewOpenUtc = localToUtcHHmm(form.openTime.trim(), form.timezone.trim());
+  const previewCloseUtc = localToUtcHHmm(form.closeTime.trim(), form.timezone.trim());
+  const { openDisplay: previewOpen, closeDisplay: previewClose, isOvernight } =
+    formatOperatingHours(previewOpenUtc, previewCloseUtc, form.timezone.trim());
 
   return (
     <div className="min-h-screen bg-muted">
@@ -300,7 +332,7 @@ export default function AdminSettingsPage() {
             <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
               <h2 className="text-sm font-semibold text-foreground">Jam Operasional</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Disimpan dalam UTC (HH:mm), ditampilkan dalam timezone kedai. Berlaku untuk jam buka/tutup kedai.
+                Diisi dalam waktu LOKAL kedai (timezone di bawah), disimpan sebagai UTC. Berlaku untuk jam buka/tutup kedai.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
@@ -334,7 +366,7 @@ export default function AdminSettingsPage() {
                   type="text"
                   list="timezone-options"
                   value={form.timezone}
-                  onChange={(e) => set("timezone", e.target.value)}
+                  onChange={(e) => handleTimezoneChange(e.target.value)}
                   placeholder="Asia/Jakarta"
                   className="w-full rounded-lg border border-border bg-card px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none"
                 />
@@ -344,9 +376,10 @@ export default function AdminSettingsPage() {
                   ))}
                 </datalist>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  contoh: {form.openTime || "07:00"} UTC → {previewOpen}{" "}
-                  {previewOpen !== form.openTime.trim() ? `(${form.timezone.trim() || "Asia/Makassar"})` : ""}
-                  {previewClose !== previewOpen ? `, ${form.closeTime || "21:00"} UTC → ${previewClose}` : ""}
+                  contoh: {previewOpen || "07:00"} lokal{" "}
+                  {previewClose !== previewOpen ? `– ${previewClose} lokal` : ""}{" "}
+                  {isOvernight ? "(besok) " : ""}→ tersimpan {previewOpenUtc || "07:00"}
+                  {previewCloseUtc !== previewOpenUtc ? ` – ${previewCloseUtc}` : ""} UTC
                 </p>
               </div>
               <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-muted px-3 py-2.5">

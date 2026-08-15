@@ -97,8 +97,10 @@ describe("AdminSettingsPage — Jam Operasional (T25-10)", () => {
     await renderPage();
     const section = jamOperasionalSection();
     const fields = getFields();
-    expect(within(section).getByDisplayValue("07:00")).toBeInTheDocument();
-    expect(within(section).getByDisplayValue("21:00")).toBeInTheDocument();
+    // Inputs show LOCAL time: 07:00 UTC → 15:00 Asia/Makassar (+8),
+    // 21:00 UTC → 05:00 next day.
+    expect(within(section).getByDisplayValue("15:00")).toBeInTheDocument();
+    expect(within(section).getByDisplayValue("05:00")).toBeInTheDocument();
     expect(
       within(section).getByDisplayValue("Asia/Makassar"),
     ).toBeInTheDocument();
@@ -107,7 +109,7 @@ describe("AdminSettingsPage — Jam Operasional (T25-10)", () => {
     expect(within(section).getByDisplayValue("20")).toBeInTheDocument();
   });
 
-  it("pre-populates the 6 fields from GET /api/admin/settings on load", async () => {
+  it("pre-populates the 6 fields from GET /api/admin/settings on load, converting UTC → local", async () => {
     await renderPage({
       ...DEFAULT_SETTINGS,
       openTime: "09:30",
@@ -118,12 +120,50 @@ describe("AdminSettingsPage — Jam Operasional (T25-10)", () => {
       maxQueueSize: 42,
     });
     const fields = getFields();
-    expect((fields.openTime as HTMLInputElement).value).toBe("09:30");
-    expect((fields.closeTime as HTMLInputElement).value).toBe("17:45");
+    // 09:30 UTC → 16:30 WIB (+7); 17:45 UTC → 00:45 WIB next day.
+    expect((fields.openTime as HTMLInputElement).value).toBe("16:30");
+    expect((fields.closeTime as HTMLInputElement).value).toBe("00:45");
     expect((fields.timezone as HTMLInputElement).value).toBe("Asia/Jakarta");
     expect(fields.switch).toHaveAttribute("aria-checked", "false");
     expect((fields.prepTimeBuffer as HTMLInputElement).value).toBe("15");
     expect((fields.maxQueueSize as HTMLInputElement).value).toBe("42");
+  });
+
+  it("shows raw UTC values when the stored timezone is null (fallback, no conversion)", async () => {
+    await renderPage({
+      ...DEFAULT_SETTINGS,
+      openTime: "07:00",
+      closeTime: "21:00",
+      timezone: "",
+    });
+    const fields = getFields();
+    expect((fields.openTime as HTMLInputElement).value).toBe("07:00");
+    expect((fields.closeTime as HTMLInputElement).value).toBe("21:00");
+  });
+
+  it("re-converts displayed times when the timezone changes", async () => {
+    await renderPage(); // 15:00 / 05:00 Asia/Makassar
+    const fields = getFields();
+    fireEvent.change(fields.timezone, { target: { value: "Asia/Jakarta" } });
+    // Same UTC instant (07:00/21:00) re-rendered in UTC+7 → 14:00 / 04:00.
+    expect((fields.openTime as HTMLInputElement).value).toBe("14:00");
+    expect((fields.closeTime as HTMLInputElement).value).toBe("04:00");
+  });
+
+  it("converts local input → UTC on save (15:00 Makassar → 07:00 UTC)", async () => {
+    await renderPage(); // openTime displayed 15:00 local already
+    fireEvent.change(getFields().openTime, { target: { value: "15:00" } });
+    fireEvent.change(getFields().closeTime, { target: { value: "05:00" } });
+    await submit();
+    await waitFor(() =>
+      expect(updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          openTime: "07:00",
+          closeTime: "21:00",
+          timezone: "Asia/Makassar",
+        }),
+      ),
+    );
   });
 
   it("rejects invalid openTime '25:00' with an HH:mm error and no PATCH", async () => {
@@ -267,12 +307,14 @@ describe("AdminSettingsPage — Jam Operasional (T25-10)", () => {
     );
   });
 
-  it("sends all 6 fields on a valid PATCH save and shows success", async () => {
+  it("sends all 6 fields on a valid PATCH save, converting local → UTC", async () => {
     await renderPage();
     const fields = getFields();
+    // Change timezone FIRST (re-converts displayed times), then set times in
+    // the new local zone: 08:30 WIB → 01:30 UTC, 22:15 WIB → 15:15 UTC.
+    fireEvent.change(fields.timezone, { target: { value: "Asia/Jakarta" } });
     fireEvent.change(fields.openTime, { target: { value: "08:30" } });
     fireEvent.change(fields.closeTime, { target: { value: "22:15" } });
-    fireEvent.change(fields.timezone, { target: { value: "Asia/Jakarta" } });
     fireEvent.click(fields.switch);
     fireEvent.change(fields.prepTimeBuffer, { target: { value: "15" } });
     fireEvent.change(fields.maxQueueSize, { target: { value: "42" } });
@@ -280,8 +322,8 @@ describe("AdminSettingsPage — Jam Operasional (T25-10)", () => {
     await waitFor(() =>
       expect(updateSettings).toHaveBeenCalledWith(
         expect.objectContaining({
-          openTime: "08:30",
-          closeTime: "22:15",
+          openTime: "01:30",
+          closeTime: "15:15",
           timezone: "Asia/Jakarta",
           isOpen: false,
           prepTimeBuffer: 15,

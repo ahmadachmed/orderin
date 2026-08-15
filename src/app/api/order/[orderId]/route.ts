@@ -91,6 +91,7 @@ export async function GET(
     paymentMethod: order.paymentMethod,
     paidAt: order.paidAt,
     customerTransferNote: order.customerTransferNote,
+    paymentClaimedAt: order.paymentClaimedAt,
     createdAt: order.createdAt,
     customerName: order.customerName,
     items: order.items.map((oi) => ({
