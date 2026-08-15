@@ -48,6 +48,10 @@ const DEFAULT_SETTINGS: TenantSettings = {
   qrisCode: null,
   bankAccountNumber: null,
   bankName: null,
+  plan: "FREE",
+  planExpiresAt: null,
+  isActive: true,
+  contactEmail: null,
 };
 
 /** Render the page with fetchSettings mocked, then wait for the form to load. */

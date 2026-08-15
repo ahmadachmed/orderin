@@ -14,6 +14,9 @@ export type OrderStatus =
 export type PaymentStatus = "UNPAID" | "PAID";
 export type PaymentMethod = "qris" | "bank_transfer" | "cash";
 
+// Monetisation Phase 0 / T1 — billing plan enum (issue #229)
+export type Plan = "FREE" | "PRO";
+
 export interface OrderItem {
   id: string;
   menuItemId: string;
@@ -80,6 +83,11 @@ export interface TenantSettings {
   qrisCode?: string | null;
   bankAccountNumber?: string | null;
   bankName?: string | null;
+  // Monetisation Phase 0 / T1 — plan fields (issue #229)
+  plan: Plan;
+  planExpiresAt?: string | null;
+  isActive: boolean;
+  contactEmail?: string | null;
 }
 
 // Status flow for the kanban columns (issue #5). CANCELLED is handled
