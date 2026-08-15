@@ -31,6 +31,11 @@ const SETTINGS_SELECT = {
   qrisCode: true,
   bankAccountNumber: true,
   bankName: true,
+  // Monetisation Phase 0 / T1 — plan fields (read-only, issue #229)
+  plan: true,
+  planExpiresAt: true,
+  isActive: true,
+  contactEmail: true,
 } as const;
 
 const STRING_FIELDS = [
@@ -150,6 +155,10 @@ export async function PATCH(req: NextRequest) {
         qrisCode: true,
         bankAccountNumber: true,
         bankName: true,
+        plan: true,
+        planExpiresAt: true,
+        isActive: true,
+        contactEmail: true,
       },
     });
     return ok(tenant);
