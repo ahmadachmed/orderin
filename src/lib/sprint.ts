@@ -21,6 +21,7 @@ import { HttpError } from "@/lib/api";
 import { recalculateQueueEtas } from "@/lib/queue";
 import { OrderStatus, SprintStatus } from "@/generated/prisma/enums";
 import type { Sprint } from "@/generated/prisma/client";
+import { Plan, getLimit } from "@/lib/plan";
 
 /** Orders still being worked → move to the new sprint on close (PLAN §3.3). */
 export const CARRY_OVER_STATUSES = [
@@ -32,6 +33,39 @@ export const CARRY_OVER_STATUSES = [
 
 /** Finished orders → stay in the closed sprint (archived, PLAN §3.3). */
 export const ARCHIVED_STATUSES = [OrderStatus.PICKED_UP, OrderStatus.CANCELLED] as const;
+
+// ─────────────────────────────────────────────────────────────────────
+// Sprint history retention — T11 (issue #229)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Retention cutoff for sprint history: `now` minus the plan's
+ * `sprintRetentionDays` (FREE: 1 day, PRO: 30 days — issue #229).
+ *
+ * Pure function — the limit comes from lib/plan.ts (T6) so the plan map
+ * stays the single source of truth (no hardcoded constants here).
+ */
+export function getSprintRetentionCutoff(plan: Plan, now: Date = new Date()): Date {
+  const days = getLimit(plan, "sprintRetentionDays");
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Whether a sprint is still inside the tenant's retention window.
+ *
+ * OPEN sprints are always retained — they are the live board. CLOSED
+ * sprints are retained until their end (closedAt ?? endAt) falls before
+ * the cutoff; after that the history is treated as expired (not listed,
+ * detail 404s).
+ */
+export function isSprintRetained(
+  sprint: { status: SprintStatus; startAt: Date; endAt: Date | null; closedAt: Date | null },
+  cutoff: Date
+): boolean {
+  if (sprint.status === SprintStatus.OPEN) return true;
+  const endedAt = sprint.closedAt ?? sprint.endAt ?? sprint.startAt;
+  return endedAt.getTime() >= cutoff.getTime();
+}
 
 /**
  * The tenant's currently OPEN sprint, or null when none exists.
