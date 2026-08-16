@@ -21,5 +21,13 @@ export default defineConfig({
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     // Integration tests hit a real Postgres; keep runs fast and isolated.
     fileParallelism: false,
+    // Cap-enforcement integration tests seed hundreds of rows (e.g. 300
+    // sequential prisma.order.create in the T8 monthly-cap suite) and take
+    // 11-13s per test locally — far over vitest's 5s default. Raise the
+    // per-test budget so plain `npm test` passes without --testTimeout.
+    testTimeout: 60000,
+    // afterAll cleanupTenant() deletes those hundreds of seeded rows
+    // sequentially — also over vitest's 10s hook default.
+    hookTimeout: 60000,
   },
 });
