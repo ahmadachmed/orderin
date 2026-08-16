@@ -250,7 +250,10 @@ export default function ShopSearchForm({ tenants }: ShopSearchFormProps) {
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {visible.map((t: ShopTenant) => (
+          {/* Landing preview: max 5 kedai (T29-A fix round 2). Suggestion
+              dropdown di atas sudah cap 5; filter/submit logic pakai `visible`
+              penuh, tidak berubah. */}
+          {visible.slice(0, 5).map((t: ShopTenant) => (
             <li key={t.slug}>
               <Link href={`/${t.slug}`} className="block">
                 <Card className="p-4 transition active:scale-[0.99]">

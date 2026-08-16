@@ -14,7 +14,7 @@ const BENEFITS = [
  */
 export function OwnerCta() {
   return (
-    <section className="px-6 pb-8 md:px-12">
+    <section id="tentang" className="scroll-mt-24 px-6 pb-8 md:px-12">
       <div className="mx-auto max-w-[1200px]">
         <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-card to-muted p-6 md:p-10">
           <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">

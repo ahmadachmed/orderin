@@ -24,7 +24,7 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section className="mx-auto w-full max-w-[1200px] border-t border-border px-6 py-12 md:px-12 md:py-16">
+    <section className="mx-auto w-full max-w-[1200px] scroll-mt-24 border-t border-border px-6 py-12 md:px-12 md:py-16" id="how-it-works">
       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
         {STEPS.map((step) => (
           <div key={step.title} className="flex items-start gap-4">
