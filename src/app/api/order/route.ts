@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { effectiveOpen } from "@/lib/open";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
+import { getLimit } from "@/lib/plan";
 import { PaymentMethod } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest) {
 
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Tenant not found", 404);
+
+  // T8: isActive gate — a soft-disabled tenant (isActive=false) refuses all
+  // new orders with 403 Forbidden. This is an account/billing-level toggle,
+  // distinct from the per-day open/close schedule below (issue #229).
+  if (!tenant.isActive) return fail("Tenant is not active", 403);
+
   // #207 v2: schedule is authoritative; the Buka/Tutup toggle is a time-boxed
   // override (isOpenOverrideUntil). effectiveOpen() = override while active,
   // else operating-hours check.
@@ -78,6 +85,27 @@ export async function POST(req: NextRequest) {
       // the scoped() wrapper must not wrap a transaction client (Prisma's
       // deepCloneArgs breaks on the double proxy: "'ownKeys' on proxy: trap
       // result did not include '$on'").
+
+      // T8: monthly order cap (issue #229). FREE plans are limited to 300
+      // orders per calendar month; PRO is unlimited (getLimit returns
+      // Infinity). Count orders created in the current month for this tenant
+      // and refuse with 429 once the cap is reached. Runs inside the advisory
+      // lock so concurrent requests can't both slip under the cap.
+      const orderPerMonth = getLimit(tenant.plan, "orderPerMonth");
+      if (Number.isFinite(orderPerMonth)) {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthOrderCount = await tx.order.count({
+          where: { tenantId: tenant.id, createdAt: { gte: monthStart } },
+        });
+        if (monthOrderCount >= orderPerMonth) {
+          throw new HttpError(
+            429,
+            `Monthly order limit reached (${orderPerMonth}). Upgrade to PRO for unlimited orders.`
+          );
+        }
+      }
+
       // Order cap (PLAN §4.3 / issue #6): refuse once the FIFO queue is full.
       const queue = await fetchQueue(tx, tenant.id);
       if (queue.length >= tenant.maxQueueSize) {

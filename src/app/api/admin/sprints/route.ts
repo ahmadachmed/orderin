@@ -9,7 +9,8 @@
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, HttpError } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { closeSprint, getActiveSprint } from "@/lib/sprint";
+import { closeSprint, getActiveSprint, getSprintRetentionCutoff } from "@/lib/sprint";
+import { Plan } from "@/lib/plan";
 import { PaymentStatus, SprintStatus } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,20 @@ export async function GET() {
   if (!session) return fail("Unauthorized", 401);
 
   const db = scoped(session.tenantId);
+
+  // T11 (issue #229): sprint history retention — FREE 1 day, PRO 30 days.
+  // The plan limit (lib/plan.ts) is authoritative; the OPEN sprint is
+  // always retained (it is the live board).
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: session.tenantId },
+    select: { plan: true },
+  });
+  const cutoff = getSprintRetentionCutoff(tenant?.plan ?? Plan.FREE);
+
   const sprints = await db.sprint.findMany({
+    where: {
+      OR: [{ status: SprintStatus.OPEN }, { endAt: { gte: cutoff } }],
+    },
     orderBy: { startAt: "desc" },
     include: { _count: { select: { orders: true } } },
   });

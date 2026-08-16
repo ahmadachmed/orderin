@@ -579,3 +579,175 @@ describe("POST /api/order — ORDER-10 concurrent queue-cap race", () => {
     }
   });
 });
+
+// ── Monetisation Phase 1 / T8 — isActive gate (403) + monthly order cap (429) ─
+// issue #229: FREE > 300 orders/month → 429; isActive=false → 403; PRO → limitless.
+describe("POST /api/order — T8 isActive gate (403)", () => {
+  it("rejects orders for an inactive tenant with 403", async () => {
+    const fx = await setupTenant({ isActive: false });
+    fixtures.push(fx);
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "Blocked",
+      customerPhone: "0811",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toContain("not active");
+  });
+
+  it("isActive gate fires before the open-hours check (403, not 422)", async () => {
+    // Shop is also closed (hours never in range) — isActive must take priority.
+    const fx = await setupTenant({
+      isActive: false,
+      openTime: "12:00",
+      closeTime: "12:00",
+    });
+    fixtures.push(fx);
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "Blocked",
+      customerPhone: "0811",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("active tenant with valid hours still works (regression)", async () => {
+    const fx = await setupTenant({ isActive: true });
+    fixtures.push(fx);
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "Go",
+      customerPhone: "0811",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe("POST /api/order — T8 monthly order cap (429)", () => {
+  it("FREE plan: rejects with 429 once the monthly cap is exceeded", async () => {
+    // Use a very small cap by pre-filling orders up to the FREE limit (300).
+    // Rather than creating 300 orders, we set the tenant's createdAt back to
+    // the start of the month and bulk-insert 300 orders directly, then verify
+    // the 301st is refused. The test is still fast because we create orders
+    // in bulk without going through the API.
+    const fx = await setupTenant({ plan: "FREE" });
+    fixtures.push(fx);
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Bulk-create 300 orders directly in the DB (at the FREE cap).
+    const orderData = Array.from({ length: 300 }, (_, i) => ({
+      tenantId: fx.tenantId,
+      customerName: `Cap-${i}`,
+      customerPhone: "0811",
+      createdAt: monthStart,
+      // PICKED_UP keeps these out of the FIFO queue (queue-cap test would
+      // otherwise fire 429 first) — they still count toward the monthly cap.
+      status: "PICKED_UP",
+      items: { create: [{ menuItemId: fx.itemAvailable, quantity: 1, unitPrice: 15000 }] },
+    }));
+    for (const data of orderData) {
+      await prisma.order.create({ data: data as never });
+    }
+
+    // 301st order via API → 429
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "Over Cap",
+      customerPhone: "0822",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.error).toContain("Monthly order limit reached");
+  });
+
+  it("FREE plan: under the cap → order succeeds", async () => {
+    const fx = await setupTenant({ plan: "FREE" });
+    fixtures.push(fx);
+
+    // 299 pre-existing orders → under the 300 cap, API order should succeed.
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const orderData = Array.from({ length: 299 }, (_, i) => ({
+      tenantId: fx.tenantId,
+      customerName: `Under-${i}`,
+      customerPhone: "0811",
+      createdAt: monthStart,
+      status: "PICKED_UP",
+      items: { create: [{ menuItemId: fx.itemAvailable, quantity: 1, unitPrice: 15000 }] },
+    }));
+    for (const data of orderData) {
+      await prisma.order.create({ data: data as never });
+    }
+
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "Under Cap",
+      customerPhone: "0822",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("PRO plan: no monthly cap — order succeeds even with 300+ orders", async () => {
+    const fx = await setupTenant({ plan: "PRO" });
+    fixtures.push(fx);
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const orderData = Array.from({ length: 350 }, (_, i) => ({
+      tenantId: fx.tenantId,
+      customerName: `Pro-${i}`,
+      customerPhone: "0811",
+      createdAt: monthStart,
+      status: "PICKED_UP",
+      items: { create: [{ menuItemId: fx.itemAvailable, quantity: 1, unitPrice: 15000 }] },
+    }));
+    for (const data of orderData) {
+      await prisma.order.create({ data: data as never });
+    }
+
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "Pro Unlimited",
+      customerPhone: "0822",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("cap counts only the current calendar month (last month's orders don't count)", async () => {
+    const fx = await setupTenant({ plan: "FREE" });
+    fixtures.push(fx);
+
+    // 300 orders from LAST month — should not count toward this month's cap.
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const orderData = Array.from({ length: 300 }, (_, i) => ({
+      tenantId: fx.tenantId,
+      customerName: `Last-${i}`,
+      customerPhone: "0811",
+      createdAt: lastMonth,
+      status: "PICKED_UP",
+      items: { create: [{ menuItemId: fx.itemAvailable, quantity: 1, unitPrice: 15000 }] },
+    }));
+    for (const data of orderData) {
+      await prisma.order.create({ data: data as never });
+    }
+
+    // This month's first order → 201 (last month's 300 don't block it)
+    const res = await postOrder(fx.slug, {
+      slug: fx.slug,
+      customerName: "New Month",
+      customerPhone: "0822",
+      items: [{ menuItemId: fx.itemAvailable, quantity: 1 }],
+    });
+    expect(res.status).toBe(201);
+  });
+});

@@ -17,7 +17,8 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchSettings, updateSettings } from "@/lib/admin-api";
 import { formatTimeInTimezone, localToUtcHHmm, formatOperatingHours } from "@/lib/time";
 import { nextBoundary } from "@/lib/open";
-import type { TenantSettings } from "@/types/admin";
+import { Badge } from "@/components/ui/badge";
+import type { Plan, TenantSettings } from "@/types/admin";
 
 const HH_MM = /^\d{2}:\d{2}$/;
 
@@ -85,6 +86,11 @@ export default function AdminSettingsPage() {
     maxQueueSize: "20",
   });
   const [loaded, setLoaded] = useState(false);
+  // Monetisation Phase 0 / T5 — plan status display (read-only, issue #229).
+  // plan + contactEmail come from GET /api/admin/settings (T4) and are
+  // display-only here — the PATCH route rejects mutations to plan/isActive.
+  const [plan, setPlan] = useState<Plan>("FREE");
+  const [contactEmail, setContactEmail] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
@@ -114,6 +120,9 @@ export default function AdminSettingsPage() {
         prepTimeBuffer: String(s.prepTimeBuffer ?? 0),
         maxQueueSize: String(s.maxQueueSize ?? 20),
       });
+      // T5 — read-only plan + contactEmail for badge display (issue #229)
+      setPlan(s.plan);
+      setContactEmail(s.contactEmail ?? null);
       setAuthError(false);
       setError(null);
       setLoaded(true);
@@ -181,7 +190,6 @@ export default function AdminSettingsPage() {
         qrisCode: form.qrisCode.trim() || null,
         bankName: form.bankName.trim() || null,
         bankAccountNumber: form.bankAccountNumber.trim() || null,
-        sprintDurationDays: Math.floor(Number(form.sprintDurationDays)) || 1,
         openTime: openUtc,
         closeTime: closeUtc,
         timezone: tz,
@@ -229,8 +237,21 @@ export default function AdminSettingsPage() {
       <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div>
-            <h1 className="text-lg font-bold text-foreground">Pengaturan</h1>
-            <p className="text-xs text-muted-foreground">/{tenantSlug} · QRIS + transfer bank</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-foreground">Pengaturan</h1>
+              {/* Monetisation Phase 0 / T5 — plan status badge (read-only, issue #229) */}
+              <Badge
+                variant={plan === "PRO" ? "default" : "outline"}
+                data-testid="plan-badge"
+                className={plan === "PRO" ? "" : "text-muted-foreground"}
+              >
+                {plan}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              /{tenantSlug} · QRIS + transfer bank
+              {contactEmail ? ` · ${contactEmail}` : ""}
+            </p>
           </div>
         </div>
       </header>
@@ -442,27 +463,24 @@ export default function AdminSettingsPage() {
               </div>
             </section>
 
-            {/* Durasi Sprint */}
+            {/* Retensi Sprint — T11: plan-derived (FREE 1d, PRO 30d) */}
             <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-foreground">Durasi Sprint</h2>
+              <h2 className="text-sm font-semibold text-foreground">Retensi Sprint</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Satu sprint = satu periode retensi order. Board hanya menampilkan order sprint aktif.
+                Riwayat sprint disimpan sesuai paket Anda. Board hanya menampilkan order dari sprint aktif.
               </p>
               <div className="mt-3">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Durasi sprint (hari)
+                  Retensi riwayat sprint
                 </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={90}
-                  value={form.sprintDurationDays}
-                  onChange={(e) => set("sprintDurationDays", e.target.value)}
-                  className="w-32 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Default 1 hari. Berlaku untuk sprint berikutnya.
-                </p>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground">
+                    {plan === "PRO" ? "30 hari" : "1 hari"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Paket {plan} · diatur oleh paket, tidak dapat diubah di sini.
+                  </span>
+                </div>
               </div>
             </section>
 

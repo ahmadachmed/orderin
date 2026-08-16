@@ -4,9 +4,11 @@
  * (items + statusLogs, FIFO by createdAt) — PLAN §2.1/§2.3.
  */
 import { NextRequest } from "next/server";
-import { scoped } from "@/lib/prisma";
+import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { getSprintRetentionCutoff, isSprintRetained } from "@/lib/sprint";
+import { Plan } from "@/lib/plan";
 import { PaymentStatus } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,16 @@ export async function GET(
     },
   });
   if (!sprint) return fail("Sprint not found", 404);
+
+  // T11 (issue #229): retention — a CLOSED sprint whose history expired
+  // (outside the plan's window) is treated as not found, matching the
+  // list route which no longer returns it. OPEN sprints always pass.
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: session.tenantId },
+    select: { plan: true },
+  });
+  const cutoff = getSprintRetentionCutoff(tenant?.plan ?? Plan.FREE);
+  if (!isSprintRetained(sprint, cutoff)) return fail("Sprint not found", 404);
 
   // Omzet sprint (Σ PAID) — on-the-fly from the fetched orders (PLAN §2.3).
   const revenue = sprint.orders
