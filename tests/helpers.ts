@@ -23,7 +23,8 @@ export interface TenantOptions {
   maxQueueSize?: number;
   prepTimeBuffer?: number; // minutes
   sprintDurationDays?: number; // T15 §5.4 — sprint retention period
-  plan?: "FREE" | "PRO"; // T7 — plan-based cap enforcement tests
+  plan?: "FREE" | "PRO"; // T7/T8 — plan-based cap enforcement tests
+  isActive?: boolean; // T8 — soft-disable toggle
 }
 
 export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixture> {
@@ -42,7 +43,7 @@ export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixtu
       sprintDurationDays: opts.sprintDurationDays ?? 1, // T15 §5.4
       // T2: explicitly set plan fields (defaults exist, but be explicit)
       plan: opts.plan ?? "FREE",
-      isActive: true,
+      isActive: opts.isActive ?? true,
     },
   });
   const admin = await prisma.tenantAdmin.create({
