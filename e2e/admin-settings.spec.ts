@@ -63,6 +63,7 @@ test.beforeAll(async ({ request }) => {
     slug,
     username,
     password,
+    contactEmail: `e2e-settings-${stamp}@example.com`,
   }, 201);
 
   const { rows } = await db.query<{ id: string }>(`SELECT id FROM "Tenant" WHERE slug = $1`, [slug]);
@@ -162,11 +163,12 @@ test("Jam Operasional section renders with 6 fields pre-populated from GET", asy
   await expect(section.getByText("Buffer waktu racik (menit)", { exact: true })).toBeVisible();
   await expect(section.getByText("Maks antrean", { exact: true })).toBeVisible();
 
-  // Pre-populated from GET (fresh tenant → page defaults 07:00/21:00,
-  // Asia/Makassar, open, 0, 20).
+  // Pre-populated from GET (fresh tenant → defaults 07:00/21:00 UTC,
+  // Asia/Makassar; #228: inputs show LOCAL time → 07:00 UTC = 15:00 WITA,
+  // 21:00 UTC = 05:00 WITA).
   const f = jamFields(page);
-  await expect(f.openTime).toHaveValue("07:00");
-  await expect(f.closeTime).toHaveValue("21:00");
+  await expect(f.openTime).toHaveValue("15:00");
+  await expect(f.closeTime).toHaveValue("05:00");
   await expect(f.timezone).toHaveValue("Asia/Makassar");
   await expect(f.prepTimeBuffer).toHaveValue("0");
   await expect(f.maxQueueSize).toHaveValue("20");
@@ -177,21 +179,30 @@ test("change openTime + toggle isOpen → save → success → GET returns new v
   await page.goto(`/admin/${shop!.slug}/settings`);
 
   const f = jamFields(page);
-  await f.openTime.fill("08:30");
+  await f.openTime.fill("08:30"); // local WITA → stored UTC 00:30 (#228)
   await f.isOpen.click(); // Buka → Tutup
 
   await page.getByRole("button", { name: "Simpan pengaturan" }).click();
   await expect(page.getByText(/✓ Tersimpan/)).toBeVisible({ timeout: 15_000 });
 
-  // Verify the PATCH actually persisted — GET returns the new values.
+  // Verify the PATCH actually persisted — GET returns the UTC-stored values
+  // (local 08:30 WITA = 00:30 UTC, #228 round-trip).
   const saved = await fetchJamSettings(page.request);
-  expect(saved.openTime).toBe("08:30");
+  expect(saved.openTime).toBe("00:30");
   expect(saved.isOpen).toBe(false);
 
-  // Reload → form re-populates from GET with the saved values.
+  // Reload → form re-populates from GET, converting UTC back to local.
   await page.reload();
   await expect(f.openTime).toHaveValue("08:30");
   await expect(f.isOpen).toHaveAttribute("aria-checked", "false");
+
+  // Restore open state so the later header-toggle test starts from the
+  // fresh-tenant assumption (isOpen=true) — tests share one tenant.
+  await f.isOpen.click(); // Tutup → Buka
+  await page.getByRole("button", { name: "Simpan pengaturan" }).click();
+  await expect(page.getByText(/✓ Tersimpan/)).toBeVisible({ timeout: 15_000 });
+  const restored = await fetchJamSettings(page.request);
+  expect(restored.isOpen).toBe(true);
 });
 
 test("out-of-bounds buffer/queue and empty timezone never persist; timezone shows inline error", async ({ page }) => {
@@ -247,9 +258,12 @@ test("header Buka/Tutup toggle flips isOpen, persists on reload, reflects on set
     "true",
   );
 
-  // PATCH persisted — GET returns isOpen=false.
-  const saved = await fetchJamSettings(page.request);
-  expect(saved.isOpen).toBe(false);
+  // PATCH persisted — GET returns isOpen=false. OpenToggle updates its
+  // aria-pressed optimistically before the PATCH resolves, so poll until
+  // the server state lands (avoids a fetch-vs-PATCH race).
+  await expect
+    .poll(async () => (await fetchJamSettings(page.request)).isOpen)
+    .toBe(false);
 
   // Reload → header reflects persisted state (no full-page flash to Buka).
   await page.reload();
@@ -269,6 +283,7 @@ test("header Buka/Tutup toggle flips isOpen, persists on reload, reflects on set
     "aria-pressed",
     "true",
   );
-  const restored = await fetchJamSettings(page.request);
-  expect(restored.isOpen).toBe(true);
+  await expect
+    .poll(async () => (await fetchJamSettings(page.request)).isOpen)
+    .toBe(true);
 });

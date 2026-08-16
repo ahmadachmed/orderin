@@ -65,6 +65,10 @@ async function postWithRetry(
 }
 
 test.beforeAll(async ({ request }) => {
+  // postWithRetry waits up to 61s per 429 backoff (register is limited to
+  // 3/60s per IP and other spec files share the dev server's window), which
+  // exceeds the default 60s hook budget — give setup room for backoffs.
+  test.setTimeout(180_000);
   await db.connect();
 
   // Register one tenant + widen hours + create the shared menu item at the
@@ -80,6 +84,7 @@ test.beforeAll(async ({ request }) => {
     slug,
     username,
     password,
+    contactEmail: `e2e-pin-${stamp}@example.com`,
   }, 201);
 
   const settingsRes = await request.patch("/api/admin/settings", {

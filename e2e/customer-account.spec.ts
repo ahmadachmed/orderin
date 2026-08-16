@@ -60,6 +60,7 @@ test.beforeAll(async ({ request }) => {
     slug,
     username,
     password,
+    contactEmail: `e2e-akun-${stamp}@example.com`,
   }, 201);
 
   // Widening jam: keep the order step deterministic regardless of run time.

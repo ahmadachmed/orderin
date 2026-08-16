@@ -71,6 +71,7 @@ test.beforeAll(async ({ request }) => {
     slug: langSlug,
     username: `admin${stamp}`,
     password,
+    contactEmail: `e2e-lang-${stamp}@example.com`,
   }, 201);
   const langSettings = await request.patch("/api/admin/settings", {
     data: { openTime: "00:00", closeTime: "23:59", timezone: "" },
@@ -89,6 +90,7 @@ test.beforeAll(async ({ request }) => {
     slug: ovnSlug,
     username: `ovn${stamp}`,
     password,
+    contactEmail: `e2e-ovn-${stamp}@example.com`,
   }, 201);
   const ovnSettings = await request.patch("/api/admin/settings", {
     data: { openTime: "10:00", closeTime: "20:00", timezone: "Asia/Jakarta" },
@@ -102,6 +104,7 @@ test.beforeAll(async ({ request }) => {
     slug: daySlug,
     username: `day${stamp}`,
     password,
+    contactEmail: `e2e-day-${stamp}@example.com`,
   }, 201);
   const daySettings = await request.patch("/api/admin/settings", {
     data: { openTime: "00:00", closeTime: "10:00", timezone: "Asia/Jakarta" },
@@ -287,6 +290,9 @@ test("menu CRUD uses Indonesian labels throughout", async ({ page }) => {
 
 test("landing card shows the 'besok' marker for an overnight tenant", async ({ page }) => {
   await page.goto("/");
+  // T29-A: the landing grid previews max 5 kedai — search first so the card
+  // is deterministic regardless of how many tenants the DB has accumulated.
+  await page.locator("#shop-search").fill(`E2E Overnight Kedai`);
   const card = page.locator("li", { hasText: `E2E Overnight Kedai` });
   // 10:00–20:00 UTC → 17:00–03:00 Asia/Jakarta → wraps past midnight.
   await expect(card.getByText(`Buka 17:00\u201303:00 besok`)).toBeVisible();
@@ -294,6 +300,7 @@ test("landing card shows the 'besok' marker for an overnight tenant", async ({ p
 
 test("landing card falls back to raw UTC when timezone is empty (no marker)", async ({ page }) => {
   await page.goto("/");
+  await page.locator("#shop-search").fill(`E2E Bahasa Kedai`);
   const card = page.locator("li", { hasText: `E2E Bahasa Kedai` });
   await expect(card.getByText("Buka 00:00–23:59 UTC")).toBeVisible();
   await expect(card.getByText(/besok/)).toHaveCount(0);
@@ -301,6 +308,7 @@ test("landing card falls back to raw UTC when timezone is empty (no marker)", as
 
 test("landing card shows no 'besok' marker for a same-day tenant", async ({ page }) => {
   await page.goto("/");
+  await page.locator("#shop-search").fill(`E2E SameDay Kedai`);
   const card = page.locator("li", { hasText: `E2E SameDay Kedai` });
   // 00:00–10:00 UTC → 07:00–17:00 Asia/Jakarta → same day.
   await expect(card.getByText(`Buka 07:00\u201317:00`)).toBeVisible();

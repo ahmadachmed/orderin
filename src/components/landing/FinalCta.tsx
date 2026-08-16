@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import ScrollToSearch from "@/components/landing/ScrollToSearch";
 
 /**
  * Final CTA (T29, konsep landingpage2.html): "Siap untuk kopimu berikutnya?"
@@ -26,7 +27,7 @@ export function FinalCta() {
             size="lg"
             className="h-auto rounded-full px-10 py-4 text-lg font-bold shadow-[0_0_20px_rgba(232,127,36,0.3)]"
           >
-            <a href="#search-box">Pesan Sekarang</a>
+            <ScrollToSearch>Pesan Sekarang</ScrollToSearch>
           </Button>
         </div>
       </div>
