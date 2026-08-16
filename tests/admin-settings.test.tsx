@@ -348,3 +348,57 @@ describe("AdminSettingsPage — Jam Operasional (T25-10)", () => {
     expect(screen.queryByText(/Tersimpan/)).not.toBeInTheDocument();
   });
 });
+
+// ── Monetisation Phase 0 / T5 — plan status badge (issue #229) ──────────────
+
+describe("AdminSettingsPage — Plan badge (T5, issue #229)", () => {
+  it("renders a FREE badge with outline variant when plan is FREE", async () => {
+    await renderPage({ ...DEFAULT_SETTINGS, plan: "FREE" });
+    const badge = screen.getByTestId("plan-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent("FREE");
+    expect(badge.className).toContain("text-muted-foreground");
+  });
+
+  it("renders a PRO badge with default (solid) variant when plan is PRO", async () => {
+    await renderPage({ ...DEFAULT_SETTINGS, plan: "PRO" });
+    const badge = screen.getByTestId("plan-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent("PRO");
+    expect(badge.className).not.toContain("text-muted-foreground");
+  });
+
+  it("badge text reflects the plan value from GET /api/admin/settings", async () => {
+    await renderPage({ ...DEFAULT_SETTINGS, plan: "FREE" });
+    expect(screen.getByTestId("plan-badge")).toHaveTextContent("FREE");
+  });
+
+  it("renders PRO badge text when plan is PRO (distinct from FREE)", async () => {
+    await renderPage({ ...DEFAULT_SETTINGS, plan: "PRO" });
+    expect(screen.getByTestId("plan-badge")).toHaveTextContent("PRO");
+  });
+
+  it("shows contactEmail in the subtitle when provided", async () => {
+    await renderPage({
+      ...DEFAULT_SETTINGS,
+      contactEmail: "admin@kopi-senja.id",
+    });
+    expect(
+      screen.getByText(/admin@kopi-senja\.id/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show contactEmail in the subtitle when null", async () => {
+    await renderPage({ ...DEFAULT_SETTINGS, contactEmail: null });
+    const subtitle = screen.getByText(/QRIS \+ transfer bank/);
+    expect(subtitle.textContent).not.toContain("admin@");
+  });
+
+  it("does not render any upgrade button or payment link (read-only, Phase 3 out of scope)", async () => {
+    await renderPage({ ...DEFAULT_SETTINGS, plan: "FREE" });
+    expect(screen.queryByRole("button", { name: /upgrade/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /bayar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /pro/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /upgrade/i })).not.toBeInTheDocument();
+  });
+});
