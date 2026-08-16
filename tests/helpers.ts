@@ -64,11 +64,11 @@ export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixtu
 
 /** Delete every row belonging to the fixture tenant (children first — no FK cascade). */
 export async function cleanupTenant(tenantId: string): Promise<void> {
-  const orders = await prisma.order.findMany({ where: { tenantId }, select: { id: true } });
-  for (const o of orders) {
-    await prisma.orderStatusLog.deleteMany({ where: { orderId: o.id } });
-    await prisma.orderItem.deleteMany({ where: { orderId: o.id } });
-  }
+  // Bulk-delete children via the to-one relation filter instead of looping
+  // per order — cap tests seed 300+ orders, so the loop was 600+ sequential
+  // queries per fixture and blew vitest's hookTimeout (10s default).
+  await prisma.orderStatusLog.deleteMany({ where: { order: { tenantId } } });
+  await prisma.orderItem.deleteMany({ where: { order: { tenantId } } });
   await prisma.order.deleteMany({ where: { tenantId } });
   await prisma.menuItem.deleteMany({ where: { tenantId } });
   await prisma.tenantAdmin.deleteMany({ where: { tenantId } });
