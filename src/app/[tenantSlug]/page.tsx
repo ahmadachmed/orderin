@@ -6,6 +6,7 @@ import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
 import { formatOperatingHours } from "@/lib/time";
 import { effectiveOpen } from "@/lib/open";
 import { getCustomerSession } from "@/lib/customer-auth";
+import { can } from "@/lib/plan";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
@@ -152,6 +153,19 @@ export default async function ShopMenuPage({
           isOpen={open}
           closedMessage={closedMessage}
         />
+
+        {/* T10 (issue #229): "Powered by HeadwayBrew" badge — shown only on
+            FREE plan shopfronts. PRO tenants have showBadge=false in
+            PLAN_FEATURES (lib/plan.ts). This is the distribution channel:
+            every FREE order page carries the badge. */}
+        {can(tenant.plan, "showBadge") && (
+          <p className="pt-2 text-center text-[11px] text-muted-foreground/60">
+            Powered by{" "}
+            <span className="font-medium text-muted-foreground">
+              HeadwayBrew
+            </span>
+          </p>
+        )}
       </div>
     </main>
   );
