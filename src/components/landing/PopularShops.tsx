@@ -70,13 +70,64 @@ export async function getPopularShops(
   });
 }
 
+/** Buka/Tutup badge — layout per konsep landingpage2.html, token codebase. */
+function StatusBadge({
+  open,
+  size,
+}: {
+  open: boolean;
+  size: "lg" | "sm";
+}) {
+  return (
+    <span
+      className={`inline-block border font-bold uppercase tracking-wider ${
+        size === "lg"
+          ? "rounded-lg px-4 py-2 text-sm"
+          : "rounded-md px-3 py-1 text-xs"
+      } ${
+        open
+          ? "border-primary/20 bg-primary/10 text-primary"
+          : "border-border bg-muted text-muted-foreground"
+      }`}
+    >
+      {open ? "Buka" : "Tutup"}
+    </span>
+  );
+}
+
+/** Watermark rank — konsep landingpage2.html (big ghost numeral per card). */
+function RankWatermark({
+  rank,
+  size,
+}: {
+  rank: number;
+  size: "hero" | "square" | "inline";
+}) {
+  const cls =
+    size === "hero"
+      ? "absolute -right-10 -bottom-10 text-9xl"
+      : size === "square"
+        ? "absolute -right-4 -bottom-4 text-7xl"
+        : "text-4xl";
+  return (
+    <span
+      aria-hidden
+      className={`${cls} select-none font-extrabold tabular-nums text-primary/5`}
+    >
+      #{rank}
+    </span>
+  );
+}
+
 /**
  * Kedai Paling Populer section (T29-2, konsep landingpage2.html).
  *
- * 12-col grid: rank #1 spans half (md:col-span-6, label "Paling Diminati"),
- * #2/#3 take md:col-span-3 each. Every card links to /[slug]; the open badge
- * goes through the shared `effectiveOpen` (F8 — do NOT fork open-state
- * logic). Empty state D4: <3 shops render as-is, 0 shops → section hidden.
+ * 12-col grid with auto-rows: rank #1 spans 8 (hero card, label
+ * "Paling Diminati", big ghost #1 watermark), #2 spans 4 (square, ghost #2),
+ * #3 spans 12 (wide row, inline #3). Every card links to /[slug]; the open
+ * badge goes through the shared `effectiveOpen` (F8 — do NOT fork
+ * open-state logic). Empty state D4: <3 shops render as-is, 0 shops →
+ * section hidden.
  */
 export default function PopularShops({ shops }: { shops: PopularShop[] }) {
   if (shops.length === 0) return null;
@@ -84,65 +135,118 @@ export default function PopularShops({ shops }: { shops: PopularShop[] }) {
   return (
     <section
       id="popular"
-      className="bg-muted/50 px-6 py-16 md:px-12 md:py-20"
+      className="bg-muted/50 px-6 py-20 md:px-12"
     >
       <div className="mx-auto max-w-[1200px]">
-        <h2 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
-          Kedai Paling Populer
-        </h2>
-        <p className="mt-2 text-muted-foreground">
-          Berdasarkan volume pesanan dalam 30 hari terakhir.
-        </p>
+        <div className="mb-10 text-center md:text-left">
+          <h2 className="mb-2 text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
+            Kedai Paling Populer
+          </h2>
+          <p className="text-muted-foreground">
+            Berdasarkan volume pesanan dalam 30 hari terakhir.
+          </p>
+        </div>
 
-        <div className="mt-10 grid grid-cols-12 gap-4 md:gap-6">
+        <div className="grid auto-rows-[minmax(140px,auto)] grid-cols-1 gap-6 md:grid-cols-12">
           {shops.map((s, i) => {
-            const isTop = i === 0;
             const open = effectiveOpen({
               isOpen: s.isOpen,
               openTime: s.openTime,
               closeTime: s.closeTime,
               isOpenOverrideUntil: s.isOpenOverrideUntil,
             });
+            const rank = i + 1;
+            const isTop = i === 0;
+            const isWide = i >= 2;
+
+            // Konsep landingpage2.html: #1 = col-span-8 (hero), #2 = col-span-4
+            // (square), #3+ = col-span-12 (wide row).
+            const span = isTop ? "md:col-span-8" : isWide ? "md:col-span-12" : "md:col-span-4";
+
+            const base =
+              "group relative overflow-hidden rounded-3xl border border-border bg-card transition-colors hover:border-primary/50";
+
+            if (isWide) {
+              return (
+                <Link
+                  key={s.slug}
+                  href={`/${s.slug}`}
+                  className={`${base} ${span} flex flex-row items-center justify-between gap-6 p-6 opacity-80 transition-all hover:opacity-100 md:p-8`}
+                >
+                  <div className="relative z-10 flex items-center gap-6">
+                    <RankWatermark rank={rank} size="inline" />
+                    <div className="flex flex-col">
+                      <h3 className="text-xl font-bold text-foreground transition-colors group-hover:text-primary">
+                        {s.name}
+                      </h3>
+                      {s.address ? (
+                        <p className="text-sm text-muted-foreground">
+                          {s.address}
+                        </p>
+                      ) : null}
+                      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {s.orderCount} pesanan
+                      </p>
+                    </div>
+                  </div>
+                  <StatusBadge open={open} size="sm" />
+                </Link>
+              );
+            }
+
+            if (isTop) {
+              return (
+                <Link
+                  key={s.slug}
+                  href={`/${s.slug}`}
+                  className={`${base} ${span} flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center`}
+                >
+                  <RankWatermark rank={rank} size="hero" />
+                  <div className="relative z-10 flex flex-col">
+                    <span className="mb-2 text-sm font-bold uppercase tracking-widest text-primary">
+                      Paling Diminati
+                    </span>
+                    <h3 className="mb-2 text-3xl font-bold text-foreground transition-colors group-hover:text-primary">
+                      {s.name}
+                    </h3>
+                    {s.address ? (
+                      <p className="text-base text-muted-foreground">
+                        {s.address}
+                      </p>
+                    ) : null}
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {s.orderCount} pesanan
+                    </p>
+                  </div>
+                  <div className="relative z-10 self-start md:self-center">
+                    <StatusBadge open={open} size="lg" />
+                  </div>
+                </Link>
+              );
+            }
+
+            // #2 — square card, rank watermark bottom-right, badge bottom-left.
             return (
               <Link
                 key={s.slug}
                 href={`/${s.slug}`}
-                className={`group col-span-12 rounded-2xl border border-border bg-card p-6 transition hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 ${
-                  isTop ? "md:col-span-6" : "md:col-span-3"
-                }`}
+                className={`${base} ${span} flex flex-col justify-between p-8`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                      isTop
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {isTop ? "Paling Diminati" : `Peringkat ${i + 1}`}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                      open
-                        ? "border-success/20 bg-success/10 text-success"
-                        : "border-border bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {open ? "Buka" : "Tutup"}
-                  </span>
-                </div>
-
-                <h3 className="mt-4 truncate text-lg font-extrabold text-foreground group-hover:text-primary">
-                  {s.name}
-                </h3>
-                {s.address ? (
-                  <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {s.address}
+                <RankWatermark rank={rank} size="square" />
+                <div className="relative z-10 mb-6 flex flex-col">
+                  <h3 className="mb-2 text-2xl font-bold text-foreground transition-colors group-hover:text-primary">
+                    {s.name}
+                  </h3>
+                  {s.address ? (
+                    <p className="text-sm text-muted-foreground">{s.address}</p>
+                  ) : null}
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {s.orderCount} pesanan
                   </p>
-                ) : null}
-                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {s.orderCount} pesanan
-                </p>
+                </div>
+                <div className="relative z-10 mt-auto self-start">
+                  <StatusBadge open={open} size="sm" />
+                </div>
               </Link>
             );
           })}
