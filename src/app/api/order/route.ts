@@ -8,8 +8,8 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { effectiveOpen } from "@/lib/open";
-import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
-import { getLimit } from "@/lib/plan";
+import { fetchQueue, etaForNewOrder, withBuffer, isQueueFull } from "@/lib/queue";
+import { effectiveMaxQueueSize, getLimit } from "@/lib/plan";
 import { PaymentMethod } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
@@ -107,8 +107,12 @@ export async function POST(req: NextRequest) {
       }
 
       // Order cap (PLAN §4.3 / issue #6): refuse once the FIFO queue is full.
+      // T9 (issue #229): the cap is the plan-aware effectiveMaxQueueSize —
+      // min(tenant.maxQueueSize, planCeiling). FREE is hard-capped at 20
+      // even if the tenant column says higher; PRO is capped at 100.
       const queue = await fetchQueue(tx, tenant.id);
-      if (queue.length >= tenant.maxQueueSize) {
+      const cap = effectiveMaxQueueSize(tenant);
+      if (isQueueFull(queue.length, cap)) {
         throw new HttpError(429, "Order queue is full — please try again in a few minutes");
       }
 

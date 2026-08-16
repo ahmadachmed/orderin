@@ -86,7 +86,13 @@ export function etaForNewOrder(queue: readonly QueueEntry[], ownPrepSeconds: num
   return sortQueue(queue).reduce((acc, e) => acc + e.prepSeconds, 0) + ownPrepSeconds;
 }
 
-/** Order cap check (PLAN §4.3): queue is full at or beyond maxQueueSize. */
+/**
+ * Order cap check (PLAN §4.3): queue is full at or beyond maxQueueSize.
+ *
+ * T9 (issue #229): callers should pass `effectiveMaxQueueSize(tenant)` as
+ * the `maxQueueSize` argument — not the raw `tenant.maxQueueSize` column —
+ * so the plan ceiling (FREE: 20, PRO: 100) is enforced.
+ */
 export function isQueueFull(activeCount: number, maxQueueSize: number): boolean {
   return activeCount >= maxQueueSize;
 }
