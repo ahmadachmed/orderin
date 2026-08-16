@@ -14,6 +14,7 @@ import { fetchOrders, updateOrder } from "@/lib/admin-api";
 import type { Order, OrderStatus } from "@/types/admin";
 import { STATUS_FLOW, STATUS_LABELS, canAdvanceToBrewing } from "@/types/admin";
 import StatusColumn from "@/components/admin/StatusColumn";
+import UpsellBanner from "@/components/admin/UpsellBanner";
 
 export default function AdminDashboardPage() {
   const params = useParams<{ tenantSlug: string }>();
@@ -213,6 +214,8 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </header>
+
+      <UpsellBanner />
 
       <main className="mx-auto max-w-7xl p-4">
         {error && (
