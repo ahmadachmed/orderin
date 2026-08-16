@@ -372,6 +372,67 @@ describe("PATCH /api/admin/settings — SETTINGS-03 HH:mm validation", () => {
   });
 });
 
+// ── Monetisation Phase 0 / T4 — plan fields in settings API (issue #229) ────
+// contactEmail is editable; plan, planExpiresAt, and isActive are read-only
+// (rejected with 400). GET returns all four fields (already verified by T1's
+// SETTINGS_SELECT). These tests exercise the PATCH-side enforcement.
+describe("PATCH /api/admin/settings — T4 plan field enforcement", () => {
+  let fx: TenantFixture;
+  beforeAll(async () => {
+    fx = await setupTenant();
+    fixtures.push(fx);
+    tokenStore.current = createSession(fx.tenantId, fx.adminId);
+  });
+
+  it("PATCH contactEmail with a valid string → 200, stored, returned", async () => {
+    const res = await patchTenantSettings(fx.slug, {
+      contactEmail: "billing@kopisenja.test",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.contactEmail).toBe("billing@kopisenja.test");
+    const tenant = await prisma.tenant.findUnique({ where: { slug: fx.slug } });
+    expect(tenant?.contactEmail).toBe("billing@kopisenja.test");
+  });
+
+  it("PATCH contactEmail null → 200, clears the field", async () => {
+    // Set first, then null clears it.
+    await patchTenantSettings(fx.slug, { contactEmail: "temp@kopisenja.test" });
+    const res = await patchTenantSettings(fx.slug, { contactEmail: null });
+    expect(res.status).toBe(200);
+    const tenant = await prisma.tenant.findUnique({ where: { slug: fx.slug } });
+    expect(tenant?.contactEmail).toBeNull();
+  });
+
+  it("PATCH plan → 400 'plan is read-only'", async () => {
+    const res = await patchTenantSettings(fx.slug, { plan: "PRO" });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("plan is read-only");
+    // Verify DB unchanged — still FREE (default)
+    const tenant = await prisma.tenant.findUnique({ where: { slug: fx.slug } });
+    expect(tenant?.plan).toBe("FREE");
+  });
+
+  it("PATCH isActive → 400 'isActive is read-only'", async () => {
+    const res = await patchTenantSettings(fx.slug, { isActive: false });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("isActive is read-only");
+    const tenant = await prisma.tenant.findUnique({ where: { slug: fx.slug } });
+    expect(tenant?.isActive).toBe(true);
+  });
+
+  it("PATCH planExpiresAt → 400 'planExpiresAt is read-only'", async () => {
+    const res = await patchTenantSettings(fx.slug, {
+      planExpiresAt: new Date().toISOString(),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("planExpiresAt is read-only");
+  });
+});
+
 describe("POST /api/order — ORDER-07 duplicate menuItemId aggregation", () => {
   let fx: TenantFixture;
   beforeAll(async () => {

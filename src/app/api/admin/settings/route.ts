@@ -50,7 +50,14 @@ const STRING_FIELDS = [
   "qrisCode",
   "bankAccountNumber",
   "bankName",
+  // Monetisation Phase 0 / T4 — contactEmail editable (issue #229)
+  "contactEmail",
 ] as const;
+
+// Monetisation Phase 0 / T4 — plan & isActive are read-only via settings
+// API (issue #229). They can only be mutated by internal/admin tooling or
+// Phase 3 billing, never by the tenant's own PATCH request.
+const READONLY_FIELDS = ["plan", "isActive", "planExpiresAt"] as const;
 
 export async function GET() {
   const session = await getSession();
@@ -131,6 +138,15 @@ export async function PATCH(req: NextRequest) {
   }
   if (body.closeTime !== undefined && body.closeTime !== null && !HH_MM.test(body.closeTime as string)) {
     return fail("closeTime must be HH:mm format", 400);
+  }
+
+  // Monetisation Phase 0 / T4 — reject attempts to mutate read-only plan
+  // fields (issue #229). plan, planExpiresAt, and isActive are set by
+  // internal/billing tooling only, never by the tenant's own PATCH.
+  for (const field of READONLY_FIELDS) {
+    if (body[field] !== undefined) {
+      return fail(`${field} is read-only`, 400);
+    }
   }
 
   if (Object.keys(data).length === 0) return fail("Nothing to update", 400);
