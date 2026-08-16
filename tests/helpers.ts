@@ -23,6 +23,7 @@ export interface TenantOptions {
   maxQueueSize?: number;
   prepTimeBuffer?: number; // minutes
   sprintDurationDays?: number; // T15 §5.4 — sprint retention period
+  plan?: "FREE" | "PRO"; // T7 — plan-based cap enforcement tests
 }
 
 export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixture> {
@@ -40,7 +41,7 @@ export async function setupTenant(opts: TenantOptions = {}): Promise<TenantFixtu
       prepTimeBuffer: opts.prepTimeBuffer ?? 5,
       sprintDurationDays: opts.sprintDurationDays ?? 1, // T15 §5.4
       // T2: explicitly set plan fields (defaults exist, but be explicit)
-      plan: "FREE",
+      plan: opts.plan ?? "FREE",
       isActive: true,
     },
   });
