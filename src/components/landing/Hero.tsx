@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import ShopSearchForm, { type ShopTenant } from "@/components/ShopSearchForm";
+import ScrollToSearch from "@/components/landing/ScrollToSearch";
 
 interface HeroProps {
   openCount: number;
@@ -57,7 +58,7 @@ export function Hero({ openCount, tenants }: HeroProps) {
               size="lg"
               className="h-auto rounded-full px-8 py-3.5 font-bold shadow-lg shadow-primary/20"
             >
-              <a href="#search-box">Pesan Sekarang</a>
+              <ScrollToSearch>Pesan Sekarang</ScrollToSearch>
             </Button>
             <Button
               asChild

@@ -84,3 +84,21 @@
       Consolas, monospace;
   }
 }
+
+/* T29-3 (D5) — scroll-to-search glow. Prefix `search-*` so these can never
+   collide with framework/shadcn keyframes or utility classes. Applied to
+   #search-box by ScrollToSearch on CTA click; 2.4s one-shot animation. */
+@keyframes search-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0.35);
+  }
+}
+
+.search-highlight {
+  animation: search-glow 2.4s ease-in-out;
+  border-radius: 1rem;
+}

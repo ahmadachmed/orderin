@@ -51,6 +51,10 @@ async function postWithRetry(
 }
 
 test.beforeAll(async ({ request }) => {
+  // postWithRetry waits up to 61s per 429 backoff (register is limited to
+  // 3/60s per IP and other spec files share the dev server's window), which
+  // exceeds the default 60s hook budget — give setup room for backoffs.
+  test.setTimeout(180_000);
   // Register one tenant at the API level (rate-limited, hence postWithRetry).
   await postWithRetry(request, "/api/register", {
     name: shopName,

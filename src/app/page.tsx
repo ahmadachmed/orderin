@@ -9,6 +9,8 @@ import { OwnerCta } from "@/components/landing/OwnerCta";
 import { FinalCta } from "@/components/landing/FinalCta";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { Button } from "@/components/ui/button";
+import PopularShops, { getPopularShops } from "@/components/landing/PopularShops";
+import ScrollToSearch from "@/components/landing/ScrollToSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,10 @@ export default async function Home() {
     0,
   );
 
+  // T29-2 / D3 — Kedai Paling Populer: server-side (RSC, no new endpoint).
+  // Top 3 tenants by non-CANCELLED order volume in the last 30 days.
+  const popularShops = await getPopularShops(prisma);
+
   return (
     <div className="relative min-h-screen w-full bg-background">
       {/* Sticky header (D11): logo + nav + CTA Pesan Sekarang + Daftar Kedai */}
@@ -49,12 +55,9 @@ export default async function Home() {
         <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-6 md:px-12">
           <Logo />
           <nav className="hidden items-center gap-8 md:flex">
-            <Link
-              href="#search-box"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <ScrollToSearch className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
               Pesan
-            </Link>
+            </ScrollToSearch>
             <Link
               href="#how-it-works"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -80,7 +83,7 @@ export default async function Home() {
               size="lg"
               className="hidden h-auto rounded-full px-5 py-2.5 text-sm font-bold md:inline-flex"
             >
-              <a href="#search-box">Pesan Sekarang</a>
+              <ScrollToSearch>Pesan Sekarang</ScrollToSearch>
             </Button>
           </div>
         </div>
@@ -90,21 +93,9 @@ export default async function Home() {
         <Hero openCount={openCount} tenants={tenants} />
         <HowItWorks />
 
-        {/* T29-B: Kedai Paling Populer — data real (PopularShops) menyusul.
-            D4: kosong → section disembunyikan oleh T29-B. */}
-        <section
-          id="popular"
-          className="bg-muted/50 px-6 py-16 md:px-12 md:py-20"
-        >
-          <div className="mx-auto max-w-[1200px]">
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
-              Kedai Paling Populer
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Berdasarkan volume pesanan dalam 30 hari terakhir.
-            </p>
-          </div>
-        </section>
+        {/* T29-2 — Kedai Paling Populer (data real, server-side). D4:
+            <3 tampil seadanya, 0 → section disembunyikan (null). */}
+        <PopularShops shops={popularShops} />
 
         <Features />
         <OwnerCta />
