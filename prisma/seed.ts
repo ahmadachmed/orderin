@@ -14,7 +14,11 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   const tenant = await prisma.tenant.upsert({
     where: { slug: "kopi-senja" },
-    update: {},
+    update: {
+      // T2: ensure plan fields are explicitly set on existing seed tenant
+      plan: "FREE",
+      isActive: true,
+    },
     create: {
       slug: "kopi-senja",
       name: "Kopi Senja Makassar",
@@ -25,6 +29,9 @@ async function main() {
       closeTime: "21:00",
       timezone: "Asia/Makassar",
       maxQueueSize: 20,
+      // T2: explicitly set plan fields (defaults exist, but be explicit)
+      plan: "FREE",
+      isActive: true,
     },
   });
 

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { fetchQueue, etaForNewOrder, withBuffer } from "@/lib/queue";
 import { formatOperatingHours } from "@/lib/time";
 import { effectiveOpen } from "@/lib/open";
+import { getCustomerSession } from "@/lib/customer-auth";
 import { MenuItemView } from "@/types";
 import QueueIndicator from "@/components/QueueIndicator";
 import OrderForm from "@/components/OrderForm";
@@ -68,6 +69,12 @@ export default async function ShopMenuPage({
   // else operating-hours check. (PR #208's toggle-authoritative model was
   // superseded — see issue #207.)
   const open = effectiveOpen(tenant);
+  // Hide the "Lacak Pesanan" button when the customer is logged in — they
+  // can access orders via history /account/orders instead (issue #231).
+  // Same session probe used by OrderForm's /api/customer/me, but called
+  // server-side here since this is a server component (no self-fetch).
+  const session = await getCustomerSession();
+  const isLoggedIn = Boolean(session);
   // T25-5: operating hours in the tenant's timezone (default Asia/Jakarta
   // when unset), with the "besok" marker when the range wraps past midnight.
   const timezone = tenant.timezone || "Asia/Jakarta";
@@ -110,8 +117,10 @@ export default async function ShopMenuPage({
             >
               {open ? "Buka" : "Tutup"}
             </span>
-            {/* T25 ITEM 1 (issue #167): manual order lookup entry point. */}
-            <OrderLookupForm tenantSlug={tenantSlug} />
+            {/* T25 ITEM 1 (issue #167): manual order lookup entry point.
+                Hidden for logged-in customers — they access orders via
+                /account/orders instead (issue #231). */}
+            {!isLoggedIn ? <OrderLookupForm tenantSlug={tenantSlug} /> : null}
             <Link
               href={`/${tenant.slug}/account/orders`}
               aria-label="Riwayat pesanan"
