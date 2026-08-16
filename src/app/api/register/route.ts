@@ -11,6 +11,7 @@ import { hashPassword } from "@/lib/password";
 import { createSession, sessionCookie } from "@/lib/auth";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
   const body = await readJson(req);
@@ -21,22 +22,26 @@ export async function POST(req: NextRequest) {
     typeof body.slug === "string" ? body.slug.trim().toLowerCase() : "";
   const username = typeof body.username === "string" ? body.username.trim() : "";
   const password = typeof body.password === "string" ? body.password : "";
+  const contactEmail =
+    typeof body.contactEmail === "string" ? body.contactEmail.trim() : "";
 
-  if (!name || !slug || !username || !password) {
-    return fail("name, slug, username, password required", 400);
+  if (!name || !slug || !username || !password || !contactEmail) {
+    return fail("name, slug, username, password, contactEmail required", 400);
   }
   if (name.length > 100) return fail("Nama kedai maksimal 100 karakter", 400);
   if (slug.length < 3 || slug.length > 50) return fail("Slug harus 3–50 karakter", 400);
   if (!SLUG_RE.test(slug)) return fail("Slug hanya boleh huruf kecil, angka, dan dash", 400);
   if (username.length > 50) return fail("Username maksimal 50 karakter", 400);
   if (password.length < 6) return fail("Password minimal 6 karakter", 400);
+  if (!EMAIL_RE.test(contactEmail))
+    return fail("Format email tidak valid", 400);
 
   const existing = await db.tenant.findUnique({ where: { slug } });
   if (existing) return fail("Slug sudah dipakai", 409);
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const tenant = await tx.tenant.create({ data: { name, slug } });
+      const tenant = await tx.tenant.create({ data: { name, slug, contactEmail } });
       const admin = await tx.tenantAdmin.create({
         data: {
           tenantId: tenant.id,

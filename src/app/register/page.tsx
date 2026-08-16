@@ -23,6 +23,7 @@ function suggestSlug(name: string): string {
 }
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function checkSlug(slug: string): Promise<boolean> {
   const res = await fetch(`/api/slug-check?slug=${encodeURIComponent(slug)}`);
@@ -36,6 +37,7 @@ export default function RegisterPage() {
   const [shopName, setShopName] = useState("");
   const [slug, setSlug] = useState("");
   const [username, setUsername] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
@@ -91,13 +93,17 @@ export default function RegisterPage() {
       setError(matchError);
       return;
     }
+    if (!EMAIL_RE.test(contactEmail)) {
+      setError("Format email tidak valid");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: shopName, slug, username, password }),
+        body: JSON.stringify({ name: shopName, slug, username, contactEmail, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -173,6 +179,20 @@ export default function RegisterPage() {
             autoComplete="username"
             className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-ring focus:outline-none"
           />
+        </label>
+
+        <label className="mt-3 block text-sm font-medium text-foreground">
+          Email Kontak
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            required
+            autoComplete="email"
+            placeholder="kedai@example.com"
+            className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-ring focus:outline-none"
+          />
+          <span className="mt-1 text-xs text-muted-foreground">Email untuk notifikasi penting</span>
         </label>
 
         <label className="mt-3 block text-sm font-medium text-foreground">
