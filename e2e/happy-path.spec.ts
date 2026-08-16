@@ -57,6 +57,7 @@ test.beforeAll(async ({ request }) => {
     slug,
     username,
     password,
+    contactEmail: `e2e-${stamp}@example.com`,
   }, 201);
 
   // Keep the order step deterministic: force operating hours to all-day.
