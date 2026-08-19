@@ -12,6 +12,7 @@ import { ok, fail, readJson } from "@/lib/api";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { hashPassword } from "@/lib/password";
 import { createCustomerSession, customerSessionCookie } from "@/lib/customer-auth";
+import { isValidSlug, NAME_MAX, PHONE_MAX, hasLengthAtMost } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,12 @@ export async function POST(req: NextRequest) {
   if (!name || !phone || !password || !slug) {
     return fail("name, phone, password, slug are required", 400);
   }
+  // Issue #252: format + length guards before any DB work.
+  if (!isValidSlug(slug)) return fail("Invalid slug format", 400);
+  if (!hasLengthAtMost(name, NAME_MAX))
+    return fail(`name maksimal ${NAME_MAX} karakter`, 400);
+  if (!hasLengthAtMost(phone, PHONE_MAX))
+    return fail(`phone maksimal ${PHONE_MAX} karakter`, 400);
   if (password.length < 6) {
     return fail("Password minimal 6 karakter", 400);
   }

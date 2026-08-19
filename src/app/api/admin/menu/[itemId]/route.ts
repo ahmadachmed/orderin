@@ -8,6 +8,7 @@ import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, HttpError, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { parseMenuFields } from "@/lib/menu-fields";
+import { isValidUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export async function PATCH(
   const { itemId } = await params;
   const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
+
+  // Issue #252: non-UUID itemId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(itemId)) return fail("Menu item not found", 404);
 
   const body = await readJson(req);
   if (!body) return fail("Invalid JSON body", 400);
@@ -61,6 +65,9 @@ export async function DELETE(
   const { itemId } = await params;
   const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
+
+  // Issue #252: non-UUID itemId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(itemId)) return fail("Menu item not found", 404);
 
   try {
     const db = scoped(session.tenantId);

@@ -8,6 +8,7 @@ import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail, readJson } from "@/lib/api";
 import { verifyPassword } from "@/lib/password";
 import { createSession, sessionCookie, clearSessionCookie, getSession } from "@/lib/auth";
+import { isValidSlug } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
   const body = await readJson(req);
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
   const username = typeof body.username === "string" ? body.username : "";
   const password = typeof body.password === "string" ? body.password : "";
   if (!slug || !username || !password) return fail("slug, username, password required", 400);
+  // Issue #252: reject malformed slugs before the DB lookup.
+  if (!isValidSlug(slug)) return fail("Invalid slug format", 400);
 
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Invalid credentials", 401);

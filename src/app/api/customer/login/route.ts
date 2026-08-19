@@ -12,6 +12,7 @@ import { ok, fail, readJson } from "@/lib/api";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyPassword } from "@/lib/password";
 import { createCustomerSession, customerSessionCookie } from "@/lib/customer-auth";
+import { isValidSlug, PHONE_MAX, hasLengthAtMost } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,10 @@ export async function POST(req: NextRequest) {
   if (!phone || !password || !slug) {
     return fail("phone, password, slug are required", 400);
   }
+  // Issue #252: format guards before any DB work.
+  if (!isValidSlug(slug)) return fail("Invalid slug format", 400);
+  if (!hasLengthAtMost(phone, PHONE_MAX))
+    return fail(`phone maksimal ${PHONE_MAX} karakter`, 400);
 
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Tenant not found", 404);

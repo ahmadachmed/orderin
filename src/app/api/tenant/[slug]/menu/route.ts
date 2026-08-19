@@ -7,6 +7,7 @@ import { NextRequest } from "next/server";
 import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { effectiveOpen } from "@/lib/open";
+import { isValidSlug } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,10 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+
+  // Issue #252: reject malformed slugs before they reach the DB.
+  if (!isValidSlug(slug)) return fail("Invalid slug format", 400);
+
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
   if (!tenant) return fail("Tenant not found", 404);
 
