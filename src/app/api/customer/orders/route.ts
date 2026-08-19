@@ -17,7 +17,10 @@ export async function GET() {
       status: true,
       createdAt: true,
       items: {
+        // Deterministic summary order (issue #252): nested-create row order
+        // is not guaranteed, so sort by name.
         include: { menuItem: { select: { name: true } } },
+        orderBy: { menuItem: { name: "asc" } },
       },
     },
     take: 50,

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, HttpError } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { closeSprint } from "@/lib/sprint";
+import { isValidUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,9 @@ export async function POST(
   const { sprintId } = await params;
   const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
+
+  // Issue #252: non-UUID sprintId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(sprintId)) return fail("Sprint not found", 404);
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: session.tenantId },

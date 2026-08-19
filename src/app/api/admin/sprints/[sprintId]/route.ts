@@ -8,6 +8,7 @@ import { prisma, scoped } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { getSprintRetentionCutoff, isSprintRetained } from "@/lib/sprint";
+import { isValidUuid } from "@/lib/uuid";
 import { Plan } from "@/lib/plan";
 import { PaymentStatus } from "@/generated/prisma/enums";
 
@@ -20,6 +21,9 @@ export async function GET(
   const { sprintId } = await params;
   const session = await getSession();
   if (!session) return fail("Unauthorized", 401);
+
+  // Issue #252: non-UUID sprintId → Prisma uuid cast error → 500. 404 instead.
+  if (!isValidUuid(sprintId)) return fail("Sprint not found", 404);
 
   const db = scoped(session.tenantId);
   const sprint = await db.sprint.findFirst({

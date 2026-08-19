@@ -11,6 +11,8 @@ import { effectiveOpen } from "@/lib/open";
 import { fetchQueue, etaForNewOrder, withBuffer, isQueueFull } from "@/lib/queue";
 import { effectiveMaxQueueSize, getLimit } from "@/lib/plan";
 import { PaymentMethod } from "@/generated/prisma/enums";
+import { isValidSlug, NAME_MAX, PHONE_MAX, hasLengthAtMost } from "@/lib/validation";
+import { isValidUuid } from "@/lib/uuid";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,14 @@ export async function POST(req: NextRequest) {
   if (!slug || !customerName || !customerPhone) {
     return fail("slug, customerName, customerPhone are required", 400);
   }
+  // Issue #252: format + length guards before any DB work.
+  if (!isValidSlug(slug)) return fail("Invalid slug format", 400);
+  if (!hasLengthAtMost(customerName, NAME_MAX))
+    return fail(`customerName maksimal ${NAME_MAX} karakter`, 400);
+  if (!hasLengthAtMost(customerPhone, PHONE_MAX))
+    return fail(`customerPhone maksimal ${PHONE_MAX} karakter`, 400);
+  if (customerId !== undefined && !isValidUuid(customerId))
+    return fail("customerId must be a valid UUID", 400);
   if (itemsRaw.length === 0) return fail("items[] must contain at least one item", 400);
   if (paymentMethod !== undefined && !PAYMENT_METHODS.has(paymentMethod)) {
     return fail("paymentMethod must be qris, bank_transfer or cash", 400);
