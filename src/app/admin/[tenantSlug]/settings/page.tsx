@@ -18,6 +18,7 @@ import { fetchSettings, updateSettings } from "@/lib/admin-api";
 import { formatTimeInTimezone, localToUtcHHmm, formatOperatingHours } from "@/lib/time";
 import { nextBoundary } from "@/lib/open";
 import { Badge } from "@/components/ui/badge";
+import BillingCard from "@/components/admin/BillingCard";
 import type { Plan, TenantSettings } from "@/types/admin";
 
 const HH_MM = /^\d{2}:\d{2}$/;
@@ -257,6 +258,12 @@ export default function AdminSettingsPage() {
       </header>
 
       <main className="mx-auto max-w-3xl p-4">
+        {/* Monetisation Phase 3 / T18 — billing section (issue #257): badge,
+            pay button, grace status. Self-loads GET /api/billing/status. */}
+        <div className="mb-4">
+          <BillingCard />
+        </div>
+
         {!loaded ? (
           <p className="rounded-lg bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
             Memuat pengaturan…

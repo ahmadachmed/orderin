@@ -31,6 +31,15 @@ vi.mock("@/lib/admin-api", () => ({
   adminLogout: vi.fn(),
   fetchSettings: vi.fn(),
   updateSettings: vi.fn(),
+  // Monetisation Phase 3 / T18 — BillingCard renders inside the settings page
+  // and fetches billing status on mount.
+  fetchBillingStatus: vi.fn().mockResolvedValue({
+    plan: "FREE",
+    planExpiresAt: null,
+    inGrace: false,
+    latestPayments: [],
+  }),
+  startProUpgrade: vi.fn(),
 }));
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -394,11 +403,13 @@ describe("AdminSettingsPage — Plan badge (T5, issue #229)", () => {
     expect(subtitle.textContent).not.toContain("admin@");
   });
 
-  it("does not render any upgrade button or payment link (read-only, Phase 3 out of scope)", async () => {
+  // Phase 1 (T12) asserted no upgrade button existed; Phase 3 (issue #257)
+  // shipped the BillingCard, so a FREE tenant now sees a pay button. The
+  // BillingCard section renders with the mocked fetchBillingStatus (FREE).
+  it("renders the Phase 3 BillingCard with a pay button for a FREE tenant", async () => {
     await renderPage({ ...DEFAULT_SETTINGS, plan: "FREE" });
-    expect(screen.queryByRole("button", { name: /upgrade/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /bayar/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /pro/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /upgrade/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("billing-card")).toBeInTheDocument();
+    expect(screen.getByTestId("billing-plan-badge")).toHaveTextContent("FREE");
+    expect(screen.getByTestId("pay-button")).toHaveTextContent(/bayar/i);
   });
 });

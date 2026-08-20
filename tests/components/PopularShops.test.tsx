@@ -6,7 +6,7 @@
  * the PopularShops component render (rank #1 besar + label "Paling Diminati",
  * badges via effectiveOpen, empty state D4: <3 show as-is, 0 → section hidden).
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import PopularShops, {
   getPopularShops,
@@ -137,6 +137,18 @@ describe("getPopularShops — query helper (mock prisma)", () => {
 });
 
 describe("PopularShops — render", () => {
+  beforeEach(() => {
+    // Freeze system time at NOW so effectiveOpen's internal `new Date()`
+    // matches the test's frozen clock (date-drift flake fix — override
+    // must stay relative to NOW, see isOpenOverrideUntil below).
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("rank #1 big with label Paling Diminati; #2/#3 regular; badges via effectiveOpen; cards link to /[slug]", () => {
     render(
       <PopularShops
@@ -155,8 +167,10 @@ describe("PopularShops — render", () => {
             address: null,
             orderCount: 19,
             // schedule 08:00-17:00 UTC but admin override force-closed
+            // (until NOW+4d — relative so it can never expire while the
+            // test's frozen clock is at NOW)
             isOpen: false,
-            isOpenOverrideUntil: new Date("2026-08-20T00:00:00.000Z"),
+            isOpenOverrideUntil: new Date(NOW.getTime() + 4 * 24 * 60 * 60 * 1000),
           }),
           shop({
             slug: "warung-teh",
