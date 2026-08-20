@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
         if (monthOrderCount >= orderPerMonth) {
           throw new HttpError(
             429,
-            `Monthly order limit reached (${orderPerMonth}). Upgrade to PRO for unlimited orders.`
+            `Monthly order limit reached (${orderPerMonth}). Upgrade to PRO for unlimited orders.`,
+            { upgradeUrl: "/pricing?utm=limit" }
           );
         }
       }
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
 
     return ok({ orderId: order.id, status: order.status, etaSeconds: order.etaSeconds }, 201);
   } catch (e) {
-    if (e instanceof HttpError) return fail(e.message, e.status);
+    if (e instanceof HttpError) return fail(e.message, e.status, e.extra);
     throw e;
   }
 }

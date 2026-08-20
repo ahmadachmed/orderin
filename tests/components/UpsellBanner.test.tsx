@@ -9,7 +9,7 @@
  *   - Clicking the dismiss button hides the banner and persists to localStorage.
  *   - Banner renders nothing while settings are still loading (no flash).
  *   - Banner renders nothing when fetchSettings fails (graceful degradation).
- *   - No payment/upgrade link is present (Phase 3 out of scope).
+ *   - CTA "Lihat paket PRO" links to /pricing (Phase 3 upgrade path, #257).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -19,6 +19,22 @@ import type { TenantSettings } from "@/types/admin";
 
 vi.mock("@/lib/admin-api", () => ({
   fetchSettings: vi.fn(),
+}));
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    [k: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 const fetchSettingsMock = vi.mocked(fetchSettings);
@@ -70,13 +86,14 @@ describe("UpsellBanner (T12)", () => {
       ).toBeInTheDocument(),
     );
 
-    // Should mention plan benefits without a payment link.
+    // Should mention plan benefits with a CTA to the pricing page.
     expect(screen.getByText(/menu tanpa batas/i)).toBeInTheDocument();
     expect(screen.getByText(/retensi sprint 30 hari/i)).toBeInTheDocument();
-    // CTA text must NOT include upgrade/payment links (Phase 3 out of scope).
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.queryByText(/bayar/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/upgrade sekarang/i)).not.toBeInTheDocument();
+    // CTA links to the public pricing page (Phase 3 upgrade path, #257).
+    const cta = screen.getByRole("link", { name: "Lihat paket PRO" });
+    expect(cta).toHaveAttribute("href", "/pricing");
+    // No payment button inside the banner — payment lives in BillingCard.
+    expect(screen.queryByText(/bayar sekarang/i)).not.toBeInTheDocument();
   });
 
   it("hides the banner on PRO plan", async () => {
