@@ -17,6 +17,32 @@ export type PaymentMethod = "qris" | "bank_transfer" | "cash";
 // Monetisation Phase 0 / T1 — billing plan enum (issue #229)
 export type Plan = "FREE" | "PRO";
 
+// ── Monetisation Phase 3 / T13 — billing payments (issue #257) ─────────────
+// Mirrors prisma BillingPaymentStatus enum + Payment model wire shape.
+export type BillingPaymentStatus = "PENDING" | "PAID" | "EXPIRED";
+
+export interface BillingPayment {
+  id: string;
+  xenditInvoiceId: string | null;
+  externalId: string;
+  amount: number | string; // Decimal serialized as string
+  periodStart: string;
+  periodEnd: string;
+  status: BillingPaymentStatus;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  invoiceUrl: string | null;
+  createdAt: string;
+}
+
+/** GET /api/billing/status — plan + grace flag + latest payments. */
+export interface BillingStatus {
+  plan: Plan;
+  planExpiresAt: string | null;
+  inGrace: boolean;
+  latestPayments: BillingPayment[];
+}
+
 export interface OrderItem {
   id: string;
   menuItemId: string;

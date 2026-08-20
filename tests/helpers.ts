@@ -74,6 +74,8 @@ export async function cleanupTenant(tenantId: string): Promise<void> {
   await prisma.order.deleteMany({ where: { tenantId } });
   await prisma.menuItem.deleteMany({ where: { tenantId } });
   await prisma.tenantAdmin.deleteMany({ where: { tenantId } });
+  // Monetisation Phase 3 / T13 — billing Payment rows (FK to Tenant).
+  await prisma.payment.deleteMany({ where: { tenantId } });
   // T15 §5.4: POST /api/order auto-creates an OPEN sprint — delete sprints
   // before the tenant (FK ON DELETE RESTRICT).
   await prisma.sprint.deleteMany({ where: { tenantId } });

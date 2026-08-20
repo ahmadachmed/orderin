@@ -28,3 +28,13 @@ export async function readJson(req: Request): Promise<Record<string, unknown> | 
     return null;
   }
 }
+
+/**
+ * Best-effort client IP for rate limiting — x-forwarded-for (first hop) then
+ * x-real-ip, falling back to "unknown" (Vercel sets x-forwarded-for).
+ */
+export function clientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
+  return req.headers.get("x-real-ip") || "unknown";
+}

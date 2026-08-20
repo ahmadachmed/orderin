@@ -1,0 +1,25 @@
+# Monetisation Phase 3 / T17 — monthly re-bill cron (issue #257).
+# Plan doc: docs/MONETIZATION-PLAN-PHASE3.md §7.1.
+#
+# Why GitHub Actions: Vercel Hobby has NO Cron Jobs (Pro-only $20/mo) — this
+# free workflow hits POST /api/cron/rebill daily. If the team later upgrades
+# to Vercel Pro, move to vercel.json `crons` (same handler, config-only).
+#
+# Secrets required (repo → Settings → Secrets and variables → Actions):
+#   APP_URL     public origin, e.g. https://headwaybrew.vercel.app
+#   CRON_SECRET matches the app's CRON_SECRET env var (x-cron-secret header)
+name: rebill
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # 01:00 UTC daily — codebase is all-UTC
+  workflow_dispatch: {} # manual trigger for testing
+
+jobs:
+  rebill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger billing rebill
+        run: |
+          curl -fsS -X POST "${{ secrets.APP_URL }}/api/cron/rebill" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

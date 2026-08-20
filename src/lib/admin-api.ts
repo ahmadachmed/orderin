@@ -13,6 +13,7 @@
 // `{ orders: [...] }` and bare-array responses from T2.
 
 import type {
+  BillingStatus,
   MenuItem,
   Order,
   SprintSummary,
@@ -135,6 +136,22 @@ export async function deleteMenuItem(itemId: string): Promise<void> {
 
 export async function fetchSettings(): Promise<TenantSettings> {
   return req<TenantSettings>("/api/admin/settings");
+}
+
+// ── Billing (Monetisation Phase 3 / issue #257) ────────────────────────────
+
+/** GET /api/billing/status — plan, grace flag, latest payments. */
+export async function fetchBillingStatus(): Promise<BillingStatus> {
+  return req<BillingStatus>("/api/billing/status");
+}
+
+/** POST /api/billing/upgrade — create/return the Xendit invoice URL. */
+export async function startProUpgrade(): Promise<{
+  invoiceUrl: string | null;
+  paymentId: string;
+  alreadyPaid?: boolean;
+}> {
+  return req("/api/billing/upgrade", { method: "POST" });
 }
 
 export async function updateSettings(

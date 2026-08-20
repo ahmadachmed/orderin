@@ -70,6 +70,13 @@ export default async function Home() {
             >
               Tentang
             </Link>
+            {/* Monetisation Phase 3 / T19 — pricing page (issue #257) */}
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Harga
+            </Link>
           </nav>
           <div className="flex items-center gap-3">
             <Link

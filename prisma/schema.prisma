@@ -42,6 +42,7 @@ model Tenant {
   admins    TenantAdmin[]
   sprints   Sprint[]
   customers Customer[]
+  payments  Payment[] // Monetisation Phase 3 / T13 — billing payments (issue #257)
 }
 
 model TenantAdmin {
@@ -189,4 +190,40 @@ enum SprintStatus {
 enum Plan {
   FREE
   PRO
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Monetisation Phase 3 / T13 — billing payments (issue #257).
+// Plan doc: docs/MONETIZATION-PLAN-PHASE3.md §5.
+//
+// NOTE on naming: the plan doc calls this enum `PaymentStatus`, but that
+// name is already taken by the ORDER payment enum (UNPAID/PAID) above.
+// Renamed to `BillingPaymentStatus` to avoid the Prisma name collision —
+// semantics are exactly as specced (PENDING/PAID/EXPIRED).
+// ─────────────────────────────────────────────────────────────────────
+
+enum BillingPaymentStatus {
+  PENDING // invoice created at Xendit, awaiting payment
+  PAID // invoice.paid webhook verified — PRO activated
+  EXPIRED // invoice.expired webhook, or Xendit create-invoice failure
+}
+
+model Payment {
+  id              String               @id @default(uuid()) @db.Uuid
+  tenantId        String               @db.Uuid
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  xenditInvoiceId String?              @unique // set after create-invoice succeeds (webhook lookup key)
+  externalId      String               @unique // idempotency key: pay_<tenantId>_<periodStart epochMs>
+  amount          Decimal              @db.Decimal(12, 2) // always 99000 — webhook validates against this
+  periodStart     DateTime             // start of the 30-day period this payment covers
+  periodEnd       DateTime             // periodStart + 30 days
+  status          BillingPaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  paymentMethod   String?              // channel used by customer (qris, bca_va, ...)
+  invoiceUrl      String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, periodStart])
 }
