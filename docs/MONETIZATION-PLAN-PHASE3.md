@@ -1,8 +1,9 @@
-# Monetization Phase 3 — Xendit Billing + Pricing Rp99.000
+# Monetization Phase 3 — Duitku Billing + Pricing Rp99.000
 
-**Status:** Plan (siap eksekusi oleh pioneer) · **Owner:** @senior · **Date:** 2026-08-20
+**Status:** Plan aktif — T13–T20 (Xendit) SUDAH diimplementasi & merged (12b76b7, PR #258). **T21: swap lapisan integrasi Xendit → Duitku** belum dikerjakan.
+**Owner:** @senior · **Date:** 2026-08-20 (update: gateway Xendit → Duitku, keputusan PM + user)
 **Gate:** Phase 0+1 (issue #229) sudah merged — tier FREE/PRO, feature gates, badge, upsell banner.
-**Yang belum ada:** mekanisme tenant **BAYAR → upgrade ke PRO**.
+**Yang belum ada:** mekanisme tenant **BAYAR → upgrade ke PRO** yang live dengan gateway final (Duitku).
 
 ---
 
@@ -12,63 +13,66 @@ Phase 3 menambahkan jalur pembayaran: tenant FREE bisa bayar **Rp99.000/bulan** 
 mengaktifkan PRO, tenant PRO di-re-bill otomatis tiap bulan, dan tenant yang telat bayar
 di-downgrade ke FREE setelah **grace period 3 hari**.
 
-Keputusan kunci (hasil evaluasi open item #5):
+**Keputusan kunci (2026-08-20):** gateway di-switch dari Xendit → **Duitku** (keputusan PM + user).
+T13–T20 yang sudah keimplementasi pakai Xendit tetap di-merge (PR #258, 12b76b7) karena
+schema/pricing/billing-card/badge bersifat **gateway-agnostic**; yang gateway-specific hanya
+lapisan integrasi (`lib/xendit.ts`, webhook route, cron re-bill) → diganti di **T21** dengan
+Duitku Pop (createInvoice → paymentUrl → callback HMAC SHA256).
 
 | Keputusan | Pilihan | Alasan singkat |
 |---|---|---|
-| Produk Xendit | **Invoice API (legacy v2)** | Paling simple: 1 endpoint create → hosted page QRIS/VA/e-wallet/card. Expiry built-in (`invoice_duration`) cocok dgn model grace period. Fee per-channel identik dgn API lain (fee = per produk payment channel, bukan per API version). |
-| Recurring | ❌ Ditolak | Wajib kartu (2.9%+Rp2.000, token + 3DS), pasar ID mayoritas non-kartu, effort jauh lebih tinggi. |
-| Model re-bill | **Manual re-bill via cron bulanan** | Cron harian cek tenant PRO yg periodenya habis → create invoice baru. Tanpa auto-debit (butuh kartu), tanpa subscription engine. |
+| Produk Duitku | **Pop (hosted payment page)** | Paling simple: 1 endpoint create → `paymentUrl` hosted page (QRIS/VA/e-wallet). Mirip Xendit Invoice. Sandbox tersedia. |
+| Recurring | ❌ Ditolak | Tetap tidak cocok pasar ID (butuh kartu / akun OVO/ShopeePay ter-tokenize). Model re-bill manual via cron tetap. |
+| Model re-bill | **Manual re-bill via cron bulanan** | Tidak berubah dari keputusan awal: cron harian cek tenant PRO yg periodenya habis → create invoice baru. |
 | Grace period | **3 hari** | PRO tetap aktif selama grace; downgrade FREE setelah `planExpiresAt + 3 hari` tanpa pembayaran. |
-| Cron host | **GitHub Actions** (bukan Vercel Cron) | Vercel Hobby **tidak** support Cron Jobs (fitur Pro $20/bln). GH Actions gratis. Catatan: ganti ke Vercel Cron kalau naik Vercel Pro. |
-| Tenant demo (kopi-makassar, kopi-senja) | **Rekomendasi: PRO permanen** | Set `plan=PRO, planExpiresAt=NULL` sekali di DB prod (bukan migration). `planExpiresAt=NULL` = "tidak pernah expire" → cron re-bill otomatis skip. |
+| Cron host | **GitHub Actions** (bukan Vercel Cron) | Vercel Hobby tidak support Cron Jobs. GH Actions gratis. |
+| Tenant demo (kopi-makassar, kopi-senja) | **Rekomendasi: PRO permanen** | `plan=PRO, planExpiresAt=NULL` sekali di DB prod → cron re-bill/downgrade auto skip. |
 
-Estimasi total: **2–3 hari kerja pioneer** (5 task utama + testing). Detail §12.
+Estimasi T21: **±1–2 hari kerja pioneer** (swap lapisan integrasi saja). Detail §12.
 
 ---
 
 ## 2. Keputusan PM (fixed, tidak bisa diubah)
 
-1. Gateway: **Xendit** (bukan Midtrans).
-2. Harga PRO: **Rp99.000/bulan** (note: proposal lama Rp49rb — harga baru ini yg dipakai).
-3. Tenant existing = **demo**: boleh diabaikan/dihapus; rekomendasi §11.
+1. Gateway: **Duitku** (bukan Midtrans, bukan Xendit) — keputusan PM + user 2026-08-20.
+2. Harga PRO: **Rp99.000/bulan**.
+3. Tenant existing = **demo**: rekomendasi §11 (PRO permanen).
 4. Semua tenant baru default **FREE** (sudah berlaku — `Tenant.plan @default(FREE)`).
 
 ---
 
-## 3. Open item #5 — Pilihan billing model Xendit (diputuskan @senior)
+## 3. Pilihan billing model Duitku (diputuskan @senior)
 
 ### 3.1 Perbandingan opsi
 
-| Aspek | **Invoice API (legacy v2)** ✅ | Payment Sessions / v3 `payment_requests` | Recurring / Subscription |
+| Aspek | **Duitku Pop (hosted page)** ✅ | Duitku Checkout / direct API per-channel | Recurring / tokenisasi |
 |---|---|---|---|
-| Effort integrasi | **Paling rendah.** `POST /v2/invoices` → dapat `invoice_url` → redirect. Webhook `invoice.paid`/`invoice.expired`. | Sedikit lebih tinggi: flow session lifecycle, `success/failure_return_url`, event `payment.capture`. | **Tinggi:** tokenisasi kartu, 3DS2, retry logic, `subscription_cycle`. |
-| Channel pembayaran | QRIS, VA, e-wallet, OTC, kartu (hosted page) | Sama (QRIS, VA, e-wallet, kartu) | **Hanya kartu** |
-| Expiry built-in | ✅ `invoice_duration` (jam) | Ada session expiry, tapi semantics beda | ❌ |
-| Fee transaksi | Per-channel (lihat §3.2) — **sama** untuk semua API version | Sama | Kartu 2.9% + Rp2.000 |
-| Risiko legacy | ⚠️ Legacy — Xendit dorong migrasi ke Payment Session; kebijakan pricing menyebut *Maintenance Fee* utk legacy API (besar tidak dipublikasikan, tergantung kontrak; praktis baru berlaku kalau Xendit paksa migrasi massal). | Rendah (produk current) | Rendah (produk current) |
+| Effort integrasi | **Paling rendah.** 1 call `createInvoice` → dapat `paymentUrl` → redirect. Callback tunggal (form POST). | Sedikit lebih tinggi: pilih channel per tenant, handle status per channel. | **Tinggi:** tokenisasi akun, retry logic. |
+| Channel pembayaran | QRIS, VA, e-wallet, retail, kartu (hosted page, semua channel Duitku) | Sama, tapi diset per transaksi | Terbatas |
+| Expiry | `expiryPeriod` (menit) per transaksi — channel-dependent max (VA/retail >1440, e-wallet lebih rendah) | Sama | ❌ |
+| Fee transaksi | Per-channel (lihat §3.2) | Sama | Lebih tinggi |
+| Risiko | Rendah (produk current, docs aktif docs.duitku.com) | Rendah | Tinggi (churn akun) |
 | Cocok pasar ID (non-kartu) | ✅ | ✅ | ❌ |
 
-### 3.2 Fee aktual (snapshot halaman pricing Xendit ID, 2026-08-20)
+### 3.2 Fee Duitku (verifikasi PM 2026-08-20, sumber resmi)
 
-Fee Xendit = **Payment Method Fee + Xendit Processing Fee**, dikenakan **per transaksi sukses** (gagal/expired gratis).
+| Channel | Fee | Catatan |
+|---|---|---|
+| **QRIS** | **0,7%** | Setara Xendit (0,7%+Rp4.000 → Duitku lebih murah: tanpa biaya tetap Rp4.000) |
+| **Virtual Account** | **Rp1.500–5.000** (per channel bank) | Jauh di bawah Xendit (Rp9.000+4.000 = Rp13.000) |
+| **E-wallet** (DANA/OVO/ShopeePay/dll) | **2–4%** | Sebanding Xendit (~2%+Rp4.000) |
+| **Minimal monthly fee** | **TIDAK ADA** | Beda kunci vs Xendit (USD 50/bln). Tidak ada beban platform bulanan. |
+| Volume besar | Harga khusus kalau volume > **Rp500jt/bulan** | Negosiasi langsung dengan Duitku; catat sebagai risiko §13, bukan biaya tetap. |
 
-| Channel | Payment Method Fee | Processing Fee | Total utk invoice Rp99.000 |
-|---|---|---|---|
-| **QRIS** | 0.70% (incl. VAT) | Rp4.000 | **±Rp4.693** (4.7%) |
-| E-wallet (DANA/OVO/ShopeePay/GoPay) | ±2% (lihat dashboard) | Rp4.000 | **±Rp6.000** (6%) |
-| Virtual Account (BCA/BNI/BRI/Mandiri/BSI/CIMB/Permata dll) | **Rp9.000 flat** | Rp4.000 | **Rp13.000** (13%) |
-| OTC (Alfamart/Indomaret) | Rp9.000 flat | Rp4.000 | Rp13.000 |
-| Kartu kredit | ±2.9% | Rp2.000 | ±Rp4.871 |
-| Debit BRI | 1.90% | Rp4.000 | ±Rp5.881 |
-
-Catatan penting:
-- **Min Monthly Fee USD 50** — kalau total fee bulanan < ±Rp800rb, Xendit menagih selisihnya. Dengan Rp99rb/tenant, fee QRIS ±Rp4.7rb → butuh ±170 pembayaran/bulan utk lewat ambang. Ini **beban platform, bukan tenant** — catat sebagai risiko biaya (§13), jangan di-pass ke harga tenant.
-- Tenant paling mungkin pakai **QRIS** (pasar ID, tanpa kartu) → rata-rata fee ±Rp5–7rb/transaksi. Margin bersih per pembayaran ±Rp92–94rb.
+Catatan: dengan Rp99rb/tenant, fee QRIS ±Rp693 (vs Xendit ±Rp4.693) → margin bersih per
+pembayaran naik jadi ±Rp98rb. Ini keunggulan kompetitif Duitku di keputusan swap.
 
 ### 3.3 Keputusan
 
-**Gunakan Xendit Invoice API (legacy v2).** Justifikasi: effort paling rendah (1 create call + 1 webhook + redirect), expiry bawaan (`invoice_duration`) persis kebutuhan grace period, dan fee per-transaksi identik antar API version. Risiko legacy dimitigasi: isolasi semua call Xendit di satu modul (`lib/xendit.ts`) sehingga migrasi ke Payment Sessions nanti = ganti 1 file + nama event webhook (dijadwalkan sebagai follow-up, out of scope Phase 3).
+**Gunakan Duitku Pop** — `POST /api/merchant/createInvoice` → `paymentUrl` (hosted page).
+Justifikasi: effort paling rendah (1 create call + 1 callback handler + redirect), docs aktif,
+sandbox tersedia, fee lebih murah, tanpa minimum monthly fee. Isolasi semua call Duitku di satu
+modul (`src/lib/duitku.ts`) — kalau nanti ganti gateway lagi = ganti 1 modul + webhook route.
 
 ---
 
@@ -77,29 +81,37 @@ Catatan penting:
 ### 4.1 Upgrade pertama (FREE → PRO)
 
 ```
-Tenant (admin settings)                        App (Next.js)                       Xendit
+Tenant (admin settings)                        App (Next.js)                       Duitku
         │  klik "Bayar Rp99.000"                    │                                │
         │─────────────────────────────────────────>│ POST /api/billing/upgrade      │
         │                                          │ 1. create Payment PENDING      │
         │                                          │    (externalId=pay_<tenantId>_<periodStart>) │
-        │                                          │ 2. POST /v2/invoices            │
-        │                                          │    { external_id, amount: 99000, │
-        │                                          │      invoice_duration: 72,     │
-        │                                          │      success_redirect_url,     │
-        │                                          │      customer_email }          │
-        │                                          │<───────────────────────────────│ 201 invoice_url
-        │                                          │ 3. simpan xenditInvoiceId, invoiceUrl
-        │  <─ 303 redirect ke invoice_url ─────────│                                │
-        │  (hosted page: QRIS/VA/e-wallet/card)    │                                │
+        │                                          │ 2. POST /api/merchant/createInvoice
+        │                                          │    headers: x-duitku-merchantcode,
+        │                                          │             x-duitku-timestamp (ms, WIB),
+        │                                          │             x-duitku-signature
+        │                                          │             (HMAC-SHA256(merchantCode+timestamp, apiKey))
+        │                                          │    body: { paymentAmount: 99000,
+        │                                          │      merchantOrderId: externalId,
+        │                                          │      productDetails, callbackUrl,
+        │                                          │      returnUrl, expiryPeriod, email, ... }
+        │                                          │<───────────────────────────────│ paymentUrl, reference
+        │                                          │ 3. simpan duitkuReference, invoiceUrl
+        │  <─ 303 redirect ke paymentUrl ──────────│                                │
+        │  (hosted page Duitku: QRIS/VA/e-wallet)  │                                │
         │  bayar…                                  │                                │
-        │                                          │<── webhook invoice.paid ───────│
-        │                                          │ 1. verify x-callback-token     │
-        │                                          │ 2. idempotency check           │
-        │                                          │ 3. verify amount == 99000      │
-        │                                          │ 4. update Payment → PAID       │
-        │                                          │    Tenant.plan=PRO,            │
-        │                                          │    planExpiresAt=now+30 hari   │
-        │  <─ success_redirect_url ────────────────│                                │
+        │                                          │<── callback POST (form) ───────│
+        │                                          │    merchantCode, amount, merchantOrderId,
+        │                                          │    resultCode=00, reference, signature
+        │                                          │ 1. verify signature:
+        │                                          │    HMAC-SHA256(merchantCode+amount+merchantOrderId, apiKey)
+        │                                          │ 2. idempotency check
+        │                                          │ 3. resultCode==00 && amount >= 99000
+        │                                          │ 4. update Payment → PAID
+        │                                          │    Tenant.plan=PRO,
+        │                                          │    planExpiresAt=now+30 hari
+        │  <─ returnUrl (redirect) ────────────────│   (returnUrl = info saja, TIDAK dipercaya;
+        │                                          │    aktivasi hanya via callback terverifikasi)
 ```
 
 ### 4.2 Re-bill bulanan (PRO → PRO)
@@ -110,8 +122,8 @@ Cron harian (GitHub Actions → POST /api/cron/rebill, header x-cron-secret)
     → kalau planExpiresAt <= now+24h ATAU sudah lewat (dalam grace 3 hari)
       DAN belum ada Payment PENDING utk periode berikutnya
         → create invoice baru (flow sama spt 4.1 langkah 2–3)
-  → invoice.paid webhook → planExpiresAt += 30 hari (bukan reset ke now+30 —
-    periode berkesinambungan: planExpiresAt = max(planExpiresAt, now) + 30d)
+  → callback resultCode=00 → planExpiresAt = max(planExpiresAt, now) + 30d
+    (periode berkesinambungan, bukan reset ke now+30)
 ```
 
 ### 4.3 Grace period & auto-downgrade
@@ -121,8 +133,8 @@ planExpiresAt (akhir periode) ──► +3 hari (grace, PRO tetap aktif) ──�
    │                                     │                                  │
    │ cron create invoice utk periode     │ cron create invoice (masih       │
    │ baru (pay window terbuka)           │ boleh bayar selama grace)        │
-   │                                     │ invoice.paid → planExpiresAt     │
-   │                                     │   = max(planExpiresAt, now)+30d  │
+   │                                     │ callback resultCode=00 →         │
+   │                                     │   planExpiresAt = max(...,now)+30d
    │                                     └─ tidak dibayar sampai batas       │
    │                                        → cron set plan=FREE,            │
    │                                          planExpiresAt=null             │
@@ -131,108 +143,141 @@ planExpiresAt (akhir periode) ──► +3 hari (grace, PRO tetap aktif) ──�
 Detail boundary (wajib di-test):
 - `now == planExpiresAt` → grace dimulai (masih PRO).
 - `now == planExpiresAt + 3 hari` → downgrade (TEPAT di boundary downgrade, bukan setelahnya).
-- `planExpiresAt = null` (demo PRO permanen) → cron **skip** (tidak pernah re-bill/downgrade).
+- `planExpiresAt = null` (demo PRO permanen) → cron **skip**.
+- Catatan expiry Duitku: `expiryPeriod` per-channel (VA/retail bisa >1440 menit; e-wallet cap
+  lebih rendah: ShopeePay 60 menit, OVO/DANA 1440 menit). Grace/downgrade **tetap ditangani
+  cron** (sumber kebenaran = `planExpiresAt`), expiry invoice Duitku hanya pembatas teknis.
 
 ---
 
 ## 5. Schema & migration
 
 ```prisma
-// File: prisma/schema.prisma — tambah model + enum (setelah model Customer)
-
-enum PaymentStatus {
+// File: prisma/schema.prisma — SUDAH diimplementasikan (T13, merged 12b76b7)
+enum PaymentStatus {   // nama aktual di kode: BillingPaymentStatus
   PENDING
   PAID
   EXPIRED
 }
 
 model Payment {
-  id               String        @id @default(uuid()) @db.Uuid
-  tenantId         String        @db.Uuid
-  tenant           Tenant        @relation(fields: [tenantId], references: [id])
-  xenditInvoiceId  String?       @unique // set setelah create invoice sukses
-  externalId       String        @unique // kunci idempotency: pay_<tenantId>_<periodStart ISO>
-  amount           Decimal       @db.Decimal(12, 2) // selalu 99000 (validasi webhook)
-  periodStart      DateTime      // awal periode 30 hari yg dibayar
-  periodEnd        DateTime      // periodStart + 30 hari
-  status           PaymentStatus @default(PENDING)
-  paidAt           DateTime?
-  paymentMethod    String?       // channel yg dipakai customer (qris, bca_va, dst)
-  invoiceUrl       String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id              String               @id @default(uuid()) @db.Uuid
+  tenantId        String               @db.Uuid
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  xenditInvoiceId String?              @unique // ⚠️ gateway-specific — lihat catatan T21
+  externalId      String               @unique // idempotency key: pay_<tenantId>_<periodStart epochMs>
+  amount          Decimal              @db.Decimal(12, 2) // selalu 99000 — callback memvalidasi ini
+  periodStart     DateTime             // awal periode 30 hari yg dibayar
+  periodEnd       DateTime             // periodStart + 30 hari
+  status          BillingPaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  paymentMethod   String?              // channel yg dipakai customer (qris, bca_va, ...)
+  invoiceUrl      String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@index([tenantId, status])
   @@index([tenantId, periodStart])
 }
 ```
 
-- `Tenant.plan`, `Tenant.planExpiresAt` — **tidak berubah**. Tetap satu-satunya sumber kebenaran status PRO.
-- Migration: `npx prisma migrate dev --name add_payment` → hasil deploy via `prisma migrate deploy` (sudah ada di `vercel.json` buildCommand).
+- `Tenant.plan`, `Tenant.planExpiresAt` — **tidak berubah**. Satu-satunya sumber kebenaran status PRO.
+- **Catatan T21 (rekomendasi @senior):** field `xenditInvoiceId` (nama Xendit-specific) dan komentar
+  schema "gateway-agnostic" bertentangan. Rekomendasi: rename field → `gatewayReference String? @unique`
+  (migration rename sederhana, tanpa perubahan struktur/relasi). Struktur model TIDAK berubah — hanya
+  nama field. Kalau lead/pioneer setuju, masuk ke T21; kalau tidak, biarkan dan dokumentasikan sebagai
+  tech-debt kecil.
 - Tidak ada backfill (Payment kosong di awal; tenant demo di-handle manual §11).
 
 ---
 
-## 6. Integrasi Xendit
+## 6. Integrasi Duitku
 
 ### 6.1 Env vars (server-only, di Vercel env; `.env.example` utk lokal)
 
-```
-XENDIT_SECRET_KEY=        # API key (create invoice, server-side)
-XENDIT_WEBHOOK_TOKEN=     # token dari Dashboard → Settings → Webhooks (utk verifikasi x-callback-token)
-XENDIT_BASE_URL=https://api.xendit.co   # test: https://api.xendit.co (pakai xnd_development_ key)
-CRON_SECRET=              # token utk /api/cron/rebill (dari GitHub Actions)
-NEXT_PUBLIC_APP_URL=      # utk success_redirect_url
+```env
+DUITKU_MERCHANT_CODE=      # merchant code Duitku (dashboard Duitku, format DXXXX)
+DUITKU_API_KEY=            # API key (signature createInvoice + verify callback)
+DUITKU_BASE_URL=           # sandbox: https://api-sandbox.duitku.com/api/merchant/createInvoice
+                           # prod:    https://api-prod.duitku.com/api/merchant/createInvoice
+CRON_SECRET=               # token utk /api/cron/rebill (dari GitHub Actions)
+NEXT_PUBLIC_APP_URL=       # utk callbackUrl + returnUrl
+# opsional (defense-in-depth):
+DUITKU_CALLBACK_IPS=       # whitelist IP callback Duitku (prod: 182.23.85.14, 103.177.101.190, ...)
 ```
 
 **Aturan:** tidak ada secret di code/client. `NEXT_PUBLIC_*` hanya `NEXT_PUBLIC_APP_URL` (bukan secret).
+Env XENDIT_* dihapus dari `.env.example` / Vercel setelah T21 selesai.
 
-### 6.2 Modul `src/lib/xendit.ts` (semua call Xendit terisolasi di sini)
+### 6.2 Modul `src/lib/duitku.ts` (pengganti `src/lib/xendit.ts` — semua call Duitku terisolasi di sini)
 
 ```ts
-// createInvoice(input): POST {XENDIT_BASE_URL}/v2/invoices
-//   headers: Authorization: Basic base64(XENDIT_SECRET_KEY + ":"), Content-Type: application/json
+// createInvoice(input): POST {DUITKU_BASE_URL}
+//   headers:
+//     x-duitku-merchantcode: DUITKU_MERCHANT_CODE
+//     x-duitku-timestamp:    Date.now() (UNIX ms, zona Jakarta/WIB — Duitku pakai WIB)
+//     x-duitku-signature:    HMAC_SHA256(merchantCode + timestamp, DUITKU_API_KEY) — hex lowercase
+//     Content-Type: application/json
 //   body: {
-//     external_id,            // = Payment.externalId (pay_<tenantId>_<periodStart>)
-//     amount: 99000,
-//     description: "HeadwayBrew PRO — langganan 30 hari (periodStart s/d periodEnd)",
-//     invoice_duration: 72,  // jam — pay window = grace period 3 hari
-//     success_redirect_url: `${NEXT_PUBLIC_APP_URL}/admin/<slug>/settings?billing=success`,
-//     currency: "IDR",
-//     customer: { email: tenant.contactEmail ?? undefined },  // opsional
+//     paymentAmount: 99000,
+//     merchantOrderId: input.externalId,   // = Payment.externalId — idempotency key
+//     productDetails: "HeadwayBrew PRO — langganan 30 hari (periodStart s/d periodEnd)",
+//     paymentMethod: "",                   // "" = semua channel (hosted page pilih channel)
+//     customerVaName: <tenant name>, email: tenant.contactEmail ?? undefined,
+//     callbackUrl: `${NEXT_PUBLIC_APP_URL}/api/webhooks/duitku`,
+//     returnUrl: `${NEXT_PUBLIC_APP_URL}/admin/<slug>/settings?billing=success`,
+//     expiryPeriod: 4320,                 // menit = 3 hari (pay window == grace; catat §4.3)
 //   }
-//   → { id, invoice_url, status }
-//   error mapping: 400/401/429 → throw XenditError { status, code, message }
-// verifyWebhookToken(headerValue): boolean  // crypto.timingSafeEqual, constant-time
+//   → { paymentUrl, reference, statusCode, statusMessage }
+//   error mapping: non-200 / statusCode != "00" → throw DuitkuError { status, code, message }
+// verifyCallbackSignature(merchantCode, amount, merchantOrderId, signature): boolean
+//   // stringToSign = merchantCode + amount + merchantOrderId
+//   // signature = HMAC_SHA256(stringToSign, DUITKU_API_KEY) — hex lowercase, compare constant-time
+// verifyCronSecret(headerValue): boolean  // pindah dari xendit.ts, logika sama
 ```
 
 Catatan:
-- `invoice_duration: 72` → invoice expired otomatis di Xendit 3 hari setelah create → sinkron dgn grace period. Event `invoice.expired` menandai Payment → EXPIRED (opsional; downgrade tetap ditangani cron).
-- `external_id` = kunci idempotency. Xendit menolak external_id duplikat → create ganda dari cron/retry aman.
+- **DUA signature berbeda:** request `createInvoice` pakai header `x-duitku-signature`
+  (merchantCode + timestamp), callback pakai body field `signature` (merchantCode + amount +
+  merchantOrderId). Jangan tertukar.
+- `timestamp` header: ms epoch **dalam zona Jakarta (UTC+7)**. Karena kodebase "all UTC",
+  hitung eksplisit: `Date.now() + 7*3600_000` cukup utk tujuan signature (bukan utk tampilan).
+- `merchantOrderId` harus unik & ≤ batas Duitku (docs tidak menyebut max; contoh resmi pendek).
+  Format saat ini `pay_<uuid>_<epochMs>` ±60 char — **verifikasi ke Duitku / tes sandbox**; kalau
+  ditolak, pakai format kompak: `pay_<tenantId.slice(0,8)>_<epochMs>` (tetap unik, idempotency
+  tidak berubah karena `externalId` di DB tetap sumber kebenaran).
 
-### 6.3 Webhook `POST /api/webhooks/xendit`
+### 6.3 Webhook `POST /api/webhooks/duitku` (pengganti `/api/webhooks/xendit`)
 
-1. **Verifikasi signature:** baca header `x-callback-token`, bandingkan constant-time dgn `XENDIT_WEBHOOK_TOKEN`. Gagal → 401. (Referensi resmi: docs.xendit.co/handling-webhooks — "Xendit can sign each webhook event... by including a token in each event's x-callback-token header").
-2. **Rate limit** per-IP (pakai `src/lib/rate-limit.ts` — tambah `"POST /api/webhooks/xendit": { windowMs: 60_000, max: 30 }`) sebagai defense-in-depth.
-3. **Event routing** (payload `{ id, external_id, status, amount, paid_at, payment_method, ... }`):
-   - `invoice.paid` → handlePaid
-   - `invoice.expired` → mark Payment EXPIRED (no-op kalau sudah PAID)
-   - lainnya → 200 (abaikan)
-4. **handlePaid (idempotent):**
-   a. Cari Payment by `xenditInvoiceId` (atau `externalId`).
-   b. Sudah PAID? → return 200 (duplicate delivery — Xendit retry s/d 6x exponential backoff, duplikat dijamin terjadi).
-   c. **Validasi amount:** `webhook.amount < Payment.amount` → jangan aktivasi; log + alert (underpayment attack/error). Return 200 (jangan trigger retry) + simpan status.
-   d. Update atomik: `Payment → PAID (paidAt, paymentMethod)` **dan** `Tenant → plan=PRO, planExpiresAt = max(planExpiresAt ?? now, now) + 30 hari` (satu transaksi Prisma `$transaction`).
-5. **Respons cepat:** return 200 secepatnya (Xendit timeout → retry). Jangan kerja berat sinkron.
+Callback Duitku = **form POST** (`application/x-www-form-urlencoded`), bukan JSON.
+
+1. **Verifikasi signature:** baca field `signature` dari form; hitung
+   `HMAC_SHA256(merchantCode + amount + merchantOrderId, DUITKU_API_KEY)` (hex lowercase);
+   bandingkan constant-time (`crypto.timingSafeEqual`). Gagal → 401.
+2. **Rate limit** per-IP (pakai `src/lib/rate-limit.ts` — tambah `"POST /api/webhooks/duitku"`).
+3. **IP whitelist (opsional, defense-in-depth):** kalau `DUITKU_CALLBACK_IPS` diset, cek IP
+   pengirim (docs Duitku publish daftar IP prod & sandbox).
+4. **Routing by `resultCode`:**
+   - `resultCode == "00"` → handlePaid
+   - lainnya (01 failed, dll) → mark Payment EXPIRED (no-op kalau sudah PAID)
+5. **handlePaid (idempotent):**
+   a. Cari Payment by `merchantOrderId` (= `Payment.externalId`) atau `reference` (= `gatewayReference`).
+   b. Sudah PAID? → return 200 (duplicate delivery).
+   c. **Validasi amount:** `callback.amount < Payment.amount` → jangan aktivasi; log + alert. Return 200.
+   d. Update atomik: `Payment → PAID (paidAt, paymentMethod=paymentCode)` **dan**
+      `Tenant → plan=PRO, planExpiresAt = max(planExpiresAt ?? now, now) + 30 hari`
+      (satu transaksi Prisma `$transaction`).
+6. **Respons cepat:** selalu balas **200 OK** (wajib Duitku — docs: "Return HTTP 200 OK"; selain itu
+   dianggap gagal → retry).
 
 ### 6.4 Idempotency ringkasan
 
 | Lapisan | Mekanisme |
 |---|---|
-| Create invoice | `externalId` unik (unique constraint DB + Xendit reject duplikat) |
-| Webhook delivery ganda | `Payment.xenditInvoiceId @unique` + cek status PAID sebelum proses |
+| Create invoice | `merchantOrderId` unik (= `Payment.externalId` unique di DB; Duitku reject duplikat) |
+| Callback delivery ganda | `Payment.gatewayReference @unique` + cek status PAID sebelum proses |
 | Cron re-bill ganda (overlap run) | Cek "sudah ada Payment PENDING utk periode" sebelum create |
-| Retry cron (GH Actions re-run) | Idem — create invoice yg sama ditolak Xendit |
+| Retry cron (GH Actions re-run) | Idem — create invoice yg sama ditolak Duitku |
 
 ---
 
@@ -240,15 +285,15 @@ Catatan:
 
 ### 7.1 Kenapa GitHub Actions, bukan Vercel Cron
 
-**Vercel Cron = fitur Pro ($20/bln).** Proyek saat ini Vercel Hobby (free). Solusi tanpa biaya:
+**Tidak berubah dari keputusan awal** — Vercel Hobby tanpa Cron Jobs; GH Actions gratis:
 
-`.github/workflows/rebill.yml`:
+`.github/workflows/rebill.yml` (sudah ada, T17) — **tidak perlu diubah** kecuali handler-nya:
 ```yaml
 name: rebill
 on:
   schedule:
-    - cron: "0 1 * * *"   # 01:00 UTC harian (pakai UTC, konsisten dgn kodebase)
-  workflow_dispatch: {}   # manual trigger utk testing
+    - cron: "0 1 * * *"   # 01:00 UTC harian
+  workflow_dispatch: {}
 jobs:
   rebill:
     runs-on: ubuntu-latest
@@ -258,16 +303,15 @@ jobs:
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"
 ```
 
-Note: kalau tim nanti upgrade Vercel Pro → pindah ke `vercel.json` `crons` (config 1 blok, handler sama).
-
 ### 7.2 Handler `POST /api/cron/rebill` (auth: header `x-cron-secret` == `CRON_SECRET`, constant-time)
 
-Satu pass, idempotent:
+Logika **tidak berubah**; hanya call create-invoice yg ganti dari `lib/xendit.ts` → `lib/duitku.ts`:
 1. Ambil tenant: `plan=PRO, planExpiresAt != null`.
 2. Utk tiap tenant:
    - **Downgrade check:** `planExpiresAt + 3 hari < now` → `plan=FREE, planExpiresAt=null` (log).
-   - **Re-bill check:** `planExpiresAt <= now + 24h` (pay window buka 24 jam sebelum habis) DAN belum ada `Payment PENDING` utk periode berikutnya → create invoice (alur §6.2).
-3. Error per-tenant di-catch terpisah (satu tenant gagal ≠ seluruh run gagal); log error, lanjut tenant lain.
+   - **Re-bill check:** `planExpiresAt <= now + 24h` DAN belum ada `Payment PENDING` utk periode
+     berikutnya → create invoice Duitku (alur §6.2).
+3. Error per-tenant di-catch terpisah; log error, lanjut tenant lain.
 4. Response: ringkasan `{ checked, invoiced, downgraded, errors }`.
 
 ### 7.3 Boundary grace (spec test)
@@ -280,27 +324,31 @@ Satu pass, idempotent:
 
 ## 8. UI
 
-### 8.1 Pricing page `src/app/pricing/page.tsx` (public, tambah ke nav landing)
+**TIDAK BERUBAH (gateway-agnostic)** — BillingCard, badge FREE/PRO, tombol bayar, pricing page,
+status grace sudah keimplementasi (T18–T19). Satu-satunya penyesuaian: kalau ada teks/komentar
+"Xendit" di UI copy → ganti "Duitku" (cek: `src/components/admin/BillingCard.tsx`,
+`src/app/pricing/page.tsx`).
 
-- Harga **Rp99.000/bulan**, benefit PRO (menu tanpa batas, order tanpa batas, antrean s/d 100, retensi sprint 30 hari, tanpa badge, prioritas support).
-- CTA "Upgrade sekarang" → kalau ada session admin → redirect ke `/admin/<slug>/settings?billing=1`; tanpa session → `/login` (lalu ke settings).
-- Style ikut design system shadcn yg sudah ada (referensi landing page).
+### 8.1 Pricing page `src/app/pricing/page.tsx` (public)
 
-### 8.2 Admin settings — section Billing (`src/app/admin/[tenantSlug]/settings/page.tsx` + `src/components/admin/BillingCard.tsx`)
+- Harga **Rp99.000/bulan**, benefit PRO (menu tanpa batas, order tanpa batas, antrean s/d 100,
+  retensi sprint 30 hari, tanpa badge, prioritas support).
+- CTA "Upgrade sekarang" → session admin → `/admin/<slug>/settings?billing=1`; tanpa session → `/login`.
 
-- **Status badge:** `FREE` (abu) / `PRO` (amber) + "aktif s/d <tanggal>" kalau PRO.
-- FREE tenant: tombol **"Bayar Rp99.000"** → `POST /api/billing/upgrade` → 303 ke `invoice_url` (atau return `{ invoiceUrl }` → `window.location`).
-- PRO tenant dlm grace (planExpiresAt < now tapi belum di-downgrade): banner "Langganan berakhir — bayar tagihan utk lanjut" + tombol bayar (invoice PENDING sudah dibuat cron; tombol = re-fetch invoiceUrl atau create baru kalau belum ada).
-- PRO aktif: teks "Otomatis diperpanjang tiap bulan" + tanggal expire.
-- Data dari `GET /api/admin/settings` (sudah return `plan`, `planExpiresAt`) + endpoint baru `GET /api/billing/status` (list Payment terakhir: status, periode, metode, tanggal) — atau extend settings response dgn `latestPayment`.
+### 8.2 Admin settings — section Billing (BillingCard)
 
-### 8.3 Route baru ringkasan
+- **Status badge:** FREE (abu) / PRO (amber) + "aktif s/d <tanggal>" kalau PRO.
+- FREE: tombol **"Bayar Rp99.000"** → `POST /api/billing/upgrade` → 303 ke `paymentUrl`.
+- PRO dlm grace: banner "Langganan berakhir — bayar tagihan utk lanjut".
+- PRO aktif: "Otomatis diperpanjang tiap bulan" + tanggal expire.
+
+### 8.3 Route ringkasan (setelah T21)
 
 | Route | Method | Auth | Fungsi |
 |---|---|---|---|
-| `/api/billing/upgrade` | POST | admin session | Create Payment PENDING + invoice Xendit → return `{ invoiceUrl }` |
+| `/api/billing/upgrade` | POST | admin session | Create Payment PENDING + invoice Duitku → return `{ invoiceUrl }` |
 | `/api/billing/status` | GET | admin session | Status plan + riwayat Payment terakhir |
-| `/api/webhooks/xendit` | POST | x-callback-token | Terima event invoice.paid/expired |
+| `/api/webhooks/duitku` | POST | HMAC signature | Terima callback resultCode=00 → handlePaid |
 | `/api/cron/rebill` | POST | x-cron-secret | Re-bill + downgrade bulanan |
 | `/pricing` | GET | public | Halaman harga |
 
@@ -308,34 +356,41 @@ Satu pass, idempotent:
 
 ## 9. Keamanan
 
-1. **Webhook signature:** `x-callback-token` + `crypto.timingSafeEqual` (constant-time). Gagal → 401, tanpa proses apa pun.
-2. **Idempotency** (unique `externalId`, cek status PAID, cek Payment PENDING sebelum create) — mencegah double-charge & double-activation.
-3. **Validasi amount** di webhook: aktivasi hanya kalau `webhook.amount >= Payment.amount` (99000). Underpayment tidak mengaktifkan PRO.
-4. **Tidak ada secret di code:** semua via env var; `lib/xendit.ts` satu-satunya tempat akses `XENDIT_SECRET_KEY`; client bundle tidak pernah menerima secret (hanya `invoiceUrl`).
-5. **Cron auth:** header `x-cron-secret` (constant-time) — endpoint tidak boleh terbuka publik.
-6. **Rate limit** webhook & cron (defense-in-depth; signature tetap otoritas utama).
-7. **Read-only plan fields** tetap dijaga: settings PATCH sudah menolak `plan`/`planExpiresAt` (READONLY_FIELDS) — hanya webhook (verify token) & cron (verify secret) yang boleh menulis.
-8. **CSP:** redirect ke Xendit = top-level navigation, bukan fetch — tidak perlu ubah `connect-src`.
+1. **Callback signature:** field `signature` di form POST, verify `HMAC-SHA256(merchantCode + amount
+   + merchantOrderId, DUITKU_API_KEY)` + `crypto.timingSafeEqual` (constant-time). Gagal → 401,
+   tanpa proses apa pun.
+2. **Request signature:** header `x-duitku-signature` utk createInvoice (HMAC merchantCode + timestamp).
+3. **Idempotency** (unique `externalId`/`merchantOrderId`, cek status PAID, cek Payment PENDING
+   sebelum create) — mencegah double-charge & double-activation.
+4. **Validasi amount** di callback: aktivasi hanya kalau `callback.amount >= Payment.amount` (99000).
+5. **Tidak ada secret di code:** semua via env var; `lib/duitku.ts` satu-satunya tempat akses
+   `DUITKU_API_KEY`; client bundle hanya menerima `paymentUrl`.
+6. **Cron auth:** header `x-cron-secret` (constant-time).
+7. **IP whitelist opsional** (`DUITKU_CALLBACK_IPS`) — defense-in-depth; signature tetap otoritas utama.
+8. **Read-only plan fields** tetap dijaga: settings PATCH menolak `plan`/`planExpiresAt`
+   (READONLY_FIELDS) — hanya webhook (verify signature) & cron (verify secret) yang boleh menulis.
+9. **CSP:** redirect ke paymentUrl Duitku = top-level navigation, bukan fetch — tidak perlu ubah `connect-src`.
 
 ---
 
 ## 10. Testing strategy
 
-Stack: vitest (unit + integration dgn DB test seperti `tests/helpers.ts` — `setupTenant` sudah dukung `plan`).
+Stack: vitest (unit + integration dgn DB test seperti `tests/helpers.ts`).
 
 | Area | Test | Cara mock |
 |---|---|---|
-| `lib/xendit.ts` | createInvoice: payload benar, error 400/401/429 mapping, `invoice_duration=72` | `vi.stubGlobal("fetch", ...)` — tanpa network |
-| Signature | valid token → pass; salah token → reject; token kosong/malformed → reject | unit murni |
-| Webhook paid | Payment PENDING → PAID + `plan=PRO, planExpiresAt=now+30d`; amount < 99000 → **tidak** aktivasi; duplikat delivery → 200 no-op; tenant tidak ada → 404/200+log | integration dgn DB + fetch mock |
-| Webhook expired | PENDING → EXPIRED; PAID → no-op | integration |
-| Cron re-bill | tenant `planExpiresAt <= now+24h` & tanpa Payment PENDING → create invoice (fetch mock, cek payload `external_id`); `planExpiresAt=null` → skip; tenant baru FREE → skip | integration dgn DB |
+| `lib/duitku.ts` | createInvoice: header signature benar (merchantCode+timestamp), payload benar, error mapping | `vi.stubGlobal("fetch", ...)` — tanpa network |
+| Signature callback | valid signature → pass; salah stringToSign → reject; kosong/malformed → reject; **urutan stringToSign merchantCode+amount+merchantOrderId** | unit murni |
+| Callback paid | Payment PENDING → PAID + `plan=PRO, planExpiresAt=now+30d`; amount < 99000 → **tidak** aktivasi; duplikat delivery → 200 no-op; tenant tidak ada → log + 200 | integration dgn DB + parse form |
+| Callback failed | resultCode != 00 → EXPIRED/no-op; PAID → no-op | integration |
+| Cron re-bill | tenant `planExpiresAt <= now+24h` & tanpa Payment PENDING → create invoice (fetch mock, cek `merchantOrderId`); `planExpiresAt=null` → skip; tenant FREE → skip | integration dgn DB |
 | Cron downgrade | boundary `planExpiresAt+3d < now` → FREE; `==` → belum; sudah PAID periode baru → tidak di-downgrade | integration dgn DB |
-| Billing upgrade route | no session → 401; sukses → Payment PENDING + `{ invoiceUrl }`; Xendit error → Payment EXPIRED/FAILED + 502 | integration |
-| Pricing page | render harga 99.000 + benefit; CTA routing | component test (pola `*.test.tsx` existing) |
-| BillingCard | badge FREE/PRO, tombol bayar, status grace | component test dgn fetch mock `fetchSettings` |
+| Billing upgrade route | no session → 401; sukses → Payment PENDING + `{ invoiceUrl }`; Duitku error → Payment EXPIRED + 502 | integration |
+| Pricing page / BillingCard | render 99.000, badge, tombol bayar, status grace | component test |
 
-**E2E manual (staging):** pakai **Xendit test mode** (`xnd_development_` key) → create invoice → dashboard Xendit → "Simulate payment" → webhook masuk → cek tenant jadi PRO. Uji juga flow QRIS test.
+**E2E manual (staging):** pakai **Duitku sandbox** (`api-sandbox.duitku.com`, merchant code test) →
+create invoice → paymentUrl → bayar via simulasi/QRIS test → callback masuk → cek tenant jadi PRO.
+Note: test lama `tests/billing-xendit.test.ts` → rename/adapt jadi `tests/billing-duitku.test.ts`.
 
 ---
 
@@ -350,26 +405,29 @@ WHERE "slug" IN ('kopi-makassar', 'kopi-senja');
 ```
 
 - `planExpiresAt = NULL` → cron re-bill & downgrade otomatis skip (spec §7.3).
-- Kalau PM lebih suka tenant demo bebas semua (termasuk di luar fitur PRO), hapus dari DB prod manual — tapi rekomendasi tetap PRO permanen (data operasional nyata berguna utk demo).
 
 ---
 
-## 12. Task breakdown utk pioneer + estimasi
+## 12. Task breakdown
 
-Total: **±2–3 hari**. Urutan wajib (dependency): T13 → T14 → T15/T16 → T17 → T18/T19 → T20.
+**Status: T13–T20 SELESAI (implementasi Xendit, merged 12b76b7 via PR #258).**
+Sisa: **T21 — swap lapisan integrasi Xendit → Duitku.** Estimasi **±1–2 hari**.
 
 | # | Task | File utama | Estimasi |
 |---|---|---|---|
-| T13 | Schema: model `Payment` + enum `PaymentStatus` + migration | `prisma/schema.prisma`, migration baru | 0.5 jam |
-| T14 | `lib/xendit.ts`: createInvoice + verifyWebhookToken + XenditError; env vars + `.env.example` | `src/lib/xendit.ts` | 1.5 jam |
-| T15 | `POST /api/billing/upgrade` + `GET /api/billing/status` (admin session, Payment PENDING, redirect url) | `src/app/api/billing/*` | 2 jam |
-| T16 | `POST /api/webhooks/xendit`: signature verify, event routing, handlePaid idempotent + $transaction, validasi amount | `src/app/api/webhooks/xendit/route.ts` | 3 jam |
-| T17 | `POST /api/cron/rebill` + `.github/workflows/rebill.yml` + CRON_SECRET; grace boundary | `src/app/api/cron/rebill/route.ts` | 3 jam |
-| T18 | Admin BillingCard + badge status + tombol bayar + status grace | `src/components/admin/BillingCard.tsx`, settings page | 3 jam |
-| T19 | Pricing page `/pricing` + nav link | `src/app/pricing/page.tsx` | 2 jam |
-| T20 | Tests (unit + integration §10) + SQL demo tenant + docs | `tests/billing-*.test.ts` | 3–4 jam |
+| ~~T13~~ | ~~Schema: `Payment` + enum~~ ✅ DONE (Xendit) | `prisma/schema.prisma` | — |
+| ~~T14~~ | ~~`lib/xendit.ts` + env~~ ✅ DONE | `src/lib/xendit.ts` | — |
+| ~~T15~~ | ~~`/api/billing/upgrade` + `/api/billing/status`~~ ✅ DONE | `src/app/api/billing/*` | — |
+| ~~T16~~ | ~~`/api/webhooks/xendit`~~ ✅ DONE | `src/app/api/webhooks/xendit/route.ts` | — |
+| ~~T17~~ | ~~`/api/cron/rebill` + rebill.yml~~ ✅ DONE | `src/app/api/cron/rebill/route.ts` | — |
+| ~~T18~~ | ~~BillingCard + badge + tombol bayar~~ ✅ DONE | `src/components/admin/BillingCard.tsx` | — |
+| ~~T19~~ | ~~Pricing page `/pricing`~~ ✅ DONE | `src/app/pricing/page.tsx` | — |
+| ~~T20~~ | ~~Tests + SQL demo tenant~~ ✅ DONE | `tests/billing-*.test.ts` | — |
+| **T21** | **Swap Xendit → Duitku:** `src/lib/duitku.ts` (createInvoice header-signature + verifyCallbackSignature), hapus `src/lib/xendit.ts`; route webhook baru `/api/webhooks/duitku` (form POST, resultCode=00), hapus `/api/webhooks/xendit`; cron re-bill panggil Duitku; env vars `DUITKU_*` (+ hapus `XENDIT_*` dari `.env.example`); update rate-limit map; adapt/rename test; hapus komentar "Xendit" di UI copy. **Schema/pricing/billing-card/badge TIDAK berubah** (gateway-agnostic). Opsional (rekomendasi @senior): rename field `xenditInvoiceId` → `gatewayReference` (migration rename). | `src/lib/duitku.ts`, `src/app/api/webhooks/duitku/route.ts`, `src/app/api/cron/rebill/route.ts`, `.env.example`, `tests/billing-*.test.ts`, (opsional) migration rename | 1–2 hari |
 
-**Kriteria selesai:** semua test pass (`npm test`), `npx tsc --noEmit` 0 error, `npm run build` OK, flow manual test-mode Xendit tervalidasi di staging (webhook → PRO aktif).
+**Kriteria selesai T21:** semua test pass (`npm test`), `npx tsc --noEmit` 0 error, `npm run build` OK,
+flow manual **Duitku sandbox** tervalidasi di staging (createInvoice → paymentUrl → callback →
+PRO aktif), tidak ada sisa referensi `xendit` di `src/` & `.env.example`.
 
 ---
 
@@ -377,35 +435,45 @@ Total: **±2–3 hari**. Urutan wajib (dependency): T13 → T14 → T15/T16 → 
 
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
-| **Min Monthly Fee USD 50 Xendit** | Beban ±Rp800rb/bln kalau volume kecil | Catat sbg biaya platform; evaluasi volume sebelum scale; jangan di-pass ke harga |
-| VA/OTC fee Rp13.000 (13%) | Margin tipis kalau tenant pilih VA | QRIS default termurah (4.7%); pricing page bisa highlight QRIS; evaluasi naikkan harga kalau mix channel berat |
-| Invoice API legacy (maintenance fee/deprecation) | Biaya/migrasi mendadak | Isolasi di `lib/xendit.ts`; follow-up migrasi ke Payment Sessions terjadwal |
-| Webhook ganda/retry (Xendit retry 6x) | Double activation | Idempotency layer §6.4 |
-| Webhook palsu | Tenant PRO gratis | Signature verify + amount validation + rate limit |
+| **Volume > Rp500jt/bln → harga khusus Duitku** (pengganti risiko "min monthly fee USD 50 Xendit") | Fee bisa naik/turun via negosiasi di volume besar | Catat sbg biaya platform; evaluasi volume sebelum scale; jangan di-pass ke harga tenant |
+| E-wallet/QRIS expiry pendek (channel-dependent, e.g. ShopeePay 60 menit) | Invoice expired sebelum grace 3 hari utk channel tsb | Grace/downgrade tetap otoritas cron (`planExpiresAt`); billing-card tampilkan banner bayar; tenant bisa create invoice baru |
+| VA fee Rp1.500–5.000 | Margin tipis kalau tenant pilih VA mahal | QRIS default termurah (0,7%); pricing page highlight QRIS |
+| Callback ganda/retry (Duitku retry kalau bukan 200) | Double activation | Idempotency layer §6.4 + selalu balas 200 |
+| Callback palsu / replay | Tenant PRO gratis | HMAC signature verify + amount validation + rate limit + IP whitelist opsional |
+| **Dua signature beda (request vs callback)** | Salah implementasi → create invoice 401 / callback ditolak | Spec §6.2 eksplisit; unit test kedua signature |
+| `merchantOrderId` terlalu panjang / format ditolak Duitku | createInvoice gagal | Verifikasi sandbox; format kompak fallback (§6.2) |
 | Vercel Hobby tanpa cron | Re-bill tidak jalan | GitHub Actions (gratis) — §7.1 |
 | Tenant lupa bayar → downgrade | Churn | Grace 3 hari + banner di admin + email reminder (opsional, out of scope) |
-| `planExpiresAt` drift (UTC vs tz lokal) | Downgrade salah waktu | Semua logika UTC (konsisten dgn kodebase "all UTC"); boundary pakai timestamp UTC murni |
+| `planExpiresAt` drift (UTC vs tz lokal) | Downgrade salah waktu | Semua logika UTC; timestamp signature Duitku (WIB) dihitung eksplisit, tidak dipakai utk logika bisnis |
 
 ---
 
 ## 14. Out of scope (eksplisit)
 
-- Self-serve cancel/refund tenant (manual via dashboard Xendit / SQL).
+- Self-serve cancel/refund tenant (manual via dashboard Duitku / SQL).
 - Multi-admin billing, role per-admin.
 - Custom domain.
 - Annual plan / diskon / promo.
-- Auto-debit / kartu tersimpan (butuh Recurring — ditolak).
+- Auto-debit / tokenisasi akun e-wallet (Recurring — ditolak).
 - Email notification engine (reminder tagihan) — cukup banner in-app.
-- Migrasi ke Payment Sessions v3 (follow-up terpisah).
+- Integrasi Xendit lama: dihapus total di T21 (tidak dipertahankan paralel).
 - Pajak/invoice legal formal (saat revenue konsisten).
 
 ---
 
 ## 15. Referensi & sumber
 
-- Xendit docs — Handling webhooks (x-callback-token, retry 6x, duplicate webhooks): https://docs.xendit.co/v1/docs/handling-webhooks
-- Xendit docs — Transaction fees (Payment Method Fee + Processing Fee, Min Monthly Fee USD 50, Maintenance Fee legacy API): https://docs.xendit.co/v1/docs/transaction-fees
-- Xendit docs — How Payments API work (v3 migration note): https://docs.xendit.co/v1/docs/how-payments-api-work
-- Xendit pricing ID (snapshot fee 2026-08-20, halaman interaktif): https://www.xendit.co/en-id/pricing/
-- Xendit Invoice API reference (legacy v2 create invoice): https://developers.xendit.co/api-reference/#create-invoice
-- Kodebase: `prisma/schema.prisma` (model Tenant plan/planExpiresAt), `src/lib/plan.ts` (PLAN_FEATURES), `src/app/api/admin/settings/route.ts` (READONLY_FIELDS), `src/lib/rate-limit.ts`, `tests/helpers.ts` (setupTenant).
+- Duitku Pop — Create Invoice (endpoint prod/sandbox, header signature `x-duitku-timestamp` +
+  `x-duitku-signature`): https://docs.duitku.com/pop/en/#create-invoice
+- Duitku API — Callback (form POST, verify `signature` = HMAC-SHA256(merchantCode + amount +
+  merchantOrderId), resultCode=00, wajib balas 200, IP whitelist prod/sandbox):
+  https://docs.duitku.com/api/en/#callback
+- Duitku API — Expiry Period per channel (VA/retail >1440 menit; e-wallet lebih rendah):
+  https://docs.duitku.com/api/en/#expiry-period
+- Duitku pricing/fee (verifikasi PM 2026-08-20): QRIS 0,7% · VA Rp1.500–5.000 · e-wallet 2–4% ·
+  tanpa minimum monthly fee · harga khusus volume >Rp500jt/bln
+- Kodebase: `prisma/schema.prisma` (model Payment, Tenant plan/planExpiresAt),
+  `src/lib/xendit.ts` (akan → `src/lib/duitku.ts`), `src/lib/billing.ts` (PRO_PRICE_IDR, nextExpiry),
+  `src/lib/plan.ts` (PLAN_FEATURES), `src/app/api/webhooks/xendit/route.ts` (akan → `/duitku`),
+  `src/app/api/cron/rebill/route.ts`, `src/lib/rate-limit.ts`, `tests/billing-*.test.ts`,
+  `.env.example` (XENDIT_* → DUITKU_*).
