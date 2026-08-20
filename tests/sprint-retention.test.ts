@@ -78,7 +78,9 @@ describe("getSprintRetentionCutoff (pure)", () => {
 });
 
 describe("isSprintRetained (pure)", () => {
-  const now = new Date("2026-08-16T12:00:00Z");
+  // Real now — daysAgo() below is relative to Date.now(), so a hardcoded
+  // base date here would drift as real time passes (issue #252 test fix).
+  const now = new Date();
   const cutoff = getSprintRetentionCutoff(Plan.FREE, now); // now - 1d
 
   it("OPEN sprint is always retained, however old", () => {
