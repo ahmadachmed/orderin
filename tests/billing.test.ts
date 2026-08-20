@@ -15,7 +15,7 @@ import {
   BILLING_PERIOD_DAYS,
   BILLING_GRACE_DAYS,
   REBILL_WINDOW_HOURS,
-  XENDIT_INVOICE_DURATION_HOURS,
+  DUITKU_EXPIRY_MINUTES,
   addDays,
   firstPeriodStart,
   rebillPeriodStart,
@@ -33,10 +33,10 @@ describe("constants", () => {
   it("price is Rp99.000 per month", () => {
     expect(PRO_PRICE_IDR).toBe(99000);
   });
-  it("period 30 days, grace 3 days, invoice duration 72h == grace", () => {
+  it("period 30 days, grace 3 days, duitku expiry 4320 min == grace", () => {
     expect(BILLING_PERIOD_DAYS).toBe(30);
     expect(BILLING_GRACE_DAYS).toBe(3);
-    expect(XENDIT_INVOICE_DURATION_HOURS).toBe(72);
+    expect(DUITKU_EXPIRY_MINUTES).toBe(4320);
   });
   it("re-bill window opens 24h before period end", () => {
     expect(REBILL_WINDOW_HOURS).toBe(24);

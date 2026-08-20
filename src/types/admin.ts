@@ -23,7 +23,7 @@ export type BillingPaymentStatus = "PENDING" | "PAID" | "EXPIRED";
 
 export interface BillingPayment {
   id: string;
-  xenditInvoiceId: string | null;
+  gatewayReference: string | null;
   externalId: string;
   amount: number | string; // Decimal serialized as string
   periodStart: string;

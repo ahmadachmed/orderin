@@ -25,8 +25,9 @@ import {
 import { _resetRateLimitsForTest } from "../src/lib/rate-limit";
 
 process.env.CRON_SECRET = "test-cron-secret";
-process.env.XENDIT_SECRET_KEY = "xnd_development_testkey";
-process.env.XENDIT_BASE_URL = "https://xendit.test";
+process.env.DUITKU_MERCHANT_CODE = "D1234";
+process.env.DUITKU_API_KEY = "test-api-key";
+process.env.DUITKU_BASE_URL = "https://duitku.test/api/merchant/createInvoice";
 
 const fixtures: TenantFixture[] = [];
 const DAY_MS = 86_400_000;
@@ -38,13 +39,16 @@ function stubInvoiceFetch() {
     "fetch",
     vi.fn().mockResolvedValue({
       ok: true,
-      status: 201,
+      status: 200,
       json: async () => {
         invoiceSeq += 1;
         return {
-          id: `inv_cron_${invoiceSeq}`,
-          invoice_url: `https://checkout.xendit.co/web/inv_cron_${invoiceSeq}`,
-          status: "PENDING",
+          merchantCode: "D1234",
+          reference: `DUITKU_CRON_${invoiceSeq}`,
+          paymentUrl: `https://app.duitku.com/payment/DUITKU_CRON_${invoiceSeq}`,
+          amount: 99000,
+          statusCode: "00",
+          statusMessage: "Success",
         };
       },
     })
@@ -114,10 +118,12 @@ describe("re-bill", () => {
 
     const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     const payload = JSON.parse(String(init.body));
-    expect(payload.amount).toBe(99000);
-    expect(payload.invoice_duration).toBe(72);
+    expect(payload.paymentAmount).toBe(99000);
+    expect(payload.expiryPeriod).toBe(4320);
+    expect(payload.paymentMethod).toBe("");
+    expect(payload.customerVaName).toBe("T7 Test Shop");
     // Deterministic external id: periodStart == current expiry (continuous).
-    expect(payload.external_id).toBe(buildExternalId(fixtures[0].tenantId, expiresAt));
+    expect(payload.merchantOrderId).toBe(buildExternalId(fixtures[0].tenantId, expiresAt));
 
     const payment = await prisma.payment.findFirst({
       where: { tenantId: fixtures[0].tenantId },
@@ -125,6 +131,7 @@ describe("re-bill", () => {
     expect(payment).not.toBeNull();
     expect(payment!.status).toBe("PENDING");
     expect(payment!.externalId).toBe(buildExternalId(fixtures[0].tenantId, expiresAt));
+    expect(payment!.gatewayReference).toBe("DUITKU_CRON_1");
     expect(payment!.periodStart.getTime()).toBe(expiresAt.getTime());
   });
 
@@ -140,8 +147,8 @@ describe("re-bill", () => {
         periodStart: expiresAt,
         periodEnd: addDays(expiresAt, BILLING_PERIOD_DAYS),
         status: "PENDING",
-        xenditInvoiceId: "inv_already_open",
-        invoiceUrl: "https://checkout.xendit.co/web/inv_already_open",
+        gatewayReference: "DUITKU_already_open",
+        invoiceUrl: "https://app.duitku.com/payment/DUITKU_already_open",
       },
     });
 
@@ -199,7 +206,7 @@ describe("re-bill", () => {
         periodEnd: addDays(expiresAt, BILLING_PERIOD_DAYS),
         status: "PAID",
         paidAt: new Date(),
-        xenditInvoiceId: "inv_paid_1",
+        gatewayReference: "DUITKU_paid_1",
       },
     });
     const res = await POST(cronReq());

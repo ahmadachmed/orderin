@@ -35,7 +35,7 @@ interface Entry {
  * | GET  /api/slug-check | 10s | 20 |
  * | POST /api/order/lookup | 60s | 5 |
  * | POST /api/billing/upgrade | 60s | 5  | (Phase 3 — invoice-spam defense)
- * | POST /api/webhooks/xendit | 60s | 30 | (Phase 3 — defense-in-depth; signature is the authority)
+ * | POST /api/webhooks/duitku | 60s | 30 | (Phase 3 — defense-in-depth; signature is the authority)
  * | POST /api/cron/rebill     | 60s | 5  | (Phase 3 — defense-in-depth; x-cron-secret is the authority)
  */
 export const ROUTE_RATE_LIMITS: Record<string, RateLimitConfig> = {
@@ -47,7 +47,7 @@ export const ROUTE_RATE_LIMITS: Record<string, RateLimitConfig> = {
   "POST /api/customer/register": { windowMs: 60_000, max: 3 },
   "POST /api/customer/login": { windowMs: 60_000, max: 10 },
   "POST /api/billing/upgrade": { windowMs: 60_000, max: 5 },
-  "POST /api/webhooks/xendit": { windowMs: 60_000, max: 30 },
+  "POST /api/webhooks/duitku": { windowMs: 60_000, max: 30 },
   "POST /api/cron/rebill": { windowMs: 60_000, max: 5 },
 };
 

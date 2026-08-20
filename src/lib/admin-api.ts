@@ -145,7 +145,7 @@ export async function fetchBillingStatus(): Promise<BillingStatus> {
   return req<BillingStatus>("/api/billing/status");
 }
 
-/** POST /api/billing/upgrade — create/return the Xendit invoice URL. */
+/** POST /api/billing/upgrade — create/return the Duitku payment URL. */
 export async function startProUpgrade(): Promise<{
   invoiceUrl: string | null;
   paymentId: string;

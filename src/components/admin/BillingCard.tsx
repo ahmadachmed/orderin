@@ -5,7 +5,7 @@
 //
 // Three states, driven by GET /api/billing/status:
 //   FREE            → badge FREE + "Bayar Rp99.000" button → POST /api/billing/upgrade
-//                     → redirect to the Xendit hosted invoice page.
+//                     → redirect to the Duitku hosted payment page.
 //   PRO + in grace  → amber banner + "Bayar tagihan" (re-uses the PENDING
 //                     invoice the cron already created).
 //   PRO active      → "Otomatis diperpanjang tiap bulan" + expiry date

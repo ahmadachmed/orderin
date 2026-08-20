@@ -64,7 +64,7 @@ describe("FREE tenant", () => {
 
   it("clicking pay calls POST /api/billing/upgrade and redirects to invoiceUrl", async () => {
     (startProUpgrade as ReturnType<typeof vi.fn>).mockResolvedValue({
-      invoiceUrl: "https://checkout.xendit.co/web/inv_1",
+      invoiceUrl: "https://app.duitku.com/payment/DUITKU_1",
       paymentId: "pay_1",
     });
     const loc = { href: "" };
@@ -72,15 +72,15 @@ describe("FREE tenant", () => {
 
     render(<BillingCard />);
     fireEvent.click(await screen.findByTestId("pay-button"));
-    await waitFor(() => expect(loc.href).toBe("https://checkout.xendit.co/web/inv_1"));
+    await waitFor(() => expect(loc.href).toBe("https://app.duitku.com/payment/DUITKU_1"));
     expect(startProUpgrade).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces the API error message when the upgrade fails", async () => {
-    (startProUpgrade as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Xendit error (API_VALIDATION_ERROR)"));
+    (startProUpgrade as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Duitku error (API_VALIDATION_ERROR)"));
     render(<BillingCard />);
     fireEvent.click(await screen.findByTestId("pay-button"));
-    expect(await screen.findByText(/Xendit error/)).toBeInTheDocument();
+    expect(await screen.findByText(/Duitku error/)).toBeInTheDocument();
   });
 });
 
