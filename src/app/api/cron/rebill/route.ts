@@ -9,14 +9,14 @@
  * null = permanent PRO → skipped by the query itself):
  *   1. Downgrade: planExpiresAt + 3d STRICTLY < now → plan=FREE (grace ended).
  *   2. Re-bill: planExpiresAt <= now + 24h AND no PENDING payment for the
- *      next period → create a Xendit invoice (pay window == 72h == grace).
+ *      next period → create a Duitku invoice (pay window == 4320 min == grace).
  *   3. Per-tenant errors are isolated — one failing tenant never kills the
  *      run. Response: { checked, invoiced, downgraded, errors }.
  */
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { clientIp } from "@/lib/api";
-import { verifyCronSecret, createInvoice, XenditError } from "@/lib/xendit";
+import { verifyCronSecret, createInvoice, DuitkuError } from "@/lib/duitku";
 import {
   PRO_PRICE_IDR,
   BILLING_PERIOD_DAYS,
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   // planExpiresAt != null → permanent PRO (demo tenants) never enters the pass.
   const tenants = await prisma.tenant.findMany({
     where: { plan: "PRO", planExpiresAt: { not: null } },
-    select: { id: true, slug: true, planExpiresAt: true, contactEmail: true },
+    select: { id: true, slug: true, name: true, planExpiresAt: true, contactEmail: true },
   });
 
   const now = new Date();
@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
       if (!shouldRebill(expiresAt, now)) continue;
 
       // Idempotency: an open PENDING invoice for this period → nothing to do
-      // (covers cron overlap runs; the same external_id would be rejected by
-      // Xendit anyway).
+      // (covers cron overlap runs; the same merchantOrderId would be rejected
+      // by Duitku anyway).
       const periodStart = rebillPeriodStart(expiresAt);
       const pending = await prisma.payment.findFirst({
         where: { tenantId: tenant.id, periodStart, status: "PENDING" },
@@ -95,21 +95,24 @@ export async function POST(req: NextRequest) {
       });
 
       try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const invoice = await createInvoice({
           externalId,
           amount: PRO_PRICE_IDR,
           description: `HeadwayBrew PRO — langganan 30 hari (${periodStart.toISOString()} s/d ${periodEnd.toISOString()})`,
-          successRedirectUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/admin/${tenant.slug}/settings?billing=success`,
-          customerEmail: tenant.contactEmail,
+          customerVaName: tenant.name,
+          email: tenant.contactEmail,
+          callbackUrl: `${appUrl}/api/webhooks/duitku`,
+          returnUrl: `${appUrl}/admin/${tenant.slug}/settings?billing=success`,
         });
         await prisma.payment.update({
           where: { id: payment.id },
-          data: { xenditInvoiceId: invoice.id, invoiceUrl: invoice.invoice_url },
+          data: { gatewayReference: invoice.reference, invoiceUrl: invoice.paymentUrl },
         });
         invoiced += 1;
-        console.log(`[billing] re-bill invoice ${invoice.id} for tenant ${tenant.id} (period ${periodStart.toISOString()})`);
+        console.log(`[billing] re-bill invoice ${invoice.reference} for tenant ${tenant.id} (period ${periodStart.toISOString()})`);
       } catch (err) {
-        // Xendit refused — mark the row EXPIRED (audit trail; a later run
+        // Duitku refused — mark the row EXPIRED (audit trail; a later run
         // re-issues with a fresh external_id attempt) and count the error.
         await prisma.payment
           .update({ where: { id: payment.id }, data: { status: "EXPIRED" } })

@@ -4,9 +4,9 @@
  * (issue #257). Plan doc: docs/MONETIZATION-PLAN-PHASE3.md §4.1 / §8.3 / §10.
  *
  * Real DB + mocked admin session (createSession → next/headers mock) + stubbed
- * global fetch for the Xendit call. Covers: 401 without session, Payment
- * PENDING creation + invoiceUrl return, idempotent re-click (same invoice,
- * no second Payment), Xendit error → 502 + EXPIRED trail, continuous period
+ * global fetch for the Duitku call. Covers: 401 without session, Payment
+ * PENDING creation + paymentUrl return, idempotent re-click (same invoice,
+ * no second Payment), Duitku error → 502 + EXPIRED trail, continuous period
  * for an active PRO tenant.
  */
 import "dotenv/config";
@@ -24,8 +24,9 @@ import {
 } from "../src/lib/billing";
 import { _resetRateLimitsForTest } from "../src/lib/rate-limit";
 
-process.env.XENDIT_SECRET_KEY = "xnd_development_testkey";
-process.env.XENDIT_BASE_URL = "https://xendit.test";
+process.env.DUITKU_MERCHANT_CODE = "D1234";
+process.env.DUITKU_API_KEY = "test-api-key";
+process.env.DUITKU_BASE_URL = "https://duitku.test/api/merchant/createInvoice";
 
 const { tokenStore } = vi.hoisted(() => ({ tokenStore: { current: null as string | null } }));
 vi.mock("next/headers", () => ({
@@ -40,7 +41,7 @@ vi.mock("next/headers", () => ({
 const fixtures: TenantFixture[] = [];
 let invoiceSeq = 0;
 
-function stubInvoiceFetch(status = 201) {
+function stubInvoiceFetch(status = 200) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
@@ -50,11 +51,14 @@ function stubInvoiceFetch(status = 201) {
         invoiceSeq += 1;
         return status >= 200 && status < 300
           ? {
-              id: `inv_abc${invoiceSeq}`,
-              invoice_url: `https://checkout.xendit.co/web/inv_abc${invoiceSeq}`,
-              status: "PENDING",
+              merchantCode: "D1234",
+              reference: `DUITKU_abc${invoiceSeq}`,
+              paymentUrl: `https://app.duitku.com/payment/DUITKU_abc${invoiceSeq}`,
+              amount: 99000,
+              statusCode: "00",
+              statusMessage: "Success",
             }
-          : { error_code: "API_VALIDATION_ERROR", message: "unauthorized" };
+          : { statusCode: "01", statusMessage: "unauthorized" };
       },
     })
   );
@@ -95,7 +99,7 @@ describe("auth", () => {
 });
 
 describe("POST /api/billing/upgrade", () => {
-  it("creates a PENDING Payment and returns the Xendit invoiceUrl", async () => {
+  it("creates a PENDING Payment and returns the Duitku paymentUrl", async () => {
     tokenStore.current = createSession(fixtures[0].tenantId, fixtures[0].adminId);
     await cleanPayments(fixtures[0].tenantId);
     stubInvoiceFetch();
@@ -103,24 +107,25 @@ describe("POST /api/billing/upgrade", () => {
     const res = await POST(upgradeReq());
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.invoiceUrl).toMatch(/^https:\/\/checkout\.xendit\.co\/web\/inv_abc\d+$/);
+    expect(body.invoiceUrl).toMatch(/^https:\/\/app\.duitku\.com\/payment\/DUITKU_abc\d+$/);
     expect(body.paymentId).toBeTruthy();
 
     const payments = await paymentsFor(fixtures[0].tenantId);
     expect(payments).toHaveLength(1);
     const p = payments[0];
     expect(p.status).toBe("PENDING");
-    expect(p.xenditInvoiceId).toMatch(/^inv_abc\d+$/);
+    expect(p.gatewayReference).toMatch(/^DUITKU_abc\d+$/);
     expect(Number(p.amount)).toBe(PRO_PRICE_IDR);
     expect(p.externalId).toBe(buildExternalId(fixtures[0].tenantId, p.periodStart));
     expect(p.periodEnd.getTime() - p.periodStart.getTime()).toBe(BILLING_PERIOD_DAYS * 86_400_000);
 
-    // Xendit payload: amount 99000 + invoice_duration 72.
+    // Duitku payload: paymentAmount 99000 + expiryPeriod 4320.
     const [, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     const payload = JSON.parse(String(init.body));
-    expect(payload.amount).toBe(99000);
-    expect(payload.invoice_duration).toBe(72);
-    expect(payload.external_id).toBe(p.externalId);
+    expect(payload.paymentAmount).toBe(99000);
+    expect(payload.expiryPeriod).toBe(4320);
+    expect(payload.merchantOrderId).toBe(p.externalId);
+    expect(payload.customerVaName).toBe("T7 Test Shop");
   });
 
   it("second click is idempotent: same invoiceUrl, still one Payment", async () => {
@@ -137,11 +142,11 @@ describe("POST /api/billing/upgrade", () => {
     expect(secondBody.paymentId).toBe(firstBody.paymentId);
     const payments = await paymentsFor(fixtures[0].tenantId);
     expect(payments).toHaveLength(1);
-    // No second Xendit create call for the same period.
+    // No second Duitku create call for the same period.
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
   });
 
-  it("Xendit error → 502 + Payment marked EXPIRED (retryable trail)", async () => {
+  it("Duitku error → 502 + Payment marked EXPIRED (retryable trail)", async () => {
     tokenStore.current = createSession(fixtures[1].tenantId, fixtures[1].adminId);
     await cleanPayments(fixtures[1].tenantId);
     stubInvoiceFetch(401);
@@ -149,7 +154,7 @@ describe("POST /api/billing/upgrade", () => {
     const res = await POST(upgradeReq());
     expect(res.status).toBe(502);
     const body = await res.json();
-    expect(body.error).toContain("Xendit");
+    expect(body.error).toContain("Duitku");
 
     const payments = await paymentsFor(fixtures[1].tenantId);
     expect(payments).toHaveLength(1);
@@ -200,7 +205,7 @@ describe("POST /api/billing/upgrade", () => {
     const payments = await paymentsFor(fixtures[1].tenantId);
     const latest = payments[payments.length - 1];
     expect(latest.status).toBe("PENDING");
-    expect(latest.xenditInvoiceId).toMatch(/^inv_abc\d+$/);
+    expect(latest.gatewayReference).toMatch(/^DUITKU_abc\d+$/);
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1); // fresh invoice issued
   });
 });

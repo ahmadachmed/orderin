@@ -203,16 +203,16 @@ enum Plan {
 // ─────────────────────────────────────────────────────────────────────
 
 enum BillingPaymentStatus {
-  PENDING // invoice created at Xendit, awaiting payment
-  PAID // invoice.paid webhook verified — PRO activated
-  EXPIRED // invoice.expired webhook, or Xendit create-invoice failure
+  PENDING // invoice created at Duitku, awaiting payment
+  PAID // duitku callback resultCode=00 verified — PRO activated
+  EXPIRED // non-00 callback, or Duitku create-invoice failure
 }
 
 model Payment {
   id              String               @id @default(uuid()) @db.Uuid
   tenantId        String               @db.Uuid
   tenant          Tenant               @relation(fields: [tenantId], references: [id])
-  xenditInvoiceId String?              @unique // set after create-invoice succeeds (webhook lookup key)
+  gatewayReference String?              @unique // Duitku `reference` — set after create-invoice succeeds (callback lookup key)
   externalId      String               @unique // idempotency key: pay_<tenantId>_<periodStart epochMs>
   amount          Decimal              @db.Decimal(12, 2) // always 99000 — webhook validates against this
   periodStart     DateTime             // start of the 30-day period this payment covers

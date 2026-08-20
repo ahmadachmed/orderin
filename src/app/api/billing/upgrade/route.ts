@@ -2,8 +2,8 @@
  * POST /api/billing/upgrade — start a PRO subscription payment (issue #257).
  * Plan doc: docs/MONETIZATION-PLAN-PHASE3.md §4.1 / §8.3.
  *
- * Flow: create a Payment row PENDING → create a Xendit invoice → return the
- * hosted invoice_url (the client redirects there). Idempotent: an existing
+ * Flow: create a Payment row PENDING → create a Duitku invoice → return the
+ * hosted paymentUrl (the client redirects there). Idempotent: an existing
  * PENDING invoice for the same period is returned as-is, so double-clicks
  * and cron/upgrade races never double-charge.
  */
@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, clientIp } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { createInvoice, XenditError } from "@/lib/xendit";
+import { createInvoice, DuitkuError } from "@/lib/duitku";
 import {
   PRO_PRICE_IDR,
   BILLING_PERIOD_DAYS,
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: session.tenantId },
-    select: { id: true, slug: true, plan: true, planExpiresAt: true, contactEmail: true },
+    select: { id: true, slug: true, name: true, plan: true, planExpiresAt: true, contactEmail: true },
   });
   if (!tenant) return fail("Tenant not found", 404);
 
@@ -80,29 +80,32 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const invoice = await createInvoice({
       externalId: payment.externalId,
       amount: PRO_PRICE_IDR,
       description: `HeadwayBrew PRO — langganan 30 hari (${periodStart.toISOString()} s/d ${periodEnd.toISOString()})`,
-      successRedirectUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/admin/${tenant.slug}/settings?billing=success`,
-      customerEmail: tenant.contactEmail,
+      customerVaName: tenant.name,
+      email: tenant.contactEmail,
+      callbackUrl: `${appUrl}/api/webhooks/duitku`,
+      returnUrl: `${appUrl}/admin/${tenant.slug}/settings?billing=success`,
     });
     const updated = await prisma.payment.update({
       where: { id: payment.id },
-      data: { xenditInvoiceId: invoice.id, invoiceUrl: invoice.invoice_url, status: "PENDING" },
+      data: { gatewayReference: invoice.reference, invoiceUrl: invoice.paymentUrl, status: "PENDING" },
     });
-    return ok({ invoiceUrl: invoice.invoice_url, paymentId: updated.id });
+    return ok({ invoiceUrl: invoice.paymentUrl, paymentId: updated.id });
   } catch (err) {
-    // Xendit refused (bad key / duplicate / rate limit / network). Mark the
+    // Duitku refused (bad key / duplicate / rate limit / network). Mark the
     // row EXPIRED as an audit trail so a later retry issues a fresh
     // external_id for the same period. Underpayment/activation never happens
     // here — activation only comes from a verified webhook.
     await prisma.payment
       .update({ where: { id: payment.id }, data: { status: "EXPIRED" } })
       .catch(() => undefined);
-    if (err instanceof XenditError) {
-      console.error("xendit createInvoice failed:", err.status, err.code, err.message);
-      return fail(`Xendit error (${err.code})`, 502);
+    if (err instanceof DuitkuError) {
+      console.error("duitku createInvoice failed:", err.status, err.code, err.message);
+      return fail(`Duitku error (${err.code})`, 502);
     }
     console.error("billing upgrade error:", err);
     return fail("Internal server error", 500);

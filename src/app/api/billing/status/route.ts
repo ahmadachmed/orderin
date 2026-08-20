@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const PAYMENT_SELECT = {
   id: true,
-  xenditInvoiceId: true,
+  gatewayReference: true,
   externalId: true,
   amount: true,
   periodStart: true,

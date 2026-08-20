@@ -12,13 +12,17 @@ export const PRO_PRICE_IDR = 99000;
 export const BILLING_PERIOD_DAYS = 30;
 /**
  * Grace period: PRO stays active until planExpiresAt + 3 days, then the
- * cron downgrades to FREE. `invoice_duration` at Xendit (72h) matches this.
+ * cron downgrades to FREE. Duitku `expiryPeriod` (4320 min) matches this.
  */
 export const BILLING_GRACE_DAYS = 3;
 /** Re-bill window: cron opens a new invoice when the period ends within 24h. */
 export const REBILL_WINDOW_HOURS = 24;
-/** Xendit invoice_duration (hours) — pay window == grace period. */
-export const XENDIT_INVOICE_DURATION_HOURS = 72;
+/**
+ * Duitku createInvoice expiryPeriod (minutes) — pay window == grace period
+ * (3 days). Channel caps vary (e-wallet e.g. ShopeePay 60 min) but expiry is
+ * only a technical bound — the cron (planExpiresAt) is the source of truth.
+ */
+export const DUITKU_EXPIRY_MINUTES = 4320;
 
 /** Add N days to a Date (UTC-safe). */
 export function addDays(date: Date, days: number): Date {
@@ -74,15 +78,20 @@ export function nextExpiry(current: Date | null, now: Date): Date {
 
 /**
  * Idempotency key for a Payment: `pay_<tenantId>_<periodStart epochMs>`.
- * Unique at the DB (Payment.externalId) and at Xendit (external_id).
- * epochMs (not ISO) keeps the string within Xendit's external_id charset
+ * Unique at the DB (Payment.externalId) and at Duitku (merchantOrderId).
+ * epochMs (not ISO) keeps the string within Duitku's merchantOrderId charset
  * (alphanumeric + `_`/`-`) and length limits.
  *
+ * NOTE (T21 pitfall): Duitku does not document a merchantOrderId max length;
+ * this format is ±55 chars. If the sandbox rejects it, fall back to the
+ * compact form `pay_<tenantId.slice(0,8)>_<epochMs>` (still unique — the DB
+ * externalId stays the source of truth for idempotency).
+ *
  * `attempt` > 1 suffixes the key (`_2`, `_3`, …) so a RE-issued invoice for
- * the SAME period (previous one expired unpaid, or Xendit create failed)
- * gets a fresh external_id — Xendit rejects duplicate external_ids, and the
- * cron "no PENDING payment for this period" check keys on periodStart, not
- * the external id, so retries stay idempotent.
+ * the SAME period (previous one expired unpaid, or Duitku create failed)
+ * gets a fresh merchantOrderId — Duitku rejects duplicate merchantOrderIds,
+ * and the cron "no PENDING payment for this period" check keys on
+ * periodStart, not the external id, so retries stay idempotent.
  */
 export function buildExternalId(tenantId: string, periodStart: Date, attempt = 1): string {
   const base = `pay_${tenantId}_${periodStart.getTime()}`;
