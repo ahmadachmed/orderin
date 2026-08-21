@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Sparkles } from "lucide-react";
+import { Check, CreditCard, HelpCircle, Sparkles } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PRO_PRICE_IDR } from "@/lib/billing";
@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 /**
- * Monetisation Phase 3 / T19 — public pricing page (issue #257).
+ * Monetisation Phase 3 / T19 + UX polish (issue #257) — public pricing page.
  * Plan doc: docs/MONETIZATION-PLAN-PHASE3.md §8.1.
  *
- * Rp99.000/bulan + PRO benefits. CTA routing: logged-in admin → their
- * settings billing section; otherwise → /login (which lands them on the
- * dashboard after sign-in).
+ * Rp99.000/bulan + PRO benefits vs FREE. Payment methods (QRIS / transfer
+ * bank) without naming the gateway in user-facing copy. CTA routing:
+ * logged-in admin → their settings billing section; otherwise → /login
+ * (which lands them on the dashboard after sign-in). FAQ for the three
+ * common questions.
  */
 
 const PRO_BENEFITS: Array<{ title: string; detail: string }> = [
@@ -25,6 +27,29 @@ const PRO_BENEFITS: Array<{ title: string; detail: string }> = [
   { title: "Retensi sprint 30 hari", detail: "Riwayat penjualan lebih panjang" },
   { title: "Tanpa badge", detail: "Shopfront bersih tanpa \"Powered by HeadwayBrew\"" },
   { title: "Prioritas support", detail: "Bantuan lebih cepat saat dibutuhkan" },
+];
+
+const FREE_LIMITS: Array<{ title: string; detail: string }> = [
+  { title: "25 item menu", detail: "Cukup untuk menu harian kecil" },
+  { title: "300 order/bulan", detail: "Kuota bulanan terbatas" },
+  { title: "Antrean 20 order", detail: "Kapasitas antrean standar" },
+  { title: "Retensi sprint 1 hari", detail: "Riwayat penjualan singkat" },
+  { title: "Badge HeadwayBrew", detail: "Tampil di shopfront publik" },
+];
+
+const FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "Apakah bisa coba gratis?",
+    a: "Ya. Semua kedai mulai di paket FREE tanpa biaya — buat menu, terima order, dan kelola antrean langsung. Upgrade ke PRO hanya saat kedai sudah siap tumbuh.",
+  },
+  {
+    q: "Bagaimana cara bayar?",
+    a: "Pembayaran via QRIS atau transfer bank (virtual account). Setelah membayar, paket PRO aktif otomatis untuk 30 hari dan diperpanjang setiap bulan selama langganan aktif.",
+  },
+  {
+    q: "Bisa berhenti kapan saja?",
+    a: "Bisa. Batalkan langganan kapan saja dari halaman billing — tagihan bulan berikutnya berhenti otomatis dan kedai kembali ke paket FREE.",
+  },
 ];
 
 const priceLabel = new Intl.NumberFormat("id-ID", {
@@ -102,17 +127,88 @@ export default async function PricingPage() {
             ))}
           </ul>
 
+          {/* FREE vs PRO — what stays the same vs what changes */}
+          <div className="mt-8 border-t border-border pt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Bandingkan dengan FREE
+            </h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2" data-testid="plan-comparison">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-sm font-semibold text-foreground">FREE</p>
+                <p className="text-xs text-muted-foreground">Gratis selamanya</p>
+                <ul className="mt-3 space-y-2">
+                  {FREE_LIMITS.map((f) => (
+                    <li key={f.title} className="flex items-start gap-2 text-sm text-foreground">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+                      <span>
+                        <span className="font-medium">{f.title}</span>
+                        <span className="block text-xs text-muted-foreground">{f.detail}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                <p className="text-sm font-semibold text-foreground">PRO — {priceLabel}/bulan</p>
+                <p className="text-xs text-muted-foreground">Tanpa batas, tanpa badge</p>
+                <ul className="mt-3 space-y-2">
+                  {PRO_BENEFITS.map((b) => (
+                    <li key={b.title} className="flex items-start gap-2 text-sm text-foreground">
+                      <span className="mt-0.5 rounded-full bg-emerald-500/15 p-0.5 text-emerald-600 dark:text-emerald-400">
+                        <Check className="h-3 w-3" aria-hidden="true" />
+                      </span>
+                      <span>
+                        <span className="font-medium">{b.title}</span>
+                        <span className="block text-xs text-muted-foreground">{b.detail}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Cara bayar — QRIS / transfer bank (gateway agnostic copy) */}
+          <div className="mt-8 border-t border-border pt-6">
+            <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <CreditCard className="h-4 w-4" aria-hidden="true" />
+              Cara bayar
+            </h2>
+            <p className="mt-3 text-sm text-foreground">
+              Bayar sekali, aktif 30 hari. Pembayaran diproses otomatis lewat{" "}
+              <span className="font-semibold">QRIS atau transfer bank</span> — tanpa perlu
+              kartu, tanpa ribet. Setelah pembayaran terverifikasi, paket PRO aktif langsung.
+            </p>
+          </div>
+
           <div className="mt-8 border-t border-border pt-6 text-center">
             <Button asChild size="lg" className="w-full rounded-full font-bold sm:w-auto sm:px-10">
               <Link href={ctaHref} data-testid="pricing-cta">
-                Upgrade sekarang
+                Bayar sekarang
               </Link>
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              Pembayaran aman via Duitku — QRIS, VA, e-wallet, atau kartu.
+              Pembayaran aman via QRIS / transfer bank — tagihan bulanan berhenti otomatis
+              saat dibatalkan.
             </p>
           </div>
         </div>
+
+        {/* FAQ */}
+        <section className="mt-12" aria-label="Pertanyaan umum">
+          <h2 className="flex items-center justify-center gap-2 text-lg font-bold text-foreground">
+            <HelpCircle className="h-5 w-5 text-primary" aria-hidden="true" />
+            Pertanyaan umum
+          </h2>
+          <div className="mt-6 space-y-4" data-testid="pricing-faq">
+            {FAQS.map((faq) => (
+              <div key={faq.q} className="rounded-xl border border-border bg-card p-5">
+                <h3 className="text-sm font-semibold text-foreground">{faq.q}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
 
       <LandingFooter />

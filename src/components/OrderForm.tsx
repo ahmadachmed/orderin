@@ -29,7 +29,7 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; upgradeUrl?: string } | null>(null);
   // T14-followup: category tabs — selected category filters the menu
   // client-side; null = "Semua" (all items).
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -91,11 +91,11 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartLines.length === 0) {
-      setError("Pilih minimal satu menu dulu.");
+      setError({ message: "Pilih minimal satu menu dulu." });
       return;
     }
     if (!customerName.trim() || !customerPhone.trim()) {
-      setError("Nama dan nomor HP wajib diisi.");
+      setError({ message: "Nama dan nomor HP wajib diisi." });
       return;
     }
     setSubmitting(true);
@@ -122,12 +122,15 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error ?? "Gagal membuat pesanan. Coba lagi.");
+        setError({
+          message: data?.error ?? "Gagal membuat pesanan. Coba lagi.",
+          upgradeUrl: typeof data?.upgradeUrl === "string" ? data.upgradeUrl : undefined,
+        });
         return;
       }
       const orderId = data?.orderId ?? data?.order?.id;
       if (!orderId) {
-        setError("Respon server tidak valid.");
+        setError({ message: "Respon server tidak valid." });
         return;
       }
       const orderUrl = `/${tenantSlug}/order/${orderId}`;
@@ -161,7 +164,7 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
         window.location.assign(orderUrl);
       }
     } catch {
-      setError("Gagal terhubung ke server. Coba lagi.");
+      setError({ message: "Gagal terhubung ke server. Coba lagi." });
     } finally {
       if (!redirecting) setSubmitting(false);
     }
@@ -264,7 +267,17 @@ export default function OrderForm({ tenantSlug, items, isOpen, closedMessage }: 
           </Card>
 
           {error ? (
-            <p className="mt-3 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{error}</p>
+            <div className="mt-3 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+              {error.message}
+              {error.upgradeUrl ? (
+                <Link
+                  href={error.upgradeUrl}
+                  className="ml-1 font-semibold underline underline-offset-2"
+                >
+                  Lihat paket PRO
+                </Link>
+              ) : null}
+            </div>
           ) : null}
 
           {/* Sticky bottom summary bar — matches Stitch menu.html bottom cart bar */}

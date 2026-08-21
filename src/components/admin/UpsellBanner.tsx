@@ -1,19 +1,21 @@
 "use client";
 
-// Monetisasi Phase 1 / T12 (issue #229) — Upsell banner in admin dashboard.
+// Monetisasi Phase 1 / T12 (issue #229) + Phase 3 UX (issue #257) — Upsell
+// banner in admin dashboard.
 //
 // Shows a dismissible banner ONLY on FREE-plan tenants. PRO tenants never see
 // it because `can(plan, "upsellBanner")` returns false for PRO.
 //
-// The banner is purely informational — no payment buttons, no upgrade flow
-// (that's Phase 3, out of scope). The CTA text says "perubahan rencana tersedia
-// nanti" (plan changes available later) so the merchant knows an upgrade path
-// exists without a broken link.
+// The banner is informational with a CTA to the public pricing page — no
+// payment buttons (the actual upgrade flow lives in BillingCard on the
+// settings page). CTA text says "Lihat paket PRO" so the merchant can learn
+// about the plan before paying.
 //
 // Dismiss state persists in localStorage so once a merchant closes the banner
 // it stays closed across sessions until the key is manually cleared.
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Sparkles, X } from "lucide-react";
 import { fetchSettings } from "@/lib/admin-api";
 import { can } from "@/lib/plan";
@@ -84,9 +86,14 @@ export default function UpsellBanner() {
         </p>
         <p className="text-xs text-muted-foreground">
           Buka menu tanpa batas, antrean lebih panjang, dan retensi sprint 30 hari.
-          Perubahan rencana tersedia nanti.
         </p>
       </div>
+      <Link
+        href="/pricing"
+        className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        Lihat paket PRO
+      </Link>
       <button
         type="button"
         onClick={handleDismiss}

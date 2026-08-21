@@ -5,15 +5,20 @@ export function ok(data: unknown, status = 200): NextResponse {
   return NextResponse.json(data, { status });
 }
 
-export function fail(message: string, status = 400): NextResponse {
-  return NextResponse.json({ error: message }, { status });
+export function fail(
+  message: string,
+  status = 400,
+  extra?: Record<string, unknown>
+): NextResponse {
+  return NextResponse.json({ error: message, ...extra }, { status });
 }
 
 /** Throw inside a route's scoped() block to short-circuit with a clean HTTP error. */
 export class HttpError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public extra?: Record<string, unknown>
   ) {
     super(message);
   }

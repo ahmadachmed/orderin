@@ -83,4 +83,36 @@ describe("/pricing", () => {
     const cta = screen.getByTestId("pricing-cta");
     expect(cta).toHaveAttribute("href", "/admin/kopi-senja/settings?billing=1");
   });
+
+  it("labels the CTA 'Bayar sekarang'", async () => {
+    sessionStore.token = null;
+    render(await PricingPage());
+    expect(screen.getByTestId("pricing-cta")).toHaveTextContent("Bayar sekarang");
+  });
+
+  it("shows payment methods without naming the gateway", async () => {
+    sessionStore.token = null;
+    render(await PricingPage());
+    expect(screen.getAllByText(/QRIS atau transfer bank/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/duitku/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/xendit/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the FREE vs PRO comparison", async () => {
+    sessionStore.token = null;
+    render(await PricingPage());
+    const comparison = screen.getByTestId("plan-comparison");
+    expect(comparison).toHaveTextContent("FREE");
+    expect(comparison).toHaveTextContent("PRO");
+    expect(comparison).toHaveTextContent("25 item menu");
+  });
+
+  it("renders the FAQ", async () => {
+    sessionStore.token = null;
+    render(await PricingPage());
+    const faq = screen.getByTestId("pricing-faq");
+    expect(faq).toHaveTextContent("Apakah bisa coba gratis?");
+    expect(faq).toHaveTextContent("Bagaimana cara bayar?");
+    expect(faq).toHaveTextContent("Bisa berhenti kapan saja?");
+  });
 });

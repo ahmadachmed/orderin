@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
           return fail(
             `Menu item limit reached (${cap}). Upgrade to PRO for unlimited menu items.`,
             402,
+            { upgradeUrl: "/pricing?utm=limit" }
           );
         }
       }

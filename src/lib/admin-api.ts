@@ -28,15 +28,21 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail = res.statusText;
+    let upgradeUrl: string | undefined;
     try {
       const body = await res.json();
       if (body?.error) detail = body.error;
       else if (body?.message) detail = body.message;
+      if (typeof body?.upgradeUrl === "string") upgradeUrl = body.upgradeUrl;
     } catch {
       // non-JSON error body — keep statusText
     }
-    const err = new Error(detail) as Error & { status?: number };
+    const err = new Error(detail) as Error & {
+      status?: number;
+      upgradeUrl?: string;
+    };
     err.status = res.status;
+    if (upgradeUrl) err.upgradeUrl = upgradeUrl;
     throw err;
   }
   if (res.status === 204) return undefined as T;
