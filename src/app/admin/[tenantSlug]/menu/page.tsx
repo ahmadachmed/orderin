@@ -4,6 +4,7 @@
 // Consumes T2's GET/POST/PATCH/DELETE /api/admin/menu[/itemId].
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   createMenuItem,
@@ -24,6 +25,20 @@ interface FormState {
   sortOrder: string;
 }
 
+interface ErrorState {
+  message: string;
+  upgradeUrl?: string;
+}
+
+/** Normalize a thrown error into renderable state, carrying upgradeUrl when the
+ * API attached one (Monetisation Phase 3 — 402 menu cap → /pricing link). */
+function toErrorState(err: unknown, fallback: string): ErrorState {
+  return {
+    message: err instanceof Error ? err.message : fallback,
+    upgradeUrl: (err as { upgradeUrl?: string }).upgradeUrl,
+  };
+}
+
 const EMPTY: FormState = {
   name: "",
   description: "",
@@ -42,7 +57,7 @@ export default function AdminMenuPage() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [editing, setEditing] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorState | null>(null);
   const [authError, setAuthError] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -54,7 +69,7 @@ export default function AdminMenuPage() {
     } catch (err) {
       const status = (err as Error & { status?: number }).status;
       if (status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Gagal memuat menu");
+      else setError(toErrorState(err, "Gagal memuat menu"));
     }
   }, []);
 
@@ -110,7 +125,7 @@ export default function AdminMenuPage() {
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Gagal menyimpan");
+      else setError(toErrorState(err, "Gagal menyimpan"));
     } finally {
       setBusy(false);
     }
@@ -123,7 +138,7 @@ export default function AdminMenuPage() {
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Gagal menghapus");
+      else setError(toErrorState(err, "Gagal menghapus"));
     }
   }
 
@@ -133,7 +148,7 @@ export default function AdminMenuPage() {
       await load();
     } catch (err) {
       if ((err as Error & { status?: number }).status === 401) setAuthError(true);
-      else setError(err instanceof Error ? err.message : "Gagal memperbarui");
+      else setError(toErrorState(err, "Gagal memperbarui"));
     }
   }
 
@@ -159,7 +174,15 @@ export default function AdminMenuPage() {
       <main className="mx-auto max-w-5xl p-4">
         {error && (
           <p className="mb-3 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
-            {error}
+            {error.message}
+            {error.upgradeUrl ? (
+              <Link
+                href={error.upgradeUrl}
+                className="ml-1 font-semibold underline underline-offset-2"
+              >
+                Lihat paket PRO
+              </Link>
+            ) : null}
           </p>
         )}
 
