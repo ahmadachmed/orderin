@@ -188,8 +188,7 @@ export default async function PricingPage() {
               </Link>
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              Pembayaran aman via QRIS / transfer bank — tagihan bulanan berhenti otomatis
-              saat dibatalkan.
+              Pembayaran aman via Duitku — QRIS, VA, e-wallet, atau kartu.
             </p>
           </div>
         </div>
