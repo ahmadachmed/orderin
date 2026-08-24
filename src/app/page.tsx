@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { effectiveOpen } from "@/lib/open";
 import { Logo } from "@/components/landing/Logo";
@@ -13,6 +14,10 @@ import PopularShops, { getPopularShops } from "@/components/landing/PopularShops
 import ScrollToSearch from "@/components/landing/ScrollToSearch";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /**
  * Modern marketing landing page for HeadwayBrew (T29, PLAN section 13).
