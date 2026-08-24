@@ -428,11 +428,11 @@ export default function AdminSettingsPage() {
                     setIsOpenTouched(true);
                   }}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
-                    form.isOpen ? "bg-emerald-500" : "bg-muted"
+                    form.isOpen ? "bg-emerald-500" : "bg-border"
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-transform ${
+                    className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-card shadow transition-transform ${
                       form.isOpen ? "translate-x-5" : "translate-x-0.5"
                     }`}
                   />
