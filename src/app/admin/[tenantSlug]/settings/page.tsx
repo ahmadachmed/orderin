@@ -428,7 +428,7 @@ export default function AdminSettingsPage() {
                     setIsOpenTouched(true);
                   }}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
-                    form.isOpen ? "bg-emerald-500" : "bg-muted"
+                    form.isOpen ? "bg-emerald-500" : "bg-border"
                   }`}
                 >
                   <span
