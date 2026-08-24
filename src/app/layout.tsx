@@ -10,6 +10,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+/** Absolute URL base for public links (env-driven, defaults to production). */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "https://headwaybrew.com";
+
 // Mono fallback for code (kept from the pre-design-system stack).
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
@@ -18,6 +22,10 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: "/",
+  },
   title: "HeadwayBrew — Pesan Kopi, Skip Antre",
   description: "Pesan kopi takeaway lebih dulu dan ambil saat sudah siap.",
 };

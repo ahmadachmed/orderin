@@ -1,4 +1,12 @@
 {
   "buildCommand": "if [ -n \"$MIGRATE_DATABASE_URL\" ]; then DATABASE_URL=\"$MIGRATE_DATABASE_URL\" prisma migrate deploy; fi && next build",
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.headwaybrew.com" }],
+      "destination": "https://headwaybrew.com/$1",
+      "permanent": true
+    }
+  ]
 }
