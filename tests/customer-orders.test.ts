@@ -244,12 +244,12 @@ describe("T17-9 — /[tenantSlug]/account/orders page", () => {
     expect(navMock.redirect).toHaveBeenCalledWith(`/${fx.slug}/login?next=account/orders`);
   });
 
-  it("404s when the session belongs to a different tenant slug", async () => {
+  it("redirects to login when the session belongs to a different tenant slug (cross-tenant 404 fix)", async () => {
     tokenStore.current = makeSession(fx.tenantId, customerId, "some-other-shop");
     await expect(
       AccountOrdersPage({ params: Promise.resolve({ tenantSlug: fx.slug }) })
-    ).rejects.toThrow("__NOT_FOUND__");
-    expect(navMock.notFound).toHaveBeenCalled();
+    ).rejects.toThrow("__REDIRECT__");
+    expect(navMock.redirect).toHaveBeenCalledWith(`/${fx.slug}/login?next=account/orders`);
   });
 
   it("renders the history page for a valid session", async () => {
