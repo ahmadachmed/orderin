@@ -72,6 +72,7 @@ test.beforeAll(async ({ request }) => {
     username: `admin${stamp}`,
     password,
     contactEmail: `e2e-lang-${stamp}@example.com`,
+    consent: true,
   }, 201);
   const langSettings = await request.patch("/api/admin/settings", {
     data: { openTime: "00:00", closeTime: "23:59", timezone: "" },
@@ -91,6 +92,7 @@ test.beforeAll(async ({ request }) => {
     username: `ovn${stamp}`,
     password,
     contactEmail: `e2e-ovn-${stamp}@example.com`,
+    consent: true,
   }, 201);
   const ovnSettings = await request.patch("/api/admin/settings", {
     data: { openTime: "10:00", closeTime: "20:00", timezone: "Asia/Jakarta" },
@@ -105,6 +107,7 @@ test.beforeAll(async ({ request }) => {
     username: `day${stamp}`,
     password,
     contactEmail: `e2e-day-${stamp}@example.com`,
+    consent: true,
   }, 201);
   const daySettings = await request.patch("/api/admin/settings", {
     data: { openTime: "00:00", closeTime: "10:00", timezone: "Asia/Jakarta" },

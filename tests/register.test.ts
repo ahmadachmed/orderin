@@ -5,10 +5,12 @@
  */
 import "dotenv/config";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { NextRequest } from "next/server";
 import { prisma, scoped } from "../src/lib/prisma";
 import { prisma as db } from "../src/lib/db";
 import { hashPassword, verifyPassword } from "../src/lib/password";
 import { validatePasswordMatch } from "../src/lib/register-validation";
+import { POST as postRegisterRoute } from "../src/app/api/register/route";
 
 const stamp = Date.now();
 const SLUG = `test-reg-${stamp}`;
@@ -285,5 +287,50 @@ describe("GET /api/slug-check", () => {
   it("returns available=true for unregistered slug", async () => {
     const t = await db.tenant.findUnique({ where: { slug: `available-${stamp}` } });
     expect(t).toBeNull();
+  });
+});
+
+describe("POST /api/register — privacy consent (UU PDP)", () => {
+  function regJson(body: Record<string, unknown>) {
+    return new NextRequest("http://localhost/api/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  const validBody = (suffix: string) => ({
+    name: `Kedai Consent ${suffix}`,
+    slug: `test-consent-${stamp}-${suffix}`,
+    username: `consent-admin-${suffix}`,
+    password: "secret123",
+    contactEmail: `consent-${suffix}@kedai.com`,
+  });
+
+  it("rejects registration without consent → 400 with clear message", async () => {
+    const res = await postRegisterRoute(regJson(validBody("a")));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("menyetujui");
+  });
+
+  it("rejects registration with consent=false → 400", async () => {
+    const res = await postRegisterRoute(regJson({ ...validBody("b"), consent: false }));
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts registration with consent=true → 201", async () => {
+    const res = await postRegisterRoute(regJson({ ...validBody("c"), consent: true }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.tenant.slug).toBe(`test-consent-${stamp}-c`);
+
+    // Cleanup
+    const t = await db.tenant.findUnique({ where: { slug: `test-consent-${stamp}-c` } });
+    if (t) {
+      await prisma.tenantAdmin.deleteMany({ where: { tenantId: t.id } });
+      await db.tenant.deleteMany({ where: { id: t.id } });
+    }
   });
 });

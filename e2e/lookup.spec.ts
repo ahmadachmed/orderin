@@ -63,6 +63,7 @@ test.beforeAll(async ({ request }) => {
     username,
     password,
     contactEmail: `e2e-lookup-${stamp}@example.com`,
+    consent: true,
   }, 201);
 
   // Keep the order step deterministic regardless of run time.

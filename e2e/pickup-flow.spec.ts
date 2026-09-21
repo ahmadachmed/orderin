@@ -85,6 +85,7 @@ test.beforeAll(async ({ request }) => {
     username,
     password,
     contactEmail: `e2e-pin-${stamp}@example.com`,
+    consent: true,
   }, 201);
 
   const settingsRes = await request.patch("/api/admin/settings", {

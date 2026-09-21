@@ -13,6 +13,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { hashPassword } from "@/lib/password";
 import { createCustomerSession, customerSessionCookie } from "@/lib/customer-auth";
 import { isValidSlug, NAME_MAX, PHONE_MAX, hasLengthAtMost } from "@/lib/validation";
+import { hasConsent, CONSENT_REQUIRED_MESSAGE, PRIVACY_CONSENT_VERSION } from "@/lib/privacy-consent";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await readJson(req);
+  // UU PDP: registration collects PII (name + phone) — explicit consent is
+  // mandatory. Missing or false consent is rejected before any DB work.
+  if (!hasConsent(body)) {
+    return fail(CONSENT_REQUIRED_MESSAGE, 400);
+  }
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
@@ -60,6 +66,8 @@ export async function POST(req: NextRequest) {
       name,
       phone,
       passwordHash,
+      privacyConsentAt: new Date(),
+      privacyConsentVersion: PRIVACY_CONSENT_VERSION,
     } as unknown as Parameters<typeof prisma.customer.create>[0]["data"],
   });
 

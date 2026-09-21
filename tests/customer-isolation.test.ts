@@ -99,7 +99,10 @@ function jsonReq(path: string, body: Record<string, unknown>, ip: string) {
 }
 
 async function registerReq(slug: string, phone: string, password: string, ip: string) {
-  return postRegister(jsonReq("/api/customer/register", { slug, phone, password, name: "Pelanggan" }, ip));
+  // UU PDP: register requires explicit consent — the API rejects bodies without it.
+  return postRegister(
+    jsonReq("/api/customer/register", { slug, phone, password, name: "Pelanggan", consent: true }, ip)
+  );
 }
 
 async function loginReq(slug: string, phone: string, password: string, ip: string) {

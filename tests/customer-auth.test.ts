@@ -51,7 +51,9 @@ function jsonReq(path: string, body: Record<string, unknown>, ip: string) {
 }
 
 async function registerReq(slug: string, phone: string, password: string, ip: string, name = "Pelanggan") {
-  return postRegister(jsonReq("/api/customer/register", { slug, phone, password, name }, ip));
+  return postRegister(
+    jsonReq("/api/customer/register", { slug, phone, password, name, consent: true }, ip)
+  );
 }
 
 async function loginReq(slug: string, phone: string, password: string, ip: string) {
@@ -122,6 +124,51 @@ describe("customer auth — register", () => {
       jsonReq("/api/customer/register", { slug: fx.slug, phone: "0811-1004" }, "10.20.0.5")
     );
     expect(res.status).toBe(400);
+  });
+});
+
+describe("customer auth — privacy consent (UU PDP)", () => {
+  let fx: TenantFixture;
+  beforeAll(async () => {
+    fx = await setupTenant();
+    fixtures.push(fx);
+  });
+  beforeEach(() => _resetRateLimitsForTest());
+
+  it("register without consent → 400 with clear message", async () => {
+    const res = await postRegister(
+      jsonReq(
+        "/api/customer/register",
+        { slug: fx.slug, name: "No Consent", phone: "0811-1101", password: "rahasia123" },
+        "10.20.6.1"
+      )
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("menyetujui");
+  });
+
+  it("register with consent=false → 400", async () => {
+    const res = await postRegister(
+      jsonReq(
+        "/api/customer/register",
+        { slug: fx.slug, name: "No Consent", phone: "0811-1102", password: "rahasia123", consent: false },
+        "10.20.6.2"
+      )
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("register with consent=true → 201 and privacyConsentAt stored", async () => {
+    const phone = "0811-1103";
+    const res = await registerReq(fx.slug, phone, "rahasia123", "10.20.6.3");
+    expect(res.status).toBe(201);
+    const { customerId } = await res.json();
+
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    expect(customer).not.toBeNull();
+    expect(customer?.privacyConsentAt).not.toBeNull();
+    expect(customer?.privacyConsentVersion).toBeTruthy();
   });
 });
 
