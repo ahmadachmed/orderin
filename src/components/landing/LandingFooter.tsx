@@ -23,6 +23,18 @@ export function LandingFooter() {
           >
             Daftar Kedai
           </Link>
+          <Link
+            href="/privacy"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Kebijakan Privasi
+          </Link>
+          <Link
+            href="/terms"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Syarat &amp; Ketentuan
+          </Link>
         </nav>
         <div className="text-sm text-muted-foreground">
           &copy; {year} HeadwayBrew. Semua hak dilindungi.

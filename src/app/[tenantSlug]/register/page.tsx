@@ -22,6 +22,8 @@ export default function CustomerRegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // UU PDP: explicit consent before PII (name + phone) is submitted.
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,6 +41,10 @@ export default function CustomerRegisterPage() {
       setError("Konfirmasi password tidak sama");
       return;
     }
+    if (!consent) {
+      setError("Anda harus menyetujui Kebijakan Privasi dan Syarat & Ketentuan");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -50,6 +56,7 @@ export default function CustomerRegisterPage() {
           name: name.trim(),
           phone: phone.trim(),
           password,
+          consent: true,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -128,7 +135,33 @@ export default function CustomerRegisterPage() {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" disabled={busy} className="w-full">
+            {/* UU PDP: consent is required — default unchecked, submit blocked until checked */}
+            <label className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+              />
+              <span>
+                Saya setuju dengan{" "}
+                <Link
+                  href={`/${tenantSlug}/privacy`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Kebijakan Privasi
+                </Link>{" "}
+                &amp;{" "}
+                <Link
+                  href={`/${tenantSlug}/terms`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Syarat &amp; Ketentuan
+                </Link>
+              </span>
+            </label>
+
+            <Button type="submit" disabled={busy || !consent} className="w-full">
               {busy ? "Mendaftarkan…" : "Daftar"}
             </Button>
 

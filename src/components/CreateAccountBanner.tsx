@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Lock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,8 @@ export default function CreateAccountBanner({
 }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [password, setPassword] = useState("");
+  // UU PDP: explicit consent before PII (name + phone) is submitted.
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -27,6 +30,10 @@ export default function CreateAccountBanner({
   const handleRegister = async () => {
     if (password.length < 6) {
       setError("Password minimal 6 karakter");
+      return;
+    }
+    if (!consent) {
+      setError("Anda harus menyetujui Kebijakan Privasi dan Syarat & Ketentuan");
       return;
     }
     try {
@@ -38,6 +45,7 @@ export default function CreateAccountBanner({
           name: customerName,
           phone: customerPhone,
           password,
+          consent: true,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -81,8 +89,33 @@ export default function CreateAccountBanner({
             />
           </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
+          {/* UU PDP: consent is required before the account is created */}
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-primary"
+            />
+            <span>
+              Saya setuju dengan{" "}
+              <Link
+                href={`/${tenantSlug}/privacy`}
+                className="font-medium text-primary hover:underline"
+              >
+                Kebijakan Privasi
+              </Link>{" "}
+              &amp;{" "}
+              <Link
+                href={`/${tenantSlug}/terms`}
+                className="font-medium text-primary hover:underline"
+              >
+                Syarat &amp; Ketentuan
+              </Link>
+            </span>
+          </label>
           <div className="flex gap-2">
-            <Button onClick={handleRegister} size="sm">
+            <Button onClick={handleRegister} disabled={!consent} size="sm">
               Daftar
             </Button>
             <Button

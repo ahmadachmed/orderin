@@ -61,6 +61,7 @@ test.beforeAll(async ({ request }) => {
     username,
     password,
     contactEmail: `e2e-akun-${stamp}@example.com`,
+    consent: true,
   }, 201);
 
   // Widening jam: keep the order step deterministic regardless of run time.
@@ -82,6 +83,7 @@ test.beforeAll(async ({ request }) => {
     name: "Login Cust",
     phone: phone3,
     password: CUSTOMER_PASSWORD,
+    consent: true,
   }, 201);
   existingCustomer = { name: "Login Cust", phone: phone3 };
 
@@ -149,6 +151,10 @@ async function openBannerForm(page: Page) {
 async function registerViaBanner(page: Page) {
   await openBannerForm(page);
   await page.getByPlaceholder("Password (min 6 karakter)").fill(CUSTOMER_PASSWORD);
+  // UU PDP: consent checkbox must be checked — Daftar is disabled until then.
+  await page
+    .getByRole("checkbox", { name: /saya setuju dengan kebijakan privasi/i })
+    .check();
   await page.getByRole("button", { name: "Daftar" }).click();
 }
 
@@ -228,6 +234,7 @@ test("register + same-phone order: bound order appears in account history", asyn
     name: customer,
     phone,
     password: CUSTOMER_PASSWORD,
+    consent: true,
   }, 201);
 
   // 3. Login (register already auto-logged-in, but exercise the explicit

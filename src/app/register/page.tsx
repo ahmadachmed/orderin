@@ -40,6 +40,8 @@ export default function RegisterPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // UU PDP: explicit consent before PII (owner name + email) is submitted.
+  const [consent, setConsent] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,13 +99,17 @@ export default function RegisterPage() {
       setError("Format email tidak valid");
       return;
     }
+    if (!consent) {
+      setError("Anda harus menyetujui Kebijakan Privasi dan Syarat & Ketentuan");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: shopName, slug, username, contactEmail, password }),
+        body: JSON.stringify({ name: shopName, slug, username, contactEmail, password, consent: true }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -228,9 +234,29 @@ export default function RegisterPage() {
           </p>
         )}
 
+        {/* UU PDP: consent is required — default unchecked, submit blocked until checked */}
+        <label className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+          />
+          <span>
+            Saya setuju dengan{" "}
+            <Link href="/privacy" className="font-medium text-sky-400 hover:text-sky-300">
+              Kebijakan Privasi
+            </Link>{" "}
+            &amp;{" "}
+            <Link href="/terms" className="font-medium text-sky-400 hover:text-sky-300">
+              Syarat &amp; Ketentuan
+            </Link>
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || !consent}
           className="mt-4 w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {busy ? "Mendaftarkan…" : "Daftar"}

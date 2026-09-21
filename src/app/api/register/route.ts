@@ -9,6 +9,7 @@ import { prisma as db } from "@/lib/db";
 import { ok, fail, readJson } from "@/lib/api";
 import { hashPassword } from "@/lib/password";
 import { createSession, sessionCookie } from "@/lib/auth";
+import { hasConsent, CONSENT_REQUIRED_MESSAGE } from "@/lib/privacy-consent";
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,6 +17,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(req: NextRequest) {
   const body = await readJson(req);
   if (!body) return fail("Invalid JSON body", 400);
+
+  // UU PDP: onboarding collects PII (owner name, email, username) — explicit
+  // consent is mandatory before the tenant is created.
+  if (!hasConsent(body)) {
+    return fail(CONSENT_REQUIRED_MESSAGE, 400);
+  }
 
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const slug =

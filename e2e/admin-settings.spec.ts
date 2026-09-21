@@ -64,6 +64,7 @@ test.beforeAll(async ({ request }) => {
     username,
     password,
     contactEmail: `e2e-settings-${stamp}@example.com`,
+    consent: true,
   }, 201);
 
   const { rows } = await db.query<{ id: string }>(`SELECT id FROM "Tenant" WHERE slug = $1`, [slug]);
