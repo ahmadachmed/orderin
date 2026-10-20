@@ -28,11 +28,11 @@ export function Features() {
   return (
     <section className="px-6 py-16 md:px-12 md:py-24">
       <div className="mx-auto max-w-[1200px]">
-        <div className="mb-12 text-center md:mb-16">
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
+        <div className="mb-12 md:mb-16">
+          <h2 className="text-3xl font-medium tracking-tight text-foreground md:text-4xl">
             Pesan Lebih Cerdas
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+          <p className="mt-3 max-w-xl text-muted-foreground">
             Platform pemesanan kopi yang menghubungkanmu dengan kedai favorit.
             Posisi antrean, ETA, dan status buka langsung dari ponselmu.
           </p>
@@ -41,12 +41,12 @@ export function Features() {
           {FEATURES.map((feature) => (
             <div
               key={feature.title}
-              className="flex flex-col items-start rounded-3xl border border-border bg-card p-8 transition-colors hover:border-primary/30"
+              className="flex flex-col items-start rounded-2xl border border-border bg-card p-8 transition-colors hover:border-primary/30"
             >
               <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted text-primary">
                 <feature.icon className="h-6 w-6" />
               </div>
-              <h3 className="mb-3 text-xl font-bold text-foreground">
+              <h3 className="mb-3 text-xl font-semibold text-foreground">
                 {feature.title}
               </h3>
               <p className="text-sm leading-relaxed text-muted-foreground">

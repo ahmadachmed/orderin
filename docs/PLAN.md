@@ -548,3 +548,12 @@ kopi-order/
 ---
 
 > **Note:** This document is a draft PRD + technical plan. Not final. All architectural decisions (multitenancy model, stack, scope) are open for discussion and revision after PM review.
+
+
+## Portfolio-inspired visual refresh (2026-10-20)
+
+User-requested cream and forest-green theme based on the Ahmad Ilham portfolio.
+Scope: shared semantic colors, landing typography and hero composition, menu
+cards, checkout surfaces, and accessible focus/reduced-motion behavior.
+Keep existing ordering, authentication, tenant routing, and billing behavior.
+The light palette supersedes the earlier dark-only visual direction.
