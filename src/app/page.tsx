@@ -57,7 +57,7 @@ export default async function Home() {
     <div className="relative min-h-screen w-full bg-background">
       {/* Sticky header (D11): logo + nav + CTA Pesan Sekarang + Daftar Kedai */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-6 md:px-12">
+        <div className="mx-auto flex h-20 w-full max-w-[1200px] items-center justify-between px-6 md:px-12">
           <Logo />
           <nav className="hidden items-center gap-8 md:flex">
             <ScrollToSearch className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
@@ -93,7 +93,7 @@ export default async function Home() {
             <Button
               asChild
               size="lg"
-              className="hidden h-auto rounded-full px-5 py-2.5 text-sm font-bold md:inline-flex"
+              className="hidden h-auto rounded-lg px-5 py-2.5 text-sm font-bold md:inline-flex"
             >
               <ScrollToSearch>Pesan Sekarang</ScrollToSearch>
             </Button>

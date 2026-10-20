@@ -13,59 +13,49 @@
 
 @layer base {
   :root {
-    /* P1+P2 dark-first token map — single dark palette (Stitch kanon). */
-    --background: 0 0% 3.9%; /* #0a0a0a */
-    --foreground: 30 5% 91%; /* #e5e2e1 (on-surface) */
-    --card: 0 0% 10.2%; /* #1a1a1a */
-    --card-foreground: 30 5% 91%;
-    --popover: 0 0% 10.2%;
-    --popover-foreground: 30 5% 91%;
-    --primary: 24 85% 53%; /* #E87F24 */
-    --primary-foreground: 30 87% 8%;
-    --secondary: 0 0% 15%; /* #262626 */
-    --secondary-foreground: 30 5% 91%;
-    --muted: 0 0% 11.8%; /* surface-low #131313 */
-    --muted-foreground: 0 0% 67%; /* on-surface-variant #ACABAB */
-    --accent: 0 0% 15%;
-    --accent-foreground: 30 5% 91%;
-    --destructive: 0 70% 45%;
+    /* Cream and forest palette, shared across customer and admin surfaces. */
+    --background: 72 24% 96%;
+    --foreground: 138 17% 12%;
+    --card: 60 20% 99%;
+    --card-foreground: 138 17% 12%;
+    --popover: 60 20% 99%;
+    --popover-foreground: 138 17% 12%;
+    --primary: 142 27% 28%;
+    --primary-foreground: 72 24% 98%;
+    --secondary: 78 18% 90%;
+    --secondary-foreground: 138 17% 18%;
+    --muted: 78 18% 92%;
+    --muted-foreground: 132 8% 39%;
+    --accent: 77 69% 77%;
+    --accent-foreground: 138 25% 18%;
+    --destructive: 0 68% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%; /* #262626 */
-    --input: 0 0% 15%;
-    --ring: 24 85% 53%; /* #E87F24 */
-    /* Status tokens (plan §2.1: warning/info/success) — hues match the
-       pre-restyle dot colors (amber-500 / sky-500 / emerald-500). */
-    --warning: 38 92% 50%; /* #f59e0b */
-    --info: 199 89% 48%; /* #0ea5e9 */
-    --success: 160 84% 39%; /* #10b981 */
-    /* Token scale (shadcn defaults — values match Tailwind's own defaults,
-       so existing utilities render identically). */
-    --radius: 0.5rem; /* 8px pills — cards use rounded-xl */
-    --chart-1: 24 85% 53%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar: 0 0% 10.2%;
-    --sidebar-foreground: 30 5% 91%;
-    --sidebar-primary: 24 85% 53%;
-    --sidebar-primary-foreground: 30 87% 8%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 30 5% 91%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 24 85% 53%;
+    --border: 90 12% 84%;
+    --input: 90 12% 78%;
+    --ring: 142 27% 28%;
+    --warning: 32 90% 33%;
+    --info: 202 80% 35%;
+    --success: 145 55% 28%;
+    --radius: 0.75rem;
+    --chart-1: 142 27% 28%;
+    --chart-2: 173 45% 35%;
+    --chart-3: 30 55% 40%;
+    --chart-4: 77 45% 45%;
+    --chart-5: 27 60% 50%;
+    --sidebar: 78 18% 92%;
+    --sidebar-foreground: 138 17% 12%;
+    --sidebar-primary: 142 27% 28%;
+    --sidebar-primary-foreground: 72 24% 98%;
+    --sidebar-accent: 78 18% 87%;
+    --sidebar-accent-foreground: 138 17% 18%;
+    --sidebar-border: 90 12% 84%;
+    --sidebar-ring: 142 27% 28%;
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 
-  /* NO .dark block — single dark-first palette. Light fallback NOT in
-     P1/P2 scope, defer to P4. */
-  @media (prefers-color-scheme: light) {
-    :root {
-      /* light fallback: NOT in P1/P2 scope, defer to P4 */
-    }
-  }
+
 }
 
 @layer base {
@@ -101,4 +91,14 @@
 .search-highlight {
   animation: search-glow 2.4s ease-in-out;
   border-radius: 1rem;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  ::selection { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .search-highlight { animation: none; }
 }

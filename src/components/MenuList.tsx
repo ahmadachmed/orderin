@@ -39,7 +39,7 @@ export default function MenuList({
         const qty = quantities[item.id] ?? 0;
         return (
           <li key={item.id}>
-            <Card className="flex gap-4 border-border bg-card p-4">
+            <Card className="flex items-start gap-4 rounded-2xl border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/40">
               {item.imageUrl ? (
                 // Menu images are arbitrary remote URLs (admin uploads) — no
                 // remotePatterns configured, so plain <img> over next/image.
@@ -47,7 +47,7 @@ export default function MenuList({
                 <img
                   src={item.imageUrl}
                   alt={item.name}
-                  className="h-20 w-20 shrink-0 rounded-lg border border-border object-cover"
+                  className="h-20 w-20 shrink-0 rounded-xl border border-border object-cover"
                 />
               ) : null}
 

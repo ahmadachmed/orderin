@@ -1,3 +1,4 @@
+import { ArrowDownRight, Coffee, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ShopSearchForm, { type ShopTenant } from "@/components/ShopSearchForm";
 import ScrollToSearch from "@/components/landing/ScrollToSearch";
@@ -7,77 +8,51 @@ interface HeroProps {
   tenants: ShopTenant[];
 }
 
-/**
- * Hero (T29, konsep landingpage2.html). Left column: live counter badge,
- * headline, sub, 2 CTA (Pesan Sekarang → #search-box glow target, Lacak
- * Pesanan → #shop-search — contract e2e/lookup.spec.ts:128-137). Right
- * column: search card wrapping ShopSearchForm (D6). The input inside
- * ShopSearchForm keeps the single `id="shop-search"` (contract F4 — the
- * scroll anchor resolves to it; no duplicate section id, happy-path fill
- * stays strict-mode safe).
- */
 export function Hero({ openCount, tenants }: HeroProps) {
   return (
-    <section className="relative overflow-hidden px-6 pb-16 pt-10 md:px-12 md:pb-24 md:pt-20">
-      {/* Decorative blur (konsep) */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-24 top-0 h-96 w-96 rounded-full bg-primary/10 blur-[100px]"
-      />
-
-      <div className="relative mx-auto grid w-full max-w-[1200px] items-center gap-12 md:grid-cols-2">
-        {/* Left: copy + CTAs */}
-        <div className="space-y-6 md:space-y-8">
-          {/* Live counter badge — real openCount (jangan hardcode 12) */}
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-muted px-3 py-1">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-            </span>
-            <span className="text-xs font-bold uppercase tracking-wide text-primary">
-              {openCount} Kedai Buka Sekarang
-            </span>
+    <section className="px-6 pb-14 pt-12 md:px-12 md:pb-24 md:pt-20">
+      <div className="mx-auto grid w-full max-w-[1200px] items-center gap-12 lg:grid-cols-2 lg:gap-20">
+        <div className="space-y-7">
+          <div className="inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            <span className="h-2 w-2 rounded-full bg-primary ring-4 ring-primary/10" />
+            {openCount} Kedai Buka Sekarang
           </div>
-
-          <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-6xl">
-            Lewati Antrean.
+          <h1 className="text-5xl font-medium leading-[1.1] tracking-[-0.045em] text-foreground sm:text-6xl xl:text-7xl">
+            Kopi favoritmu.
             <br />
-            <span className="text-primary">Pesan Kopi</span>
-            <br />
-            dalam Hitungan Detik.
+            <span className="text-primary">Tanpa buru-buru.</span>
           </h1>
-
-          <p className="max-w-md text-base font-medium leading-relaxed text-muted-foreground md:text-lg">
-            Cara tercepat untuk mendapatkan kopi harianmu. Cek posisi antrean
-            real-time dan ETA yang akurat sebelum kamu tiba.
+          <p className="max-w-md text-base leading-8 text-muted-foreground">
+            Pesan lebih dulu dari kedai pilihanmu. Pantau prosesnya, lalu ambil
+            kopimu saat sudah siap. Lebih banyak waktu untuk menikmati hari.
           </p>
-
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Button
-              asChild
-              size="lg"
-              className="h-auto rounded-full px-8 py-3.5 font-bold shadow-lg shadow-primary/20"
-            >
-              <ScrollToSearch>Pesan Sekarang</ScrollToSearch>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild size="lg" className="h-auto gap-6 rounded-lg px-6 py-4 font-semibold">
+              <ScrollToSearch>
+                Pesan Sekarang <ArrowDownRight className="h-4 w-4" aria-hidden="true" />
+              </ScrollToSearch>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-auto rounded-full px-8 py-3.5 font-bold"
-            >
+            <Button asChild size="lg" variant="outline" className="h-auto rounded-lg bg-transparent px-6 py-4 font-semibold">
               <a href="#shop-search">Lacak Pesanan</a>
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs leading-6 text-muted-foreground">
             Cari kedai lalu gunakan tombol Lacak di halaman kedai.
           </p>
+          <div className="flex flex-wrap gap-5 border-t border-border pt-6 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-2"><Coffee className="h-4 w-4" aria-hidden="true" /> Pesan dari browser</span>
+            <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4" aria-hidden="true" /> Ambil di kedai</span>
+          </div>
         </div>
-
-        {/* Right: search card (konsep hero card) — ShopSearchForm dipindah ke
-            sini (D6): div#search-box = glow target, DI DALAM hero card. */}
-        <div className="relative rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm md:p-8">
-          <div id="search-box" className="scroll-mt-24">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg shadow-primary/5">
+          <div className="flex items-center justify-between gap-4 bg-primary px-6 py-6 text-primary-foreground md:px-8">
+            <div>
+              <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-primary-foreground/75">Mulai dari sini</p>
+              <h2 className="text-xl font-medium tracking-tight">Mau ngopi di mana?</h2>
+            </div>
+            <Coffee className="h-8 w-8 shrink-0 text-accent" aria-hidden="true" />
+          </div>
+          <div id="search-box" className="scroll-mt-28 p-5 md:p-8">
             <ShopSearchForm tenants={tenants} />
           </div>
         </div>
